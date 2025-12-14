@@ -2,7 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Landing from '../pages/public/Landing';
 import Pricing from '../pages/public/Pricing';
 import Login from '../pages/public/Login';
-import Register from '../pages/public/Register';
+import RegisterWizard from '../pages/public/RegisterWizard';
 import AdminLayout from '../app/layout/AdminLayout';
 import CustomerMenu from '../pages/customer/MenuPage';
 import Dashboard from '../pages/admin/Dashboard';
@@ -26,7 +26,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/auth/register',
-    element: <Register />,
+    element: <RegisterWizard />,
   },
   // Tenant routes (simulate subdomain with :tenantSlug)
   {
