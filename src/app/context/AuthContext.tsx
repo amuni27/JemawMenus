@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import * as api from '../../api/auth';
+import {register} from '../../services/authService.ts'
 
 type Session = Awaited<ReturnType<typeof api.login>>;
 interface AuthContextValue {
