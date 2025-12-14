@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import * as api from '../../../api/menuApi';
+import * as api from '../../../api/itemsApi';
 import { MenuItem, ItemStatus } from '../../../types/menu';
 
 export function useItems(menuId?: string) {
@@ -9,7 +9,7 @@ export function useItems(menuId?: string) {
   useEffect(() => {
     if (!menuId) return;
     setLoading(true);
-    api.listItems(menuId).then((it) => {
+    api.list(menuId).then((it) => {
       setItems(it);
       setLoading(false);
     });
@@ -17,7 +17,7 @@ export function useItems(menuId?: string) {
 
   const createItem = async (item: Omit<MenuItem, 'id' | 'menuId' | 'createdAt' | 'updatedAt'>) => {
     if (!menuId) return;
-    const created = await api.createItem(menuId, item);
+    const created = await api.create(menuId, item);
     setItems((prev) => [...prev, created]);
   };
 
@@ -25,12 +25,12 @@ export function useItems(menuId?: string) {
     const current = items.find((i) => i.id === itemId);
     if (!current) return;
     const newStatus: ItemStatus = current.status === 'AVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE';
-    await api.updateItemStatus(itemId, newStatus);
+    await api.updateStatus(itemId, newStatus);
     setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, status: newStatus } : i)));
   };
 
   const updateItem = async (itemId: string, patch: Partial<MenuItem>) => {
-    const updated = await api.updateItem(itemId, patch);
+    const updated = await api.update(itemId, patch);
     if (!updated) return;
     setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
   };

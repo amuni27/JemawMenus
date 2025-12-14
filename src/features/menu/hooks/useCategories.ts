@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import * as api from '../../../api/menuApi';
+import * as api from '../../../api/categoriesApi';
 import { Category } from '../../../types/menu';
 
 export function useCategories(menuId?: string) {
@@ -9,7 +9,7 @@ export function useCategories(menuId?: string) {
   useEffect(() => {
     if (!menuId) return;
     setLoading(true);
-    api.listCategories(menuId).then((c) => {
+    api.list(menuId).then((c) => {
       setCategories(c);
       setLoading(false);
     });
@@ -17,12 +17,12 @@ export function useCategories(menuId?: string) {
 
   const createCategory = async (name: string) => {
     if (!menuId) return;
-    const cat = await api.createCategory(menuId, name);
+    const cat = await api.create(menuId, name);
     setCategories((prev) => [...prev, cat]);
   };
 
   const updateCategory = async (id: string, name: string) => {
-    const updated = await api.updateCategory(id, { name });
+    const updated = await api.update(id, { name });
     if (!updated) return;
     setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
   };
