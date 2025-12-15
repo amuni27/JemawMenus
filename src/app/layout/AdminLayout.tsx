@@ -7,7 +7,7 @@ import clsx from 'clsx';
 
 export default function AdminLayout() {
   const { tenantSlug } = useParams();
-  const { session, logout } = useAuth();
+  const { user, business, isAuthenticated,logout } = useAuth();
 
   const base = `/${tenantSlug}/admin`;
 
@@ -25,7 +25,7 @@ export default function AdminLayout() {
         <div className="mb-4">
           {/* Tenant switcher placeholder */}
           <button className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm font-medium">
-            {session?.tenantName ?? 'Workspace'}
+            {business?.name ?? 'Workspace'}
             <span className="text-gray-500">▾</span>
           </button>
         </div>
@@ -49,8 +49,8 @@ export default function AdminLayout() {
             Log out
           </button>
           <div className="rounded-lg bg-gray-100 p-3 text-xs">
-            <div className="font-medium">{session?.user?.name ?? 'User'}</div>
-            <div className="text-gray-600">{session?.user?.email}</div>
+            <div className="font-medium">{user?.name ?? 'User'}</div>
+            <div className="text-gray-600">{user?.email}</div>
           </div>
         </div>
       </aside>

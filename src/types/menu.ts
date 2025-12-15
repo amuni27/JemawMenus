@@ -1,13 +1,29 @@
 // Type definitions for menus, categories, items
-export type MenuType = "FOOD" | "DRINK" | "DESSERT" | "OTHER";
+export interface MenuType {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 export type Currency = "USD" | "ETB" | (string & {});
 export interface Menu {
   id: string;
-  tenantId: string;
+  businessId: string;
   name: string;
-  type: MenuType;
+  menuType: MenuType;
   description?: string;
   currency: Currency;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MenuDto {
+  id: string;
+  businessId: string;
+  name: string;
+  menuId: string;
+  description?: string;
+  currency: string;
   createdAt: string;
   updatedAt: string;
 }

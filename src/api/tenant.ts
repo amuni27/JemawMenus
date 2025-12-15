@@ -1,48 +1,26 @@
-import { delay, getData, setData, uuid } from './_utils';
-import { Tenant, Plan, SubscriptionStatus } from '../types';
+import {delay, getData, setData, uuid} from './_utils';
+import {Tenant} from '../types';
 
-const STORAGE_KEY = 'mock_tenants';
+const STORAGE_KEY_BUSINESS = 'business';
 
 type TenantRecord = Tenant;
 
-function load(): TenantRecord[] {
-  return getData<TenantRecord[]>(STORAGE_KEY, []);
+function load(): Tenant {
+  return getData<Tenant>(STORAGE_KEY_BUSINESS, []);
 }
-function save(list: TenantRecord[]) {
-  setData(STORAGE_KEY, list);
+function save(tenants: TenantRecord[]) {
+  setData(STORAGE_KEY_BUSINESS, tenants);
 }
 
 export async function getTenantBySlug(slug: string): Promise<Tenant | undefined> {
   await delay();
-  const tenants = load();
-  return tenants.find((t) => t.slug === slug);
+  return load();
 }
 
 export async function getTenantById(id: string): Promise<Tenant | undefined> {
   await delay();
+  console.log("tenant id", id)
   const tenants = load();
-  return tenants.find((t) => t.id === id);
-}
-
-export function getTenantByIdSync(id: string): Tenant | undefined {
-  const list = load();
-  return list.find((t) => t.id === id);
-}
-
-// helper to seed tenant when register is called
-export function createTenant(name: string, address?: string, phone?: string): Tenant {
-  const slug = name.toLowerCase().replace(/\s+/g, '-');
-  const tenant: Tenant = {
-    id: uuid(),
-    name,
-    slug,
-    plan: 'starter',
-    subscriptionStatus: 'trial',
-    location: address ? { address } : undefined,
-    contact: phone ? { phone } : undefined,
-  } as Tenant;
-  const list = load();
-  list.push(tenant);
-  save(list);
-  return tenant;
+  console.log("tenant", tenants)
+  return load();
 }

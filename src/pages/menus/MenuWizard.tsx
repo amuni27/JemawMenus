@@ -1,20 +1,11 @@
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import WizardLayout from "../../components/wizard/WizardLayout";
 import { FormInput } from "../../components/form/FormInput";
 import { FormSelect } from "../../components/form/FormSelect";
 import { FormTextarea } from "../../components/form/FormTextarea";
 import Button from "../../components/ui/Button";
-import { MenuType, Currency } from "../../types/menu";
-
-export interface MenuWizardData {
-  name: string;
-  displayName: string;
-  type: MenuType;
-  description: string;
-  currency: Currency;
-  language: string;
-  // step2+ placeholders
-}
+import {MenuDto, MenuType} from "../../types/menu";
+import menuApi from "../../api/menuApi";
 
 const steps = [
   { label: "Menu Details" },
@@ -23,108 +14,147 @@ const steps = [
 ];
 
 interface Props {
-  initial?: Partial<MenuWizardData>;
-  onSave: (data: MenuWizardData) => Promise<void>;
+  initial?: Partial<MenuDto>;
+  onSave: (data: MenuDto) => Promise<void>;
 }
 
 export default function MenuWizard({ initial, onSave }: Props) {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<MenuWizardData>({
-    name: initial?.name ?? "",
-    displayName: initial?.displayName ?? "",
-    type: (initial?.type ?? "FOOD") as MenuType,
-    description: initial?.description ?? "",
-    currency: (initial?.currency ?? "USD") as Currency,
-    language: initial?.language ?? "",
+
+  const [data, setData] = useState<MenuDto>(() => {
+    const now = new Date().toISOString();
+    return {
+      id: initial?.id ?? "",
+      businessId: initial?.businessId ?? "",
+      name: initial?.name ?? "",
+      menuId: initial?.menuId ?? "", // REQUIRED in your DTO
+      description: initial?.description ?? "",
+      currency: initial?.currency ?? "USD",
+      createdAt: initial?.createdAt ?? now,
+      updatedAt: initial?.updatedAt ?? now,
+    };
   });
 
-  const [errors, setErrors] = useState<{ [k: string]: string }>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+
+  const [menuTypes, setMenuTypes] = useState<MenuType[]>([]);
+  const [menuTypesLoading, setMenuTypesLoading] = useState(false);
+  const [menuTypesError, setMenuTypesError] = useState<string>("");
+
+  useEffect(() => {
+    let mounted = true;
+    setMenuTypesLoading(true);
+    setMenuTypesError("");
+
+    menuApi
+        .listMenuTypes()
+        .then((items) => {
+          setMenuTypes(items.data);
+        })
+        .catch((err: any) => {
+          if (!mounted) return;
+          setMenuTypesError(err?.message || "Failed to load menu types");
+        })
+        .finally(() => {
+          if (!mounted) return;
+          setMenuTypesLoading(false);
+        });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const validateStep1 = () => {
-    const e: { [k: string]: string } = {};
+    const e: Record<string, string> = {};
     if (!data.name.trim()) e.name = "Name is required";
+    if (!data.menuId) e.menuId = "Menu type is required";
     if (!data.currency) e.currency = "Currency is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleNext = async () => {
-    if (step === 0) {
-      if (!validateStep1()) return;
-    }
+    if (step === 0 && !validateStep1()) return;
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
+
   const handleBack = () => setStep((s) => Math.max(s - 1, 0));
 
-  const handleChange = (field: keyof MenuWizardData, value: any) =>
-    setData((d) => ({ ...d, [field]: value }));
+  const handleChange = <K extends keyof MenuDto>(field: K, value: MenuDto[K]) => {
+    setData((d) => ({
+      ...d,
+      [field]: value,
+      updatedAt: new Date().toISOString(),
+    }));
+
+  };
 
   return (
-    <WizardLayout steps={steps} current={step} completed={step - 1}>
-      {step === 0 && (
-        <div className="space-y-4">
-          <FormInput
-            label="Menu Name"
-            value={data.name}
-            error={errors.name}
-            onChange={(e) => handleChange("name", e.target.value)}
-          />
-          <FormInput
-            label="Menu Display Name (optional)"
-            value={data.displayName}
-            onChange={(e) => handleChange("displayName", e.target.value)}
-          />
-          <FormSelect
-            label="Menu Type"
-            value={data.type}
-            onChange={(e) => handleChange("type", e.target.value as MenuType)}
-          >
-            <option value="FOOD">Food</option>
-            <option value="DRINK">Drink</option>
-            <option value="DESSERT">Dessert</option>
-            <option value="OTHER">Other</option>
-          </FormSelect>
-          <FormTextarea
-            label="Description (optional)"
-            value={data.description}
-            onChange={(e) => handleChange("description", e.target.value)}
-          />
-          <FormSelect
-            label="Currency"
-            value={data.currency}
-            error={errors.currency}
-            onChange={(e) => handleChange("currency", e.target.value as Currency)}
-          >
-            <option value="USD">USD</option>
-            <option value="ETB">ETB</option>
-          </FormSelect>
-          <FormSelect
-            label="Menu Language (optional)"
-            value={data.language}
-            onChange={(e) => handleChange("language", e.target.value)}
-          >
-            <option value="">-- select --</option>
-            <option value="English">English</option>
-            <option value="Amharic">Amharic</option>
-          </FormSelect>
-        </div>
-      )}
-      {step > 0 && <p className="text-gray-500">This step is WIP. Coming soon.</p>}
+      <WizardLayout steps={steps} current={step} completed={step - 1}>
+        {step === 0 && (
+            <div className="space-y-4">
+              <FormInput
+                  label="Menu Name"
+                  value={data.name}
+                  error={errors.name}
+                  onChange={(e) => handleChange("name", e.target.value)}
+              />
 
-      {/* Navigation buttons */}
-      <div className="mt-8 flex justify-between">
-        {step > 0 ? (
-          <Button variant="secondary" onClick={handleBack}>
-            Back
-          </Button>
-        ) : (
-          <span />
+              {/* menuId = Menu Type ID */}
+              <FormSelect
+                  label="Menu Type"
+                  value={data.menuId} // ✅ stored id
+                  error={errors.menuId || menuTypesError}
+                  onChange={(e) => handleChange("menuId", e.target.value)} // ✅ set id
+              >
+                <option value="">
+                  {menuTypesLoading ? "Loading..." : "-- select --"}
+                </option>
+
+                {menuTypes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} {/* ✅ user sees name */}
+                    </option>
+                ))}
+              </FormSelect>
+
+              <FormTextarea
+                  label="Description (optional)"
+                  value={data.description ?? ""}
+                  onChange={(e) => handleChange("description", e.target.value)}
+              />
+
+              <FormSelect
+                  label="Currency"
+                  value={data.currency}
+                  error={errors.currency}
+                  onChange={(e) => handleChange("currency", e.target.value)}
+              >
+                <option value="USD">USD</option>
+                <option value="ETB">ETB</option>
+              </FormSelect>
+            </div>
         )}
-        {step === steps.length - 1 ? (
-          <Button onClick={() => onSave(data)}>Save Menu</Button>
-        ) : (
-          <Button onClick={handleNext}>Next</Button>
-        )}
-      </div>
-    </WizardLayout>
+
+        {step > 0 && <p className="text-gray-500">This step is WIP. Coming soon.</p>}
+
+        <div className="mt-8 flex justify-between">
+          {step > 0 ? (
+              <Button variant="secondary" onClick={handleBack}>
+                Back
+              </Button>
+          ) : (
+              <span />
+          )}
+
+          {step === steps.length - 1 ? (
+              <Button onClick={() => onSave(data)}>Save Menu</Button>
+          ) : (
+              <Button onClick={handleNext}>Next</Button>
+          )}
+        </div>
+      </WizardLayout>
   );
 }

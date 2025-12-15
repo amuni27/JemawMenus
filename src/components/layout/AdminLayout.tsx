@@ -1,12 +1,12 @@
 import { PropsWithChildren, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import {Link, Outlet, useLocation} from "react-router-dom";
 
 const NAV_ITEMS = [
   { label: "Menus", path: "admin/menus" },
   // Future items can be added here
 ];
 
-export default function AdminLayout({ children }: PropsWithChildren) {
+export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { pathname } = useLocation();
   const tenantSlug = pathname.split("/")[1]; // crude extract
@@ -39,7 +39,9 @@ export default function AdminLayout({ children }: PropsWithChildren) {
           {/* breadcrumb placeholder */}
           <span className="text-sm text-gray-500">{pathname}</span>
         </header>
-        <div className="max-w-6xl mx-auto px-4 py-6">{children}</div>
+        <div className="max-w-6xl mx-auto px-4 py-6">
+            <Outlet />
+        </div>
       </main>
     </div>
   );

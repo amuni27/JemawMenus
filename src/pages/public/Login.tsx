@@ -16,12 +16,8 @@ export default function Login() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const sess = await login(email, password);
-      console.log("sess" + JSON.stringify(sess))
-      // fetch tenant to get slug
-      const tenant = await api.tenant.getTenantById(sess.tenantId);
-      console.log("tenant" + tenant)
-      if (tenant) nav(`/${tenant.slug}/admin`);
+      const session = await login(email, password);
+      if (session.business) nav(`/${session.business.id}/admin/menus`);
       else nav('/');
     } catch (err: any) {
       setError(err.message);

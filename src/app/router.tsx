@@ -3,13 +3,18 @@ import Landing from '../pages/public/Landing';
 import Pricing from '../pages/public/Pricing';
 import Login from '../pages/public/Login';
 import RegisterWizard from '../pages/public/RegisterWizard';
-import AdminLayout from '../app/layout/AdminLayout';
+import AdminLayout from '../components/layout/AdminLayout.tsx';
 import CustomerMenu from '../pages/customer/MenuPage';
 import Dashboard from '../pages/admin/Dashboard';
 import AdminMenuPage from '../features/menu/pages/AdminMenuPage';
 import QrListPage from '../pages/admin/QrListPage';
 import DealsPage from '../pages/admin/DealsPage';
 import AdsPage from '../pages/admin/AdsPage';
+import MenuPage from "../pages/admin/menu/MenuPage.tsx";
+import React from "react";
+import MenusListPage from "../pages/menus/MenusListPage.tsx";
+import MenuCreatePage from "../pages/menus/MenuCreatePage.tsx";
+import MenuDetailPage from "../pages/menus/MenuDetailPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -44,6 +49,15 @@ const router = createBrowserRouter([
           { path: 'menu', element: <AdminMenuPage /> },
           { path: 'qr', element: <QrListPage /> },
           { path: 'deals', element: <DealsPage /> },
+          {
+            path: 'menus',
+            children: [
+              { index: true, element: <MenusListPage /> },
+              { path: 'new', element: <MenuCreatePage /> },
+              { path: ':menuId', element: <MenuDetailPage /> },
+            ],
+          },
+          {path: 'menus/new', element: <MenuCreatePage />},
           { path: 'ads', element: <AdsPage /> },
         ],
       },

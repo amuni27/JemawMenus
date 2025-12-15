@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Menu } from "../../types/menu";
-import { deleteMenu, listMenus } from "../../api/menuApi";
+import menuApi from "../../api/menuApi";
 import MenuQrModal from "../../components/menu/MenuQrModal";
 import QRCode from "react-qr-code";
 import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import {useAuth} from "../../app/context/AuthContext.tsx";
 
 export default function MenusListPage() {
+  const nav = useNavigate();
+  const auth = useAuth();
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -14,10 +17,13 @@ export default function MenusListPage() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    if (!tenantSlug) return;
     setLoading(true);
-    const data = await listMenus(tenantSlug);
-    setMenus(data);
+    console.log("start menue list page ....")
+    const response = await menuApi.listMenus(auth.business?.id);
+    if(response.status === 401){
+      nav('/auth/login');
+    }
+    setMenus(response.data);
     setLoading(false);
   };
 
@@ -27,7 +33,7 @@ export default function MenusListPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this menu?")) return;
-    await deleteMenu(id);
+    await menuApi.deleteMenu(id);
     load();
   };
 
@@ -75,14 +81,15 @@ export default function MenusListPage() {
                 <tr key={menu.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     <Link
-                      to={`/${tenantSlug}/admin/menus/${menu.id}`}
+                      to={`/${auth.business?.id}/admin/menus/${menu.id}`}
                       className="text-blue-600 hover:underline"
                     >
                       {menu.name}
                     </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {menu.type}
+                    {menu.menuType.name
+                    }
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="cursor-pointer" onClick={() => setQrMenu(menu)}>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { getMenu } from '../../api/menuApi';
 import { Menu } from '../../types/menu';
 import CategoryPanel from '../../features/menu/components/CategoryPanel';
 import ItemsPanel from '../../features/menu/components/ItemsPanel';
@@ -10,7 +9,7 @@ import ItemModal from '../../features/menu/components/ItemModal';
 import { useCategories } from '../../features/menu/hooks/useCategories';
 
 export default function MenuDetailPage() {
-  const { tenantSlug, menuId } = useParams();
+  const { menuId } = useParams();
   const [loading, setLoading] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
 
@@ -22,11 +21,7 @@ export default function MenuDetailPage() {
 
   useEffect(() => {
     if (!menuId) return;
-    setLoading(true);
-    getMenu(menuId).then((m) => {
-      setMenu(m || null);
-      setLoading(false);
-    });
+    setLoading(false);
   }, [menuId]);
 
   if (loading) return <p className="p-6">Loading...</p>;

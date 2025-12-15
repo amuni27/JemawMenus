@@ -21,26 +21,18 @@ export type Allergen =
 
 // Tenant (hotel/restaurant)
 export interface Tenant {
-  id: ID;
+  id: string;
+  ownerUserId: string;
   name: string;
-  slug: string; // used for subdomain
-  plan: Plan;
-  subscriptionStatus: SubscriptionStatus;
-  branding?: {
-    logoUrl?: string;
-    primaryColor?: string;
-  };
-  contact?: {
-    phone?: string;
-    email?: string;
-  };
-  location?: {
-    address?: string;
-    city?: string;
-    country?: string;
-    latitude?: number;
-    longitude?: number;
-  };
+  businessPhone: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  customSubdomain: string;
+  open24_7: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Menu

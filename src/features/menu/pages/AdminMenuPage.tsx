@@ -24,7 +24,7 @@ export default function AdminMenuPage() {
             <div className="flex flex-wrap items-center gap-2">
               <MenuSwitcher
                 className="mb-0"
-                tenantId={session.tenantId}
+                tenantId={session.business?.id}
                 tenantSlug={tenantSlug}
                 selected={selectedMenu}
                 onSelect={setSelectedMenu}

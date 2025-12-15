@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import * as api from '../../../api/menuApi';
-import { Menu } from '../../../types/menu';
+import { useEffect, useState } from "react";
+import menuApi from "../../../api/menuApi";
+import { Menu } from "../../../types/menu";
 
 export function useMenus(tenantId?: string) {
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -8,17 +8,29 @@ export function useMenus(tenantId?: string) {
 
   useEffect(() => {
     if (!tenantId) return;
+
     setLoading(true);
-    api.listMenus(tenantId).then((m) => {
-      setMenus(m);
-      setLoading(false);
-    });
+
+    menuApi
+        .listMenus()
+        .then((res: any) => {
+          console.log(res.data);
+          setMenus(res.data);
+        })
+        .finally(() => setLoading(false));
   }, [tenantId]);
 
-  const createMenu = async (payload: Omit<Menu, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>) => {
+  const createMenu = async (
+      payload: Omit<Menu, "id" | "tenantId" | "createdAt" | "updatedAt">
+  ) => {
     if (!tenantId) return;
-    const menu = await api.createMenu({ ...payload, tenantId });
-    setMenus((prev) => [...prev, menu]);
+
+    const res: any = await menuApi.createMenu({
+      ...payload,
+      tenantId,
+    });
+
+    setMenus((prev) => [...prev, res.data]);
   };
 
   return { menus, loading, createMenu, setMenus };

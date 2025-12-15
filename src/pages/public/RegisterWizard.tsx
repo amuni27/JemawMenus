@@ -6,7 +6,7 @@ import WizardStepper from '../../components/wizard/WizardStepper';
 import { useAuth } from '../../app/context/AuthContext';
 import { useToast } from '../../components/ui/ToastContext';
 import { useNavigate } from 'react-router-dom';
-import {register} from '../../services/authService.ts'
+import {delay} from "../../api/_utils.ts";
 
 // ----- Types ---------------------------------------------------------------
 interface PersonalInfo {
@@ -88,7 +88,7 @@ export default function RegisterWizard() {
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
 
-  const { login, loading } = useAuth();
+  const { register, login, loading } = useAuth();
   const toast = useToast();
   const nav = useNavigate();
 
@@ -148,18 +148,10 @@ export default function RegisterWizard() {
             })),
       };
 
-      const res = await register(payload)
-
-
-      const json = await res.data;
-      console.log(json)
-      if (res.status !== 201) throw new Error(json.message || 'Registration failed');
-
-      localStorage.setItem('token', json.token);
+      await register(payload); // AuthContext handles token + session (and login fallback if needed)
       toast('Account created');
-
-      await login(payload.email, data.personal.password);
-      nav('/');
+      await delay(1000)
+      nav('/auth/login');
     } catch (err: any) {
       toast(err.message || 'Registration failed');
       setError(err.message);
