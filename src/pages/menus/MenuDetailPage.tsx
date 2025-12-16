@@ -11,11 +11,12 @@ import menuApi from "../../api/menuApi";
 import categoryApi from "../../api/categoriesApi";
 
 export default function MenuDetailPage() {
+
   const { menuId } = useParams<{ menuId: string }>();
 
   const [loading, setLoading] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories, loading: catLoading, error: catError } = useCategories(menuId);
   const [error, setError] = useState<string>("");
 
   // modal states

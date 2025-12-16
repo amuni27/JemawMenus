@@ -1,47 +1,35 @@
-import { MenuItem, ItemStatus } from "../types/menu";
-import { delay, uuid, getData, setData } from "./_utils";
+import type { MenuItem, ItemStatus } from "../types/menu";
+import { fetchItems, postRequest, deleteRequest } from "../services/apiService";
+import {updateItem} from "./menu.ts";
 
-const STORAGE_KEY = "items";
+// If your apiService uses PUT for updateRequest, we should add a PATCH helper.
+// For now, we'll try to use updateRequest for PATCH-like updates.
+// If your backend requires PATCH and updateRequest uses PUT, tell me and I'll give you a patchRequest helper.
 
-type ItemPatch = Partial<Omit<MenuItem, "id" | "menuId" | "createdAt" | "updatedAt">>;
+type CreateItemBody = Omit<MenuItem, "id" | "menuId" | "createdAt" | "updatedAt">;
+type ItemPatch = Partial<CreateItemBody>;
 
-function read(): MenuItem[] {
-  return getData<MenuItem[]>(STORAGE_KEY, []);
-}
-function write(data: MenuItem[]) {
-  setData(STORAGE_KEY, data);
-}
-
-export async function list(menuId: string): Promise<MenuItem[]> {
-  await delay();
-  return read().filter((i) => i.menuId === menuId);
+// GET /api/menus/:menuId/items
+export function list(menuId: string) {
+  return fetchItems(`/menus/${menuId}/items`);
 }
 
-export async function create(menuId: string, item: Omit<MenuItem, "id" | "menuId" | "createdAt" | "updatedAt">): Promise<MenuItem> {
-  await delay();
-  const items = read();
-  const now = new Date().toISOString();
-  const newItem: MenuItem = { ...item, id: uuid(), menuId, createdAt: now, updatedAt: now } as MenuItem;
-  write([...items, newItem]);
-  return newItem;
+// POST /api/menus/:menuId/items
+export function create(menuId: string, body: CreateItemBody) {
+  return postRequest(`/menus/${menuId}/items`, body);
 }
 
-export async function update(id: string, patch: ItemPatch): Promise<MenuItem | undefined> {
-  await delay();
-  const items = read();
-  const idx = items.findIndex((i) => i.id === id);
-  if (idx === -1) return undefined;
-  items[idx] = { ...items[idx], ...patch, updatedAt: new Date().toISOString() };
-  write(items);
-  return items[idx];
+// PATCH or PUT /api/items/:itemId  (adjust if your backend path is different)
+export function update(itemId: string, patch: ItemPatch) {
+  return updateItem(`/items/${itemId}`, patch);
 }
 
-export async function remove(id: string): Promise<void> {
-  await delay();
-  const items = read();
-  write(items.filter((i) => i.id !== id));
+// DELETE /api/items/:itemId
+export function remove(itemId: string) {
+  return deleteRequest(`/items/${itemId}`);
 }
 
-export async function updateStatus(id: string, status: ItemStatus): Promise<MenuItem | undefined> {
-  return update(id, { status });
+// Update status using same update endpoint
+export function updateStatus(itemId: string, status: ItemStatus) {
+  return update(itemId, { status });
 }

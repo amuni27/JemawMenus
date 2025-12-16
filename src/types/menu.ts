@@ -53,18 +53,24 @@ export interface MenuItem {
   menuId: string;
   categoryId: string;
   name: string;
-  description?: string;
   price: number;
-  calories?: number; // optional
-  sku?: string;
-  isFeatured?: boolean;
-  prepTimeMinutes?: number;
-  spiceLevel?: SpiceLevel;
-  dietTags?: string[];
-  allergens?: string[];
-  imageUrl?: string;
-  ingredients: string[]; // required, min 1
-  status: ItemStatus;
+  ingredients: string[];   // ✅ matches backend
+  description?: string | null;
+  imageUrl?: string | null;
+  calories?: number | null;
+  status?: "AVAILABLE" | "UNAVAILABLE";
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
+
+export type CreateMenuItemDTO = {
+  name: string;
+  price: number;
+  categoryId: string;
+  ingredients: string[];   // ✅ same shape
+  description?: string | null;
+  imageUrl?: string | null;
+  calories?: number | null;
+  status?: "AVAILABLE" | "UNAVAILABLE";
+};
