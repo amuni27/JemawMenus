@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import {Category, Menu} from "../../types/menu";
+import {Menu} from "../../types/menu";
 import CategoryPanel from "../../features/menu/components/CategoryPanel";
 import ItemsPanel from "../../features/menu/components/ItemsPanel";
 import Button from "../../components/ui/Button";
@@ -8,7 +8,6 @@ import CategoryModal from "../../features/menu/components/CategoryModal";
 import ItemModal from "../../features/menu/components/ItemModal";
 import { useCategories } from "../../features/menu/hooks/useCategories";
 import menuApi from "../../api/menuApi";
-import categoryApi from "../../api/categoriesApi";
 
 export default function MenuDetailPage() {
 
