@@ -1,4 +1,8 @@
 import CategoryList from './CategoryList';
+import {useEffect, useState} from "react";
+import menuApi from "../../../api/menuApi.ts";
+import categoryApi from "../../../api/categoriesApi.ts";
+import {Category, Menu} from "../../../types/menu.ts";
 
 interface Props {
   menuId?: string;
@@ -7,6 +11,7 @@ interface Props {
 }
 
 export default function CategoryPanel({ menuId }: Props) {
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit">
       <CategoryList menuId={menuId} />

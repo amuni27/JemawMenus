@@ -11,7 +11,7 @@ export default function MenusListPage() {
   const nav = useNavigate();
   const auth = useAuth();
   const { tenantSlug } = useParams();
-  const navigate = useNavigate();
+  useNavigate();
   const [menus, setMenus] = useState<Menu[]>([]);
   const [qrMenu, setQrMenu] = useState<Menu | null>(null);
   const [loading, setLoading] = useState(true);

@@ -32,10 +32,17 @@ export interface Category {
   id: string;
   menuId: string;
   name: string;
+  isActive:true
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
+
+export type CreateCategoryDTO = {
+  name: string;
+  sortOrder?: number;
+  isActive?: boolean;
+};
 
 export type ItemStatus = "AVAILABLE" | "UNAVAILABLE";
 

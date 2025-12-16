@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = async () => {
     const raw = localStorage.getItem(SESSION_KEY);
+    console.log(raw)
     if (!raw) {
       persistSession(null);
       setLoading(false);
