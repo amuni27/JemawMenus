@@ -6,9 +6,14 @@ export type Role = 'OWNER' | 'ADMIN' | 'STAFF';
 
 export interface UserDTO {
     id: string;
+    businessId: string;
     email: string;
-    role: Role;
+    role: string;
+    phoneNumber: string;
+    status: string;
     fullName?: string;
+    updatedAt: Date
+    createdAt: Date
 }
 
 export interface BusinessDTO {
@@ -20,7 +25,10 @@ export interface BusinessDTO {
     city?: string;
     state?: string;
     zipcode?: string;
+    ownerUserId?: string;
     open24_7?: boolean;
+    updatedAt: Date
+    createdAt: Date
 }
 
 export interface AuthSession {

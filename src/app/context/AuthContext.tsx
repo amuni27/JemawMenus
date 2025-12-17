@@ -39,15 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const user = session?.user ?? null;
   const business = session?.business ?? null;
 
-  const persistSession = (s: AuthSession | null) => {
-    setSession(s);
+  const persistSession = (session: AuthSession | null) => {
+    setSession(session);
 
-    if (s?.token) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-      localStorage.setItem(TOKEN_KEY, s.token);
+    if (session?.token) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      localStorage.setItem(TOKEN_KEY, session.token);
     } else {
-      localStorage.removeItem(SESSION_KEY);
-      localStorage.removeItem(TOKEN_KEY);
+      console.log("remove largew alalalem")
+      // localStorage.removeItem(SESSION_KEY);
+      // localStorage.removeItem(TOKEN_KEY);
     }
   };
 
@@ -85,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = async () => {
     const raw = localStorage.getItem(SESSION_KEY);
-    console.log(raw)
     if (!raw) {
       persistSession(null);
       setLoading(false);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Modal from "../../../components/ui/Modal";
 import ModalHeader from "../../../components/ui/ModalHeader";
 import Button from "../../../components/ui/Button";
@@ -13,20 +13,26 @@ interface Props {
   onClose: () => void;
   menuId?: string;
   item?: MenuItem; // edit mode if provided
-  categories: Category[]; // ✅ pass from DB (useCategories(menuId) in parent)
+  categories: Category[]; // pass from DB
 }
 
 type Draft = {
   name: string;
   description: string;
-  price: string; // keep as string for input
+  price: string; // keep as string for DECIMAL input
   calories: string;
   categoryId: string;
   status: "AVAILABLE" | "UNAVAILABLE";
   imageUrl: string;
-  ingredients: string[]; // ✅ matches backend (jsonb + z.array(z.string()))
+  ingredients: string[];
   ingredientInput: string;
 };
+
+function normalizeIngredients(raw: any): string[] {
+  if (Array.isArray(raw)) return raw.filter(Boolean).map(String);
+  if (typeof raw === "string" && raw.trim()) return [raw.trim()];
+  return [];
+}
 
 function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
   if (item) {
@@ -36,9 +42,9 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
       price: item.price != null ? String(item.price) : "",
       calories: item.calories != null ? String(item.calories) : "",
       categoryId: item.categoryId ?? categories[0]?.id ?? "",
-      status: (item.status as any) ?? "AVAILABLE",
+      status: ((item.status as any) ?? "AVAILABLE") as Draft["status"],
       imageUrl: item.imageUrl ?? "",
-      ingredients: Array.isArray(item.ingredients) ? (item.ingredients as any as string[]) : [],
+      ingredients: normalizeIngredients((item as any).ingredients),
       ingredientInput: "",
     };
   }
@@ -64,7 +70,10 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ reset draft whenever modal opens / item changes / categories load
+  // image preview state so it doesn't get stuck hidden
+  const [imgOk, setImgOk] = useState(true);
+
+  // reset when modal opens / item changes / categories load
   useEffect(() => {
     if (!open) return;
     setDraft(buildDraft(item, categories));
@@ -72,7 +81,12 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
     setSubmitting(false);
   }, [open, item, categories]);
 
-  // ✅ if creating and categories arrive later, set default category
+  // reset image preview whenever url changes
+  useEffect(() => {
+    setImgOk(true);
+  }, [draft.imageUrl]);
+
+  // if creating and categories arrive later, set default category
   useEffect(() => {
     if (!open) return;
     if (!item && !draft.categoryId && categories.length > 0) {
@@ -104,14 +118,17 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
     if (!draft.name.trim()) return false;
     if (!draft.categoryId) return false;
 
+    // price must be valid and >= 0
     const priceNum = Number(draft.price);
     if (!draft.price || Number.isNaN(priceNum) || priceNum < 0) return false;
 
+    // calories optional but if present must be >= 0 integer
     if (draft.calories) {
       const calNum = Number(draft.calories);
       if (Number.isNaN(calNum) || calNum < 0) return false;
     }
 
+    // ingredients required by backend/table
     if (draft.ingredients.length === 0) return false;
 
     return true;
@@ -129,13 +146,13 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
     try {
       setSubmitting(true);
 
-      // ✅ payload aligned to backend createItemSchema
-      // backend computes sortOrder; do NOT send it
+      // ✅ payload aligned to backend + DECIMAL best practice
+      // send price as string; backend converts to Decimal(10,2)
       const payload = {
         name: draft.name.trim(),
-        price: Number(draft.price),
+        price: draft.price.trim(), // ✅ string like "12.50"
         categoryId: draft.categoryId,
-        ingredients: draft.ingredients, // ✅ jsonb array of strings
+        ingredients: draft.ingredients,
         description: draft.description.trim() ? draft.description.trim() : null,
         imageUrl: draft.imageUrl.trim() ? draft.imageUrl.trim() : null,
         calories: draft.calories ? Number(draft.calories) : null,
@@ -198,7 +215,11 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
             <Input
                 label="Price ($)"
                 value={draft.price}
-                onChange={(e) => setDraft({ ...draft, price: e.target.value })}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // ✅ allow 2 decimal places (optional UX)
+                  if (/^\d*\.?\d{0,2}$/.test(v)) setDraft({ ...draft, price: v });
+                }}
                 error={
                   touched && (!draft.price || Number.isNaN(Number(draft.price)) || Number(draft.price) < 0)
                       ? "Invalid"
@@ -209,7 +230,11 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
             <Input
                 label="Calories"
                 value={draft.calories}
-                onChange={(e) => setDraft({ ...draft, calories: e.target.value })}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // ✅ only digits (optional UX)
+                  if (/^\d*$/.test(v)) setDraft({ ...draft, calories: v });
+                }}
                 error={
                   touched && draft.calories && (Number.isNaN(Number(draft.calories)) || Number(draft.calories) < 0)
                       ? "Invalid"
@@ -242,18 +267,18 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
                 value={draft.imageUrl}
                 onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })}
             />
-            {draft.imageUrl.trim() && (
+
+            {draft.imageUrl.trim() && imgOk && (
                 <img
                     src={draft.imageUrl.trim()}
                     alt="preview"
                     className="h-40 w-full rounded-xl object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                    onLoad={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "block";
-                    }}
+                    onError={() => setImgOk(false)}
                 />
+            )}
+
+            {draft.imageUrl.trim() && !imgOk && (
+                <p className="text-xs text-gray-500">Image failed to load. Please check the URL.</p>
             )}
           </div>
 
@@ -281,10 +306,7 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
             {draft.ingredients.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {draft.ingredients.map((ing) => (
-                      <span
-                          key={ing}
-                          className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm"
-                      >
+                      <span key={ing} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm">
                   {ing}
                         <button
                             type="button"
