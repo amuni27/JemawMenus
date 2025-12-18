@@ -4,8 +4,7 @@ import ModalHeader from "../../../components/ui/ModalHeader";
 import Button from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import { FormSelect } from "../../../components/form/FormSelect";
-import type { MenuItem, Category } from "../../../types/menu";
-import { useItems } from "../hooks/useItems";
+import type {MenuItem, Category, CreateItemPayload} from "../../../types/menu";
 import { useToast } from "../../../components/ui/ToastContext";
 
 interface Props {
@@ -14,6 +13,8 @@ interface Props {
   menuId?: string;
   item?: MenuItem; // edit mode if provided
   categories: Category[]; // pass from DB
+  onCreate: (payload: CreateItemPayload) => Promise<MenuItem>;
+  onUpdate: (itemId: string, patch: Partial<MenuItem>) => Promise<MenuItem>;
 }
 
 type Draft = {
@@ -62,9 +63,9 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
   };
 }
 
-export default function ItemModal({ open, onClose, menuId, item, categories }: Props) {
+export default function ItemModal({ open, onClose, menuId, item, categories, onCreate, onUpdate }: Props) {
   const toast = useToast();
-  const { createItem, updateItem } = useItems(menuId);
+
 
   const [draft, setDraft] = useState<Draft>(() => buildDraft(item, categories));
   const [touched, setTouched] = useState(false);
@@ -160,10 +161,10 @@ export default function ItemModal({ open, onClose, menuId, item, categories }: P
       };
 
       if (item) {
-        await updateItem(item.id, payload as any);
+        await onUpdate(item.id, payload as any);
         toast("Item updated");
       } else {
-        await createItem(payload as any);
+        await onCreate(payload as any);
         toast("Item created");
       }
 

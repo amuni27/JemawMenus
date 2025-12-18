@@ -1,4 +1,5 @@
-import api from './api'; // import your configured Axios instance
+import api from './api';
+import {ItemStatus} from "../types/menu.ts"; // import your configured Axios instance
 
 // GET all items
 export const fetchItems = (endpoint: string) => {
@@ -16,8 +17,8 @@ export const postRequest = (endpoint: string, data: any) => {
 };
 
 // PUT: Update item
-export const updateRequest = (endpoint: string, id: string | number, data: any) => {
-    return api.put(`${endpoint}${id}`, data);
+export const updateRequest = (endpoint: string, data: any) => {
+    return api.put(`${endpoint}`, data);
 };
 
 // DELETE: Remove item

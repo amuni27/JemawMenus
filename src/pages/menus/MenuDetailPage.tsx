@@ -8,6 +8,7 @@ import CategoryModal from "../../features/menu/components/CategoryModal";
 import ItemModal from "../../features/menu/components/ItemModal";
 import { useCategories } from "../../features/menu/hooks/useCategories";
 import menuApi from "../../api/menuApi";
+import {useItems} from "../../features/menu/hooks/useItems.ts";
 
 export default function MenuDetailPage() {
 
@@ -15,12 +16,14 @@ export default function MenuDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const { categories, loading: catLoading, error: catError } = useCategories(menuId);
+  const  categories  = useCategories(menuId);
+  const { items, toggleStatus,deleteItem, createItem, updateItem } = useItems(menuId);
   const [error, setError] = useState<string>("");
 
   // modal states
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [itemModalOpen, setItemModalOpen] = useState(false);
+
 
 
   useEffect(() => {
@@ -35,9 +38,6 @@ export default function MenuDetailPage() {
       menuApi.getMenu(menuId)
         .then((m) => {
           if (!alive) return;
-          console.log(
-              m
-          )
           setMenu(m.data);
         })
         .catch((err: any) => {
@@ -87,11 +87,19 @@ export default function MenuDetailPage() {
         {/* Main grid */}
         <div className="grid gap-6 md:grid-cols-[260px_1fr]">
           <aside className="h-fit">
-            <CategoryPanel menuId={menuId} />
+            <CategoryPanel
+                menuId={menuId}
+                categories={categories.categories}
+                loading={categories.loading}
+                error={categories.error}
+                onCreate={categories.createCategory}
+                onUpdate={categories.updateCategory}
+                onDelete={categories.deleteCategory}
+            />
           </aside>
 
           <section>
-            <ItemsPanel menuId={menuId} />
+            <ItemsPanel menuId={menuId} categories={categories.categories} items={items}  toggleStatus={toggleStatus} deleteItem={deleteItem} onUpdate={updateItem} onCreate={createItem} />
           </section>
         </div>
 
@@ -100,12 +108,16 @@ export default function MenuDetailPage() {
             open={categoryModalOpen}
             onClose={() => setCategoryModalOpen(false)}
             menuId={menuId}
+            onCreate={categories.createCategory}
+            onUpdate={categories.updateCategory}
         />
         <ItemModal
             open={itemModalOpen}
             onClose={() => setItemModalOpen(false)}
             menuId={menuId}
-            categories={categories}
+            categories={categories.categories}
+            onUpdate={updateItem}
+            onCreate={createItem}
         />
       </div>
   );

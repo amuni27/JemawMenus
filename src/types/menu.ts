@@ -44,7 +44,9 @@ export type CreateCategoryDTO = {
   isActive?: boolean;
 };
 
-export type ItemStatus = "AVAILABLE" | "UNAVAILABLE";
+export interface ItemStatus {
+  status: string;
+}
 
 export type SpiceLevel = "NONE" | "MILD" | "MEDIUM" | "HOT";
 
@@ -73,4 +75,21 @@ export type CreateMenuItemDTO = {
   imageUrl?: string | null;
   calories?: number | null;
   status?: "AVAILABLE" | "UNAVAILABLE";
+};
+
+
+export type CreateItemPayload = {
+  name: string;
+  price: number;
+  categoryId: string;
+  ingredients: string[]; // jsonb array of strings
+  description?: string | null;
+  imageUrl?: string | null;
+  calories?: number | null;
+  allergens?: string[] | null;
+  tags?: string[] | null;
+  isFeatured?: boolean;
+  prepTimeMinutes?: number | null;
+  spiceLevel?: "NONE" | "MILD" | "MEDIUM" | "HOT" | null;
+  status?: ItemStatus;
 };

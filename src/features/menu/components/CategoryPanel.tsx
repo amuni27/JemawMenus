@@ -1,20 +1,32 @@
 import CategoryList from './CategoryList';
-import {useEffect, useState} from "react";
-import menuApi from "../../../api/menuApi.ts";
-import categoryApi from "../../../api/categoriesApi.ts";
-import {Category, Menu} from "../../../types/menu.ts";
+import {Category} from "../../../types/menu.ts";
 
-interface Props {
+export interface CategoryPanelProps {
   menuId?: string;
-  selectedId?: string;
-  onSelect?: (id?: string) => void;
+  // state
+  categories: Category[];
+  loading: boolean;
+  error?: string;
+
+  // actions
+  onCreate: (name: string) => Promise<Category>;
+  onUpdate: (categoryId: string, name: string) => Promise<Category>;
+  onDelete: (categoryId: string) => Promise<void>;
 }
 
-export default function CategoryPanel({ menuId }: Props) {
+export default function CategoryPanel({ menuId, categories, loading, error, onCreate, onUpdate, onDelete }: CategoryPanelProps) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit">
-      <CategoryList menuId={menuId} />
+      <CategoryList
+          menuId={menuId}
+          categories={categories}
+          loading={loading}
+          error={error}
+          onCreate={onCreate}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+      />
     </div>
   );
 }

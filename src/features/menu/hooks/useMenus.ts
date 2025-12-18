@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import menuApi from "../../../api/menuApi";
 import { Menu } from "../../../types/menu";
+import itemApi from "../../../api/itemsApi.ts";
 
 export function useMenus(tenantId?: string) {
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -33,5 +34,12 @@ export function useMenus(tenantId?: string) {
     setMenus((prev) => [...prev, res.data]);
   };
 
-  return { menus, loading, createMenu, setMenus };
+  const deleteMenu = async (menuId: string) => {
+    await menuApi.deleteMenu(menuId);
+
+    // remove from UI
+    setMenus((prev) => prev.filter((i) => i.id !== menuId));
+  };
+
+  return { menus, loading,deleteMenu, createMenu, setMenus };
 }

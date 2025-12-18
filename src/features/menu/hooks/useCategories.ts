@@ -37,7 +37,6 @@ export function useCategories(menuId?: string) {
     };
   }, [menuId]);
 
-  // (optional) create/update functions can also live here
   const createCategory = async (name: string) => {
     if (!menuId) throw new Error("menuId is required");
     const created = await categoryApi.createCategory(menuId, { name });
@@ -53,6 +52,11 @@ export function useCategories(menuId?: string) {
     return cat as Category;
   };
 
+  const deleteCategory = async (categoryId: string) => {
+      await categoryApi.deleteCategory(categoryId);
+    setCategories((prev) => prev.filter((c) => (c.id !== categoryId )));
+  };
+
   return {
     categories,
     loading,
@@ -60,5 +64,6 @@ export function useCategories(menuId?: string) {
     setCategories,
     createCategory,
     updateCategory,
+    deleteCategory,
   };
 }

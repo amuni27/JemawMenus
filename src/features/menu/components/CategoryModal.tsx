@@ -12,10 +12,11 @@ interface Props {
   onClose: () => void;
   menuId?: string;
   category?: Category;
+  onCreate: (name: string) => Promise<Category>;
+  onUpdate: (categoryId: string, name: string) => Promise<Category>;
 }
 
-export default function CategoryModal({ open, onClose, menuId, category }: Props) {
-  const { createCategory, updateCategory } = useCategories(menuId);
+export default function CategoryModal({ open, onClose, menuId, category, onCreate, onUpdate }: Props) {
   const toast = useToast();
 
   const [name, setName] = useState("");
@@ -41,12 +42,12 @@ export default function CategoryModal({ open, onClose, menuId, category }: Props
 
       if (category) {
         // ✅ rename
-        await updateCategory(category.id, name.trim());
+        await onUpdate(category.id, name.trim());
         toast("Category updated");
       } else {
         // ✅ create
         if (!menuId) throw new Error("menuId is required");
-        await createCategory(name.trim());
+        await onCreate(name.trim());
         toast("Category created");
       }
 

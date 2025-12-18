@@ -1,22 +1,8 @@
 import { useEffect, useState } from "react";
-import * as api from "../../../api/itemsApi";
-import type { MenuItem, ItemStatus } from "../../../types/menu";
+import itemApi from "../../../api/itemsApi";
+import type {MenuItem, ItemStatus, CreateItemPayload} from "../../../types/menu";
 
-type CreateItemPayload = {
-  name: string;
-  price: number;
-  categoryId: string;
-  ingredients: string[]; // jsonb array of strings
-  description?: string | null;
-  imageUrl?: string | null;
-  calories?: number | null;
-  allergens?: string[] | null;
-  tags?: string[] | null;
-  isFeatured?: boolean;
-  prepTimeMinutes?: number | null;
-  spiceLevel?: "NONE" | "MILD" | "MEDIUM" | "HOT" | null;
-  status?: ItemStatus;
-};
+
 
 export function useItems(menuId?: string) {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -33,10 +19,12 @@ export function useItems(menuId?: string) {
     setLoading(true);
     setError("");
 
-    api
+    itemApi
         .list(menuId)
         .then((res) => {
           if (!alive) return;
+          console.log("row res", res)
+          console.log("unwined res", unwrap<MenuItem[]>(res))
           setItems(unwrap<MenuItem[]>(res));
         })
         .catch((e: any) => {
@@ -59,7 +47,7 @@ export function useItems(menuId?: string) {
     if (!menuId) throw new Error("menuId is required");
 
     setError("");
-    const res = await api.create(menuId, payload);
+    const res = await itemApi.create(menuId, payload);
     const created = unwrap<MenuItem>(res);
 
     // optional: push to end or start
@@ -68,8 +56,7 @@ export function useItems(menuId?: string) {
   };
 
   const updateItem = async (itemId: string, patch: Partial<MenuItem>) => {
-    setError("");
-    const res = await api.update(itemId, patch);
+    const res = await itemApi.update(itemId, patch);
     const updated = unwrap<MenuItem>(res);
 
     setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
@@ -77,19 +64,33 @@ export function useItems(menuId?: string) {
   };
 
   const toggleStatus = async (itemId: string) => {
+    console.log("currentItem", itemId)
     const current = items.find((i) => i.id === itemId);
+    console.log("currentItem data", current);
     if (!current) return;
 
-    const newStatus: ItemStatus =
-        current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE";
+    const body: ItemStatus = {
+      status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
+    };
 
     setError("");
-    await api.updateStatus(itemId, newStatus);
+    const res = await itemApi.updateStatus(itemId, body);
+    console.log("endewerede toggle res",res)
+    const updated = unwrap<MenuItem>(res);
+    console.log("updated toggle res",res)
 
-    setItems((prev) =>
-        prev.map((i) => (i.id === itemId ? { ...i, status: newStatus } : i))
-    );
+    setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
+    return updated;
   };
 
-  return { items, loading, error, setItems, createItem, updateItem, toggleStatus };
+
+  const deleteItem = async (itemId: string) => {
+    setError("");
+    await itemApi.remove(itemId);
+
+    // remove from UI
+    setItems((prev) => prev.filter((i) => i.id !== itemId));
+  };
+
+  return { items, loading, error, setItems, createItem, updateItem, toggleStatus,deleteItem };
 }
