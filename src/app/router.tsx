@@ -4,7 +4,7 @@ import Pricing from '../pages/public/Pricing';
 import Login from '../pages/public/Login';
 import RegisterWizard from '../pages/public/RegisterWizard';
 import AdminLayout from '../components/layout/AdminLayout.tsx';
-import CustomerMenu from '../pages/customer/MenuPage';
+import CustomerMenu from '../pages/customer/CustomerMenu.tsx';
 import Dashboard from '../pages/admin/Dashboard';
 import AdminMenuPage from '../features/menu/pages/AdminMenuPage';
 import QrListPage from '../pages/admin/QrListPage';
