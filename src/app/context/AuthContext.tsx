@@ -46,9 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
       localStorage.setItem(TOKEN_KEY, session.token);
     } else {
-      console.log("remove largew alalalem")
-      // localStorage.removeItem(SESSION_KEY);
-      // localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(TOKEN_KEY);
     }
   };
 
