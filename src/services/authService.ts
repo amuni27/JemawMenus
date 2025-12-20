@@ -84,4 +84,5 @@ export async function me(): Promise<{ user: UserDTO; business?: BusinessDTO }> {
 
 export async function logout(): Promise<void> {
     localStorage.removeItem('token');
+    localStorage.removeItem('session')
 }

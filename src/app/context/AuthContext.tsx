@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await logoutService();
+     window.location.href ='/auth/login';
       persistSession(null);
     } finally {
       setLoading(false);
