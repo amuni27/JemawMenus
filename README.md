@@ -22,7 +22,7 @@ Hotels & restaurants can manage digital menus, deals, ads and subscriptions whil
 
 ```
 src/
-  api/            ← mock API (auth, tenant, menu, deals, ads)
+  apiAuth/            ← mock API (auth, tenant, menu, deals, ads)
   app/            ← router, context providers, layouts
   components/     ← reusable UI (+ domain modules)
   pages/          ← route components (public, admin, customer)
@@ -54,7 +54,7 @@ pnpm build    # output in dist/
 ---
 ## 🔌  Replacing the Mock API with a Real Backend
 
-The UI **never imports `fetch` directly** – every data call goes through `src/api/*` functions.  
+The UI **never imports `fetch` directly** – every data call goes through `src/apiAuth/*` functions.  
 To integrate your backend:
 
 1. Replace the implementations inside each file (keep function signatures).

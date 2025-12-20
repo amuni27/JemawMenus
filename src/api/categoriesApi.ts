@@ -1,40 +1,48 @@
 import {
   fetchItems,
   postRequest,
-  deleteRequest,
+  deleteRequest, fetchPublicItems, fetchPublicRequestById,
 } from "../services/apiService";
-import api from "../services/api";
+import apiAuth from "../services/apiAuth.ts";
 import {Category, CreateCategoryDTO} from "../types/menu";
 
 class CategoryService {
   // ================= CATEGORIES =================
 
-  // GET /api/menus/:menuId/categories
+  // GET /apiAuth/menus/:menuId/categories
   getCategories(menuId: string) {
     return fetchItems(`/menus/${menuId}/categories`);
   }
 
-  // POST /api/menus/:menuId/categories
+  // POST /apiAuth/menus/:menuId/categories
   createCategory(menuId: string, body: CreateCategoryDTO) {
     return postRequest(`/menus/${menuId}/categories`, body);
   }
 
-  // PATCH /api/categories/:categoryId
+  // PATCH /apiAuth/categories/:categoryId
   updateCategory(
       categoryId: string,
       data: Partial<Pick<Category, "name" | "sortOrder" | "isActive">>
   ) {
-    return api.patch<Category>(`/categories/${categoryId}`, data);
+    return apiAuth.patch<Category>(`/categories/${categoryId}`, data);
   }
 
-  // DELETE /api/categories/:categoryId
+  // DELETE /apiAuth/categories/:categoryId
   deleteCategory(categoryId: string) {
     return deleteRequest(`/categories/`, categoryId);
   }
 
-  // POST /api/menus/:menuId/categories/reorder
+  // POST /apiAuth/menus/:menuId/categories/reorder
   reorderCategories(menuId: string, orderedIds: string[]) {
     return postRequest(`/menus/${menuId}/categories/reorder`, { orderedIds });
+  }
+
+  listPublic(businessId: string, menuId: string) {
+    return fetchPublicItems(`/${businessId}/menus/${menuId}/categories`);
+  }
+
+  listPublicItemById(businessId: string, menuId: string, categoriesId: string) {
+    return fetchPublicRequestById(`/${businessId}/menus/${menuId}/categories`, categoriesId);
   }
 }
 

@@ -3,7 +3,7 @@ import {
   deleteRequest,
   updateRequest,
   fetchRequestById,
-  fetchItems,
+  fetchItems, fetchPublicItems, fetchPublicRequestById,
 } from "../services/apiService";
 
 import {Menu, Category, MenuItem, ItemStatus, MenuDto} from "../types/menu";
@@ -25,6 +25,14 @@ class MenuService {
 
   createMenu(data: MenuDto) {
     return postRequest("/menus/", data);
+  }
+
+  listPublic(businessId: string) {
+    return fetchPublicItems(`/menus/${businessId}`);
+  }
+
+  listPublicItemById(businessId: string, menuId: string) {
+    return fetchPublicRequestById(`/${businessId}/menus`, menuId);
   }
 
   updateMenu(menuId: string, data: Partial<Menu>) {

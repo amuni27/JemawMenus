@@ -1,5 +1,5 @@
 // src/services/authService.ts
-import api from './api';
+import apiAuth from './apiAuth.ts';
 import { postRequest } from './apiService';
 
 export type Role = 'OWNER' | 'ADMIN' | 'STAFF';
@@ -60,7 +60,7 @@ export async function login(email: string, password: string): Promise<AuthSessio
 }
 
 export async function register(payload: any): Promise<AuthSession | { message: string }> {
-    const res = await api.post('/auth/register', payload);
+    const res = await apiAuth.post('/auth/register', payload);
 
     const session = extractSession(res.data);
     if (session) {
@@ -72,7 +72,7 @@ export async function register(payload: any): Promise<AuthSession | { message: s
 }
 
 export async function me(): Promise<{ user: UserDTO; business?: BusinessDTO }> {
-    const res = await api.get('/auth/me');
+    const res = await apiAuth.get('/auth/me');
     const data = res.data?.data ?? res.data;
     if (!data?.user) throw new Error('Invalid /me response');
 

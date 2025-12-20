@@ -10,7 +10,6 @@ import AdminMenuPage from '../features/menu/pages/AdminMenuPage';
 import QrListPage from '../pages/admin/QrListPage';
 import DealsPage from '../pages/admin/DealsPage';
 import AdsPage from '../pages/admin/AdsPage';
-import MenuPage from "../pages/admin/menu/MenuPage.tsx";
 import React from "react";
 import MenusListPage from "../pages/menus/MenusListPage.tsx";
 import MenuCreatePage from "../pages/menus/MenuCreatePage.tsx";
