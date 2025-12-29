@@ -34,7 +34,7 @@ export function MenuHeader({
                     </button>
 
                     <div>
-                        <div className="text-2xl font-extrabold text-gray-900">
+                        <div className="w-full flex items-center text-2xl font-extrabold text-gray-900">
                             {businessName ?? "Menu"}
                         </div>
                     </div>
