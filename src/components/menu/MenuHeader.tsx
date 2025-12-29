@@ -1,5 +1,5 @@
 import React from "react";
-import { CategoryTab } from "./CategoryTab";
+import {CategoryTab} from "./CategoryTab";
 
 type Props = {
     businessName?: string;
@@ -33,11 +33,11 @@ export function MenuHeader({
                         ☰
                     </button>
 
-                    <div>
-                        <div className="w-full flex items-center text-2xl font-extrabold text-gray-900">
-                            <p>{businessName ?? "Menu"}</p>
-                        </div>
+
+                    <div className=" mt-1 inline-flex items-center justify-center  bg-white px-2 py-1 text-gray-700 ">
+                        <p className="text-2xl font-extrabold text-gray-900">{businessName ?? "Menu"}</p>
                     </div>
+
                 </div>
 
                 {activeMenuCurrency ? (
