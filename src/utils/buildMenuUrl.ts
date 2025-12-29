@@ -1,4 +1,4 @@
-const DOMAIN = "http://localhost:5175/"; // TODO replace with production domain
+const DOMAIN = "https://agafari-menu.onrender.com/"; // TODO replace with production domain
 
 export function buildMenuUrl(
     businessId: string | undefined,
