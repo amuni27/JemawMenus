@@ -2,6 +2,6 @@
 import axios from "axios";
 
 const apiPublic = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: "https://agafari-menu-backend.onrender.com",
 });
 export default apiPublic
