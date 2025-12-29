@@ -8,5 +8,5 @@ export function buildMenuUrl(
   }
   console.log(`${DOMAIN}${businessId}.${DOMAIN}/menu`)
 
-  return `${DOMAIN}${businessId}.${DOMAIN}/menu`;
+  return `${DOMAIN}${businessId}/menu`;
 }
