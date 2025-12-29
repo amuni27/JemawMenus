@@ -1,12 +1,12 @@
-const DOMAIN = "restaurantmenu.com"; // TODO replace with production domain
+const DOMAIN = "http://localhost:5175/"; // TODO replace with production domain
 
 export function buildMenuUrl(
-    customSubdomain: string | undefined,
-    menuId: string
+    businessId: string | undefined,
 ): string {
-  if (!customSubdomain) {
+  if (!businessId) {
     throw new Error("customSubdomain is required to build menu URL");
   }
+  console.log(`${DOMAIN}${businessId}.${DOMAIN}/menu`)
 
-  return `https://${customSubdomain}.${DOMAIN}/menu/${menuId}`;
+  return `${DOMAIN}${businessId}.${DOMAIN}/menu`;
 }

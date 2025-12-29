@@ -122,7 +122,7 @@ export default function MenusListPage() {
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="cursor-pointer" onClick={() => setQrMenu(menu)}>
                                         <QRCode
-                                            value={buildMenuUrl(auth.business?.customSubdomain, menu.id)}
+                                            value={buildMenuUrl(auth.business?.id)}
                                             size={48}
                                             level="M"
                                         />
