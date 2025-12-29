@@ -69,9 +69,9 @@ export function useItems(menuId?: string) {
     console.log("currentItem data", current);
     if (!current) return;
 
-    const body: ItemStatus = {
-      status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
-    };
+
+    const body: ItemStatus = current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE";
+
 
     setError("");
     const res = await itemApi.updateStatus(itemId, body);

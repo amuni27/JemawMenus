@@ -1,5 +1,5 @@
 import StatusBadge from './StatusBadge';
-import {MenuItem} from '../../../types/menu';
+import {ItemStatus, MenuItem} from '../../../types/menu';
 import {Pencil, Trash2} from "lucide-react";
 
 interface Props {
@@ -16,11 +16,13 @@ export default function ItemCard({item, onEdit, onToggle, onDelete}: Props) {
             ? item.price
             : Number(item.price ?? 0);
 
+
     return (
         <div className="relative overflow-hidden rounded-2xl border bg-white shadow transition hover:shadow-md">
 
+
             <img
-                src={item.imageUrl}
+                src={item.imageUrl ?? undefined}
                 alt={item.name}
                 className="h-32 w-full object-cover"
             />
@@ -32,7 +34,7 @@ export default function ItemCard({item, onEdit, onToggle, onDelete}: Props) {
                     ${price.toFixed(2)}
                 </p>
 
-                <StatusBadge status={item.status}/>
+                <StatusBadge status={(item.status ?? "AVAILABLE") as ItemStatus} />
             </div>
 
             <div className="absolute top-2 right-2 flex gap-1">
@@ -40,7 +42,7 @@ export default function ItemCard({item, onEdit, onToggle, onDelete}: Props) {
                     onClick={onToggle}
                     className="rounded bg-white/80 px-2 py-1 text-xs shadow hover:bg-white"
                 >
-                    {item.status === 'AVAILABLE' ? 'Hide' : 'Show'}
+                    {item.status === "AVAILABLE" ? 'Hide' : 'Show'}
                 </button>
                 <button
                     onClick={onEdit}

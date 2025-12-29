@@ -6,7 +6,7 @@ import {
   fetchItems, fetchPublicItems, fetchPublicRequestById,
 } from "../services/apiService";
 
-import {Menu, Category, MenuItem, ItemStatus, MenuDto} from "../types/menu";
+import {Menu, Category, MenuItem, ItemStatus, MenuDto,CreateMenuDto} from "../types/menu";
 
 class MenuService {
   // ================= MENUS =================
@@ -23,7 +23,7 @@ class MenuService {
     return fetchRequestById("/menus/", menuId); // -> /menus/{id}
   }
 
-  createMenu(data: MenuDto) {
+  createMenu(data: CreateMenuDto) {
     return postRequest("/menus/", data);
   }
 
@@ -36,7 +36,7 @@ class MenuService {
   }
 
   updateMenu(menuId: string, data: Partial<Menu>) {
-    return updateRequest("/menus/", menuId, data); // -> /menus/{id}
+    return updateRequest(`/menus/${menuId}`, data);
   }
 
   deleteMenu(menuId: string) {
@@ -58,7 +58,7 @@ class MenuService {
   }
 
   updateCategory(categoryId: string, data: Partial<Category>) {
-    return updateRequest("/categories/", categoryId, data);
+    return updateRequest(`/categories/${categoryId}`, data);
   }
 
   deleteCategory(categoryId: string) {
@@ -80,7 +80,7 @@ class MenuService {
   }
 
   updateItem(itemId: string, data: Partial<MenuItem>) {
-    return updateRequest("/items/", itemId, data);
+    return updateRequest(`/items/${itemId}`, data);
   }
 
   deleteItem(itemId: string) {
@@ -89,7 +89,7 @@ class MenuService {
 
   updateItemStatus(itemId: string, status: ItemStatus) {
     // If you have a dedicated endpoint like /items/{id}/status:
-    return updateRequest("/items/", itemId, { status });
+    return updateRequest(`/items/${itemId}`, { status });
   }
 }
 

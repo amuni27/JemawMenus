@@ -39,7 +39,7 @@ export default function MenusListPage() {
     const load = async () => {
         setLoading(true);
         console.log("start menue list page ....")
-        const response = await menuApi.listMenus(auth.business?.id);
+        const response = await menuApi.listMenus();
         if (response.status === 401) {
             nav('/auth/login');
         }
@@ -121,7 +121,11 @@ export default function MenusListPage() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="cursor-pointer" onClick={() => setQrMenu(menu)}>
-                                            <QRCode value={buildMenuUrl(auth.business?.customSubdomain, menu.id)} size={48} level="M"/>
+                                        <QRCode
+                                            value={buildMenuUrl(auth.business?.customSubdomain, menu.id)}
+                                            size={48}
+                                            level="M"
+                                        />
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">

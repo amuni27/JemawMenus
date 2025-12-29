@@ -15,10 +15,10 @@ export function CategorySection({ category, items }: Props) {
             </h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((item: any) => (
-                <MenuItemCard key={item.id} item={item} />
-))}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {items.map((item: any) => (
+                    <MenuItemCard key={item.id} item={item} />
+                ))}
 
     {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-gray-500">

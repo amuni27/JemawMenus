@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import menuApi from "../../../api/menuApi";
 import { Menu } from "../../../types/menu";
-import itemApi from "../../../api/itemsApi.ts";
 
-export function useMenus(tenantId?: string) {
+export function useMenus(businessId?: string) {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!tenantId) return;
+    if (!businessId) return;
 
     setLoading(true);
 
@@ -19,16 +18,16 @@ export function useMenus(tenantId?: string) {
           setMenus(res.data);
         })
         .finally(() => setLoading(false));
-  }, [tenantId]);
+  }, [businessId]);
 
   const createMenu = async (
-      payload: Omit<Menu, "id" | "tenantId" | "createdAt" | "updatedAt">
+      payload: Omit<Menu, "id" | "menuId" | "businessId" | "createdAt" | "updatedAt">
   ) => {
-    if (!tenantId) return;
+    if (!businessId) return;
 
     const res: any = await menuApi.createMenu({
       ...payload,
-      tenantId,
+      businessId,
     });
 
     setMenus((prev) => [...prev, res.data]);

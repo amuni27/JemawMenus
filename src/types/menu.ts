@@ -17,6 +17,11 @@ export interface Menu {
   updatedAt: string;
 }
 
+export type CreateMenuDto = Omit<
+    MenuDto,
+    "id" | "menuId" | "createdAt" | "updatedAt"
+>;
+
 export interface MenuDto {
   id: string;
   businessId: string;
@@ -44,9 +49,7 @@ export type CreateCategoryDTO = {
   isActive?: boolean;
 };
 
-export interface ItemStatus {
-  status: string;
-}
+export type ItemStatus = "AVAILABLE" | "UNAVAILABLE";
 
 export type SpiceLevel = "NONE" | "MILD" | "MEDIUM" | "HOT";
 
@@ -60,8 +63,8 @@ export interface MenuItem {
   description?: string | null;
   imageUrl?: string | null;
   calories?: number | null;
-  status?: "AVAILABLE" | "UNAVAILABLE";
-  sortOrder: number;
+  status?: ItemStatus;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }

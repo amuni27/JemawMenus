@@ -59,8 +59,8 @@ export async function login(email: string, password: string): Promise<AuthSessio
     return session;
 }
 
-export async function register(payload: any): Promise<AuthSession | { message: string }> {
-    const res = await apiAuth.post('/auth/register', payload);
+export async function register(payload: any): Promise<AuthSession> {
+    const res = await apiAuth.post("/auth/register", payload);
 
     const session = extractSession(res.data);
     if (session) {
@@ -68,7 +68,9 @@ export async function register(payload: any): Promise<AuthSession | { message: s
         return session;
     }
 
-    return { message: res.data?.message ?? 'Registered' };
+    // If API didn’t return token/user, treat it as an error
+    const message = res.data?.message ?? "Registration failed";
+    throw new Error(message);
 }
 
 export async function me(): Promise<{ user: UserDTO; business?: BusinessDTO }> {

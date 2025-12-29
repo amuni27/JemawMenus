@@ -1,14 +1,13 @@
-import React from "react";
-import { IngredientPill } from "./IngredientPill";
+import {IngredientPill} from "./IngredientPill.tsx";
 
 type Props = {
-    item: any;
+    item: any; // we’ll tighten this later if you want
 };
 
 export function MenuItemCard({ item }: Props) {
     return (
-        <article className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-            <div className="relative h-32 overflow-hidden bg-gray-100">
+        <article className="h-full overflow-hidden rounded-2xl border bg-white shadow-sm">
+            <div className="relative h-32 sm:h-52 overflow-hidden bg-gray-100">
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
@@ -22,18 +21,18 @@ export function MenuItemCard({ item }: Props) {
                 )}
             </div>
 
-            <div className="p-6">
-                <h3 className="text-xl font-extrabold tracking-tight text-gray-900">
+            <div className="flex flex-1 flex-col p-3 sm:p-4">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                     {item.name}
                 </h3>
 
                 {item.description ? (
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+                    <p className="text-xs text-gray-500">
                         {item.description}
                     </p>
                 ) : null}
 
-                <div className="mt-3 flex items-center justify-between text-sm text-gray-700">
+                <div className="mt-2 flex items-center justify-between text-xs sm:text-sm text-gray-700">
                     <span className="font-semibold">{Number(item.price).toFixed(2)}</span>
                     {typeof item.calories === "number" ? (
                         <span className="text-gray-500">{item.calories} cals</span>
@@ -41,12 +40,14 @@ export function MenuItemCard({ item }: Props) {
                 </div>
 
                 {item.ingredients?.length ? (
-                    <div className="mt-5">
-                        <div className="text-sm font-semibold text-gray-800">Ingredients:</div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            {item.ingredients.slice(0, 5).map((ing: string) => (
-                                <IngredientPill key={ing} text={ing} />
-                            ))}
+                    <div className="mt-3">
+                        {/* show fewer pills on mobile */}
+                        <div className="mt-2 flex flex-wrap gap-0.5">
+                            {item.ingredients
+                                .slice(0, 3) // mobile limit
+                                .map((ing: string) => (
+                                    <IngredientPill key={ing} text={ing} />
+                                ))}
                         </div>
                     </div>
                 ) : null}
