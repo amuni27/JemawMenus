@@ -33,7 +33,16 @@ export default function MenuQrModal({ tenantSlug, menuId, onClose }: Props) {
       >
         <h2 className="mb-4 text-lg font-semibold">Menu QR Code</h2>
         <QRCode value={url} size={256} />
-        <p className="mt-4 text-sm text-gray-500 break-all text-center">{url}</p>
+        <p className="mt-4 text-sm text-gray-500 break-all text-center">
+          <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline hover:text-blue-800"
+          >
+            View Menu
+          </a>
+        </p>
         <div className="mt-6 flex gap-3">
           <Button variant="secondary" onClick={onClose}>Close</Button>
           <Button onClick={handlePrint}>Print</Button>
