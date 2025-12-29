@@ -37,9 +37,6 @@ export function MenuHeader({
                         <div className="text-2xl font-extrabold text-gray-900">
                             {businessName ?? "Menu"}
                         </div>
-                        {activeMenuDescription ? (
-                            <div className="mt-1 text-sm text-gray-500">{activeMenuDescription}</div>
-                        ) : null}
                     </div>
                 </div>
 
