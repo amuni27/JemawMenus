@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function MenuQrModal({ tenantSlug, menuId, onClose }: Props) {
-  const url = buildMenuUrl(tenantSlug, menuId);
+  const url = buildMenuUrl(tenantSlug);
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
