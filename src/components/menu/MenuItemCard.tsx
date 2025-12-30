@@ -1,56 +1,66 @@
-import {IngredientPill} from "./IngredientPill.tsx";
-
 type Props = {
-    item: any; // we’ll tighten this later if you want
+    item: any;
+    currency?: string; // pass from parent
 };
 
-export function MenuItemCard({ item }: Props) {
+export function MenuItemCard({ item, currency = "ETB" }: Props) {
+    const price =
+        typeof item.price === "number" || typeof item.price === "string"
+            ? Number(item.price)
+            : null;
+
     return (
-        <article className="h-full overflow-hidden rounded-2xl border bg-white shadow-sm">
+        <article
+            className="
+        group h-full overflow-hidden rounded-2xl bg-white
+        ring-1 ring-gray-200 shadow-sm
+        transition hover:-translate-y-0.5 hover:shadow-md hover:ring-gray-300
+      "
+        >
             <div className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
                         alt={item.name}
-                        className="aspect-square h-full w-full object-cover transition-transform duration-300 ease-out hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+                        loading="lazy"
                     />
                 ) : (
-                    <div className="flex h-full items-center justify-center text-gray-400">
+                    <div className="flex h-full items-center justify-center text-sm text-gray-400">
                         No image
                     </div>
                 )}
             </div>
 
             <div className="flex flex-1 flex-col p-3 sm:p-4">
-                <h3 className="text-base sm:text-sm font-semibold text-gray-900">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-1">
                     {item.name}
                 </h3>
 
                 {item.description ? (
-                    <p className="text-sm text-gray-500 line-clamp-2">
+                    <p className="mt-1 text-sm text-gray-500 line-clamp-2">
                         {item.description}
                     </p>
-                ) : null}
+                ) : (
+                    <p className="mt-1 text-sm text-gray-400 italic">No description</p>
+                )}
 
-                <div className="mt-2 flex items-center justify-between text-xs sm:text-sm text-gray-700">
-                    <span className="text-sm font-semibold text-gray-900">ETB {Number(item.price).toFixed(2)}</span>
+                <div className="mt-3 flex items-end justify-between">
+                    <div className="text-base font-bold text-gray-900">
+                        {price !== null && Number.isFinite(price) ? (
+                            <>
+                                <span className="text-sm font-semibold text-gray-500">{currency}</span>{" "}
+                                {price.toFixed(2)}
+                            </>
+                        ) : (
+                            <span className="text-sm text-gray-400">Price not set</span>
+                        )}
+                    </div>
+
                     {typeof item.calories === "number" ? (
-                        <span className="text-xs text-gray-400">{item.calories} cals</span>
+                        <span className="text-xs text-gray-400">{item.calories} cal</span>
                     ) : null}
                 </div>
-
-                {/*{item.ingredients?.length ? (*/}
-                {/*    <div className="mt-3">*/}
-                {/*        /!* show fewer pills on mobile *!/*/}
-                {/*        <div className="mt-2 flex flex-wrap gap-0.5">*/}
-                {/*            {item.ingredients*/}
-                {/*                .slice(0, 3) // mobile limit*/}
-                {/*                .map((ing: string) => (*/}
-                {/*                    <IngredientPill key={ing} text={ing} />*/}
-                {/*                ))}*/}
-                {/*        </div>*/}
-                {/*    </div>*/}
-                {/*) : null}*/}
             </div>
         </article>
     );

@@ -60,7 +60,7 @@ export default function CustomerMenu() {
     }
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className=" bg-white">
             <MenuHeader
                 businessName={business?.name}
                 activeMenuCurrency={activeMenu?.currency}
@@ -80,40 +80,43 @@ export default function CustomerMenu() {
                 </div>
             ) : null}
 
-            <div className="mx-auto max-w-7xl px-6 py-10">
-                <div className="flex flex-wrap items-center gap-2 mb-6">
-                    <CategoryTab
-                        active={activeCategoryId === "ALL"}
-                        label="All"
-                        onClick={() => setActiveCategoryId("ALL")}
-                    />
-
-                    {sortedCategories.map((c: any) => (
+            <div className="mx-auto px-4 sm:px-6 py-8 sm:py-10 flex justify-center">
+                <div className="w-full max-w-4xl">
+                    <div className="flex flex-wrap items-center gap-2 mb-6">
                         <CategoryTab
-                            key={c.id}
-                            active={activeCategoryId === c.id}
-                            label={c.name}
-                            onClick={() => setActiveCategoryId(c.id)}
+                            active={activeCategoryId === "ALL"}
+                            label="All"
+                            onClick={() => setActiveCategoryId("ALL")}
                         />
-                    ))}
+
+                        {sortedCategories.map((c: any) => (
+                            <CategoryTab
+                                key={c.id}
+                                active={activeCategoryId === c.id}
+                                label={c.name}
+                                onClick={() => setActiveCategoryId(c.id)}
+                            />
+                        ))}
+                    </div>
+
+
+                    <main>
+                        {!activeMenu ? (
+                            <div className="text-gray-600">Select a menu.</div>
+                        ) : (
+                            <>
+                                {visibleGroups.map((g: any) => (
+                                    <CategorySection
+                                        key={g.category.id}
+                                        category={g.category}
+                                        items={g.items}
+                                        currency={activeMenu?.currency}
+                                    />
+                                ))}
+                            </>
+                        )}
+                    </main>
                 </div>
-
-
-                <main>
-                    {!activeMenu ? (
-                        <div className="text-gray-600">Select a menu.</div>
-                    ) : (
-                        <>
-                            {visibleGroups.map((g: any) => (
-                                <CategorySection
-                                    key={g.category.id}
-                                    category={g.category}
-                                    items={g.items}
-                                />
-                            ))}
-                        </>
-                    )}
-                </main>
             </div>
         </div>
     );

@@ -4,28 +4,41 @@ import { MenuItemCard } from "./MenuItemCard";
 type Props = {
     category: any;
     items: any[];
+    currency?: string;
 };
 
-export function CategorySection({ category, items }: Props) {
+export function CategorySection({ category, items, currency }: Props) {
+    const itemCount = items?.length ?? 0;
+
     return (
-        <section className="mb-12">
-        <div className="mb-5 flex items-end justify-between">
-        <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
-            {category.name}
-            </h2>
+        <section className="mb-10 sm:mb-12">
+            <div className="mb-4 flex items-end justify-between gap-3">
+                <div>
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+                        {category.name}
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                        {itemCount} item{itemCount === 1 ? "" : "s"}
+                    </p>
+                </div>
+
+                <div className="hidden sm:block h-px flex-1 bg-gray-200" />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {items.map((item: any) => (
-                    <MenuItemCard key={item.id} item={item} />
+                    <MenuItemCard key={item.id} item={item} currency={currency} />
                 ))}
 
-    {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-gray-500">
-            No items available in this category.
-    </div>
-    ) : null}
-    </div>
-    </section>
-);
+                {itemCount === 0 ? (
+                    <div className="col-span-full rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
+                        <div className="text-sm font-semibold text-gray-900">No items yet</div>
+                        <div className="mt-1 text-sm text-gray-500">
+                            This category doesn’t have available items right now.
+                        </div>
+                    </div>
+                ) : null}
+            </div>
+        </section>
+    );
 }
