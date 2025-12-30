@@ -10,9 +10,7 @@ import {CategoryTab} from "../../components/menu/CategoryTab.tsx";
 
 export default function CustomerMenu() {
     const {tenantSlug} = useParams<{ tenantSlug: string }>();
-
     const {business, menus, loading, error} = usePublicBusinessMenu(tenantSlug);
-
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [activeCategoryId, setActiveCategoryId] = useState<string | "ALL">("ALL");
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -83,7 +81,7 @@ export default function CustomerMenu() {
             ) : null}
 
             <div className="mx-auto max-w-7xl px-6 py-10">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 mb-6">
                     <CategoryTab
                         active={activeCategoryId === "ALL"}
                         label="All"
