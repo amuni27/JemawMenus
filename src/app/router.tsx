@@ -6,7 +6,6 @@ import RegisterWizard from '../pages/public/RegisterWizard';
 import AdminLayout from '../components/layout/AdminLayout.tsx';
 import CustomerMenu from '../pages/customer/CustomerMenu.tsx';
 import Dashboard from '../pages/admin/Dashboard';
-import AdminMenuPage from '../features/menu/pages/AdminMenuPage';
 import QrListPage from '../pages/admin/QrListPage';
 import DealsPage from '../pages/admin/DealsPage';
 import AdsPage from '../pages/admin/AdsPage';
