@@ -51,7 +51,7 @@ export function MenuSidebar({ menus, activeMenuId, onSelectMenu, loading }: Prop
 
                 <div
                     ref={scrollerRef}
-                    className="flex gap-3 overflow-x-auto overflow-y-hidden whitespace-nowrap p-2 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="flex gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap p-1 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                     {menus?.map((m: any) => {
                         const active = m.id === activeMenuId;
@@ -60,16 +60,13 @@ export function MenuSidebar({ menus, activeMenuId, onSelectMenu, loading }: Prop
                             <button
                                 key={m.id}
                                 onClick={() => onSelectMenu(m.id)}
-                                className={`shrink-0 snap-start rounded-xl px-4 py-2 text-left transition ${
+                                className={`shrink-0 snap-start rounded-xl px-3 py-1 text-left transition ${
                                     active
                                         ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
                                         : "hover:bg-gray-50"
                                 }`}
                             >
                                 <div className="font-semibold">{m.name}</div>
-                                {m.description ? (
-                                    <div className="mt-1 text-xs text-gray-500">{m.description}</div>
-                                ) : null}
                             </button>
                         );
                     })}
