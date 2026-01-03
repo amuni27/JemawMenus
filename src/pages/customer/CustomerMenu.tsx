@@ -3,7 +3,7 @@ import {useParams} from "react-router-dom";
 import {usePublicBusinessMenu} from "../../features/menu/hooks/usePublicBusinessMenu";
 
 import {MenuHeader} from "../../components/menu/MenuHeader";
-import {MenuSidebar} from "../../components/menu/MenuSidebar";
+import {MenuPicker} from "../../components/menu/MenuPicker.tsx";
 import {MobileDrawer} from "../../components/menu/MobileDrawer";
 import {CategorySection} from "../../components/menu/CategorySection";
 import {CategoryTab} from "../../components/menu/CategoryTab.tsx";

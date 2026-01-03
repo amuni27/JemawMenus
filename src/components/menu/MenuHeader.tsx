@@ -1,5 +1,5 @@
 import React from "react";
-import {MenuSidebar} from "./MenuSidebar.tsx";
+import {MenuPicker} from "./MenuPicker.tsx";
 
 type Props = {
     businessName?: string;
@@ -42,7 +42,7 @@ export function MenuHeader({
             </div>
 
             <div className="mx-auto max-w-7xl px-6 pb-2">
-                <MenuSidebar
+                <MenuPicker
                     menus={menus ?? []}
                     activeMenuId={activeMenuId}
                     onSelectMenu={handleSelectMenu}
