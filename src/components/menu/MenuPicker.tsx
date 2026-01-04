@@ -129,7 +129,7 @@ export function MenuPicker({
                             </div>
 
                             {/* menu list */}
-                            <div className="mt-3 max-h-[55vh] overflow-auto pr-1">
+                            <div className="mt-3 max-h-[55vh] overflow-auto pr-2">
                                 {!menus?.length && !loading ? (
                                     <div
                                         className="rounded-2xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
@@ -145,7 +145,7 @@ export function MenuPicker({
                                             onClick={() => handlePick(m.id)}
                                             className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition ${
                                                 active
-                                                    ? "bg-emerald-50 ring-1 ring-emerald-200"
+                                                    ? "bg-emerald-50 ring-1 ring-inset ring-emerald-200"
                                                     : "hover:bg-gray-50"
                                             }`}
                                         >
