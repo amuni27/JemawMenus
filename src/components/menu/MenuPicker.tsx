@@ -56,8 +56,8 @@ export function MenuPicker({
                     {/* Mobile Search icon (visible on < sm) - FIRST on mobile */}
                     <button
                         type="button"
-                        onClick={() => setOpen(true)} // open sheet and search inside
-                        className="order-1 sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition hover:bg-gray-50 active:scale-[0.99]"
+                        onClick={() => setOpen(true)} // open sheet and search inside rounded-full border border-gray-200 bg-white shadow-sm
+                        className="order-1 sm:hidden inline-flex h-10 w-10 items-center justify-center  transition hover:bg-gray-50 active:scale-[0.99]"
                         aria-label="Search menu"
                     >
                         <SearchIcon className="h-5 w-5 text-gray-700" />
@@ -66,8 +66,8 @@ export function MenuPicker({
                     {/* Menu Selector - SECOND on mobile, FIRST on desktop */}
                     <button
                         type="button"
-                        onClick={() => setOpen(true)}
-                        className="order-2 sm:order-1 group inline-flex min-w-0 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-sm transition hover:bg-gray-50 active:scale-[0.99]"
+                        onClick={() => setOpen(true)} //rounded-full border border-gray-200 shadow-sm
+                        className="order-2 sm:order-1 group inline-flex min-w-0 items-center gap-2  bg-white px-4 py-2  transition hover:bg-gray-50 active:scale-[0.99]"
                         aria-label="Select menu category"
                     >
                         {/* small dot like modern UI */}
