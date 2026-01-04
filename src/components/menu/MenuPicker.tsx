@@ -53,7 +53,7 @@ export function MenuPicker({
             {/* Top bar container */}
             <div className="w-full">
                 <div
-                    className="mx-auto flex max-w-7xl items-center gap-1  py-1 sm:justify-between sm:gap-3 sm:px-6">
+                    className="mx-auto flex max-w-7xl items-center gap-1  pb-1 sm:justify-between sm:gap-3 sm:px-6">
                     {/* Mobile Search icon (visible on < sm) - FIRST on mobile */}
                     <button
                         type="button"

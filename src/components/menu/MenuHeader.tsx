@@ -22,7 +22,7 @@ export function MenuHeader({
                            }: Props) {
     return (
         <header className="border-b bg-white">
-            <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-2">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 pt-2">
                 <div className=" mt-1 inline-flex items-center justify-center  bg-white px-2 py-1 text-gray-700 ">
                     {logoUrl && (
                         <img
@@ -31,7 +31,7 @@ export function MenuHeader({
                             className="h-10 w-10 rounded-lg object-contain"
                         />
                     )}
-                    <p className="text-2xl font-extrabold text-gray-900 pl-2">{businessName ?? "Menu"}</p>
+                    <p className="text-xl font-extrabold text-gray-900 pl-2">{businessName ?? "Menu"}</p>
                 </div>
 
                 {activeMenuCurrency ? (
