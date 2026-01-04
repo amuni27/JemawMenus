@@ -12,12 +12,14 @@ export function MenuItemCard({ item, currency = "ETB" }: Props) {
     return (
         <article
             className="
-        group h-full overflow-hidden rounded-2xl bg-white
-        ring-1 ring-gray-200 shadow-sm
-        transition hover:-translate-y-0.5 hover:shadow-md hover:ring-gray-300
-      "
+                group h-full overflow-hidden rounded-2xl bg-white
+                ring-1 ring-gray-200 shadow-sm
+                transition hover:-translate-y-0.5 hover:shadow-md hover:ring-gray-300
+            "
         >
-            <div className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
+            {/* Image */}
+            <div className="relative rounded-2xl border bg-white">
+                <div className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
@@ -30,8 +32,32 @@ export function MenuItemCard({ item, currency = "ETB" }: Props) {
                         No image
                     </div>
                 )}
+                </div>
+
+                {/* ADD BUTTON (Airbnb / DoorDash style) */}
+                <div className="absolute inset-y-0 right-3 flex items-center">
+                    {/* ADD BUTTON (top-right like DoorDash/Airbnb) */}
+                    <button
+                        type="button"
+                        onClick={() => console.log("Add item:", item)}
+                        aria-label={`Add ${item.name}`}
+                        className="
+    absolute right-3 top-32
+    inline-flex h-9 w-9 items-center justify-center
+    rounded-full bg-emerald-600 text-white
+    shadow-lg ring-[3px] ring-white
+    transition
+    hover:bg-emerald-700 active:scale-95
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500
+  "
+                    >
+                        <PlusIcon className="h-6 w-6" />
+                    </button>
+
+                </div>
             </div>
 
+            {/* Content */}
             <div className="flex flex-1 flex-col p-3 sm:p-4">
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-1">
                     {item.name}
@@ -63,5 +89,18 @@ export function MenuItemCard({ item, currency = "ETB" }: Props) {
                 </div>
             </div>
         </article>
+    );
+}
+
+/* ---------- Plus icon ---------- */
+function PlusIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
+            <path
+                fillRule="evenodd"
+                d="M10 4.75a.75.75 0 0 1 .75.75v3.75h3.75a.75.75 0 0 1 0 1.5h-3.75v3.75a.75.75 0 0 1-1.5 0v-3.75H5.5a.75.75 0 0 1 0-1.5h3.75V5.5a.75.75 0 0 1 .75-.75Z"
+                clipRule="evenodd"
+            />
+        </svg>
     );
 }
