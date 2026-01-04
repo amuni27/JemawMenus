@@ -67,13 +67,18 @@ export default function CustomerMenu() {
         setActiveCategoryId(catId);
 
         requestAnimationFrame(() => {
-            if (catId === "ALL") {
-                topSentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-            } else {
-                sectionRefs.current[catId]?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
+            const stickyH = stickyBarRef.current?.getBoundingClientRect().height ?? 0;
+            const gap = 12; // small breathing room under the tabs
 
-            // allow observer to take over after the smooth scroll settles
+            const target =
+                catId === "ALL" ? topSentinelRef.current : sectionRefs.current[catId];
+
+            if (!target) return;
+
+            const y = window.scrollY + target.getBoundingClientRect().top - stickyH - gap;
+
+            window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+
             window.setTimeout(() => {
                 isProgrammaticScroll.current = false;
             }, 500);
