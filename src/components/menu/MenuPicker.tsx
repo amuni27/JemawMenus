@@ -58,10 +58,10 @@ export function MenuPicker({
                     <button
                         type="button"
                         onClick={() => setOpen(true)} // open sheet and search inside rounded-full border border-gray-200 bg-white shadow-sm
-                        className="order-1 sm:hidden inline-flex h-10 w-10 items-center  transition hover:bg-gray-50 active:scale-[0.99]"
+                        className="order-1 sm:hidden inline-flex h-10 w-10 items-center transition hover:bg-gray-50 active:scale-[0.99]"
                         aria-label="Search menu"
                     >
-                        <SearchIcon className="h-5 w-5 text-gray-700"/>
+                        <SearchIcon className="h-6 w-6 text-gray-700"/>
                     </button>
 
                     {/* Menu Selector - SECOND on mobile, FIRST on desktop */}
@@ -73,7 +73,7 @@ export function MenuPicker({
                     >
                         {/* small dot like modern UI */}
                         <span className="h-2.5 w-2.5 rounded-full bg-emerald-600"/>
-                        <span className="truncate text-sm font-semibold text-gray-900">
+                        <span className="truncate text-base font-semibold text-gray-900">
                         {activeMenu?.name ?? (loading ? "Loading..." : "Select menu")}
                         </span>
                         <ChevronDownIcon
