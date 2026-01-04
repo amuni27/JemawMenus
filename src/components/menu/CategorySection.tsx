@@ -11,7 +11,7 @@ export function CategorySection({ category, items, currency }: Props) {
     const itemCount = items?.length ?? 0;
 
     return (
-        <section className="mb-10 sm:mb-12">
+        <section className="mb-10 sm:mb-12 p-1">
             <div className="mb-4 flex items-end justify-between gap-3">
                 <div>
                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
