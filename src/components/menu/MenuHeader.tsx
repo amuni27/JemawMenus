@@ -21,7 +21,7 @@ export function MenuHeader({
                                loading
                            }: Props) {
     return (
-        <header className="border-b bg-white">
+        <header className="border-b bg-white lg:sticky lg:top-0 lg:z-40">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 pt-2">
                 <div className=" mt-1 inline-flex items-center justify-center  bg-white px-2 py-1 text-gray-700 ">
                     {logoUrl && (
