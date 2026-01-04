@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {useEffect, useMemo, useRef, useState} from "react";
 
 type Menu = { id: string; name: string };
 
@@ -52,36 +52,38 @@ export function MenuPicker({
         <>
             {/* Top bar container */}
             <div className="w-full">
-                <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-1 sm:justify-between sm:gap-3 sm:px-6">
+                <div
+                    className="mx-auto flex max-w-7xl items-center gap-1  py-1 sm:justify-between sm:gap-3 sm:px-6">
                     {/* Mobile Search icon (visible on < sm) - FIRST on mobile */}
                     <button
                         type="button"
                         onClick={() => setOpen(true)} // open sheet and search inside rounded-full border border-gray-200 bg-white shadow-sm
-                        className="order-1 sm:hidden inline-flex h-10 w-10 items-center justify-center  transition hover:bg-gray-50 active:scale-[0.99]"
+                        className="order-1 sm:hidden inline-flex h-10 w-10 items-center  transition hover:bg-gray-50 active:scale-[0.99]"
                         aria-label="Search menu"
                     >
-                        <SearchIcon className="h-5 w-5 text-gray-700" />
+                        <SearchIcon className="h-5 w-5 text-gray-700"/>
                     </button>
 
                     {/* Menu Selector - SECOND on mobile, FIRST on desktop */}
                     <button
                         type="button"
                         onClick={() => setOpen(true)} //rounded-full border border-gray-200 shadow-sm
-                        className="order-2 sm:order-1 group inline-flex min-w-0 items-center gap-2  bg-white px-4 py-2  transition hover:bg-gray-50 active:scale-[0.99]"
+                        className="order-2 sm:order-1 group inline-flex min-w-0 items-center gap-2  bg-white  py-2  transition hover:bg-gray-50 active:scale-[0.99]"
                         aria-label="Select menu category"
                     >
                         {/* small dot like modern UI */}
-                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-600"/>
                         <span className="truncate text-sm font-semibold text-gray-900">
-              {activeMenu?.name ?? (loading ? "Loading..." : "Select menu")}
-            </span>
-                        <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-500 transition group-hover:text-gray-700" />
+                        {activeMenu?.name ?? (loading ? "Loading..." : "Select menu")}
+                        </span>
+                        <ChevronDownIcon
+                            className="h-4 w-4 shrink-0 text-gray-500 transition group-hover:text-gray-700"/>
                     </button>
 
                     {/* Desktop search input (visible on >= sm) */}
                     <div className="order-2 hidden flex-1 sm:block">
                         <div className="relative">
-                            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"/>
                             <input
                                 value={q}
                                 onChange={(e) => handleSearchChange(e.target.value)}
@@ -104,10 +106,11 @@ export function MenuPicker({
                     />
 
                     {/* sheet */}
-                    <div className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-2xl rounded-t-3xl bg-white shadow-2xl">
+                    <div
+                        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-2xl rounded-t-3xl bg-white shadow-2xl">
                         <div className="px-4 pb-4 pt-3 sm:px-6">
                             {/* grab handle */}
-                            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-200" />
+                            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-gray-200"/>
 
                             {/* header row */}
                             <div className="flex items-center justify-between gap-3">
@@ -121,14 +124,15 @@ export function MenuPicker({
                                     className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100"
                                     aria-label="Close"
                                 >
-                                    <XIcon className="h-5 w-5 text-gray-700" />
+                                    <XIcon className="h-5 w-5 text-gray-700"/>
                                 </button>
                             </div>
 
                             {/* search inside sheet (mobile UX like DoorDash) */}
                             <div className="mt-3">
                                 <div className="relative">
-                                    <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                    <SearchIcon
+                                        className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"/>
                                     <input
                                         ref={searchRef}
                                         value={q}
@@ -142,7 +146,8 @@ export function MenuPicker({
                             {/* menu list */}
                             <div className="mt-3 max-h-[55vh] overflow-auto pr-1">
                                 {!menus?.length && !loading ? (
-                                    <div className="rounded-2xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
+                                    <div
+                                        className="rounded-2xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
                                         No menus found.
                                     </div>
                                 ) : null}
@@ -166,7 +171,7 @@ export function MenuPicker({
                                             </div>
 
                                             {active ? (
-                                                <CheckIcon className="h-5 w-5 text-emerald-700" />
+                                                <CheckIcon className="h-5 w-5 text-emerald-700"/>
                                             ) : (
                                                 <span className="text-xs text-gray-400">Select</span>
                                             )}
