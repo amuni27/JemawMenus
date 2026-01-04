@@ -129,7 +129,7 @@ export function MenuPicker({
                             </div>
 
                             {/* menu list */}
-                            <div className="mt-3 max-h-[55vh] overflow-auto pr-2">
+                            <div className="mt-3 max-h-[55vh] overflow-auto px-2 pb-2">
                                 {!menus?.length && !loading ? (
                                     <div
                                         className="rounded-2xl border border-dashed border-gray-200 p-4 text-sm text-gray-500">
