@@ -42,7 +42,7 @@ export function MenuItemCard({ item, currency = "ETB" }: Props) {
                         onClick={() => console.log("Add item:", item)}
                         aria-label={`Add ${item.name}`}
                         className="
-    absolute right-3 top-32
+    absolute right-1 top-28 lg:top-32 lg:right-3
     inline-flex h-9 w-9 items-center justify-center
     rounded-full bg-emerald-600 text-white
     shadow-lg ring-[3px] ring-white
