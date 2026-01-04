@@ -143,10 +143,10 @@ export function MenuPicker({
                                         <button
                                             key={m.id}
                                             onClick={() => handlePick(m.id)}
-                                            className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition ${
+                                            className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition active:scale-[0.99] ${
                                                 active
-                                                    ? "bg-emerald-50 ring-1 ring-inset ring-emerald-200"
-                                                    : "hover:bg-gray-50"
+                                                    ? "bg-emerald-50 border border-emerald-200"
+                                                    : "border border-transparent hover:bg-gray-50"
                                             }`}
                                         >
                                             <div className="min-w-0">
