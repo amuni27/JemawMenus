@@ -116,7 +116,7 @@ export function MenuPicker({
                             <div className="flex items-center justify-between gap-3">
                                 <div>
                                     <div className="text-base font-bold text-gray-900">Full Menu</div>
-                                    <div className="text-xs text-gray-500">Choose a category</div>
+                                    <div className="text-xs text-gray-500">Choose a menu</div>
                                 </div>
 
                                 <button
@@ -126,21 +126,6 @@ export function MenuPicker({
                                 >
                                     <XIcon className="h-5 w-5 text-gray-700"/>
                                 </button>
-                            </div>
-
-                            {/* search inside sheet (mobile UX like DoorDash) */}
-                            <div className="mt-3">
-                                <div className="relative">
-                                    <SearchIcon
-                                        className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"/>
-                                    <input
-                                        ref={searchRef}
-                                        value={q}
-                                        onChange={(e) => handleSearchChange(e.target.value)}
-                                        placeholder="Search categories…"
-                                        className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm text-gray-900 outline-none focus:border-gray-300 focus:ring-2 focus:ring-emerald-100"
-                                    />
-                                </div>
                             </div>
 
                             {/* menu list */}
