@@ -171,17 +171,17 @@ export default function CustomerMenu() {
                 </div>
             ) : null}
 
-            <div className="mx-auto px-4 sm:px-6 py-8 sm:py-10 flex justify-center">
+            <div className="mx-auto px-4 sm:px-6 py-4 sm:py-10 flex justify-center">
                 <div className="w-full max-w-4xl">
                     {/* sentinel for "ALL" (top of the list area) */}
                     <div ref={topSentinelRef}/>
 
                     {/* Sticky category bar (header scrolls normally, this stays visible) */}
-                    <div ref={stickyBarRef} className="sticky top-0 z-20 bg-white border-b border-gray-100">
+                    <div ref={stickyBarRef} className="sticky top-0 z-20 bg-white border-b border-gray-50">
                         {/* horizontally scrollable tabs (same UI look, just scrollable) */}
                         <div
                             ref={tabsBarRef}
-                            className="flex flex-nowrap items-center gap-2 mb-6 overflow-x-auto py-2 px-1"
+                            className="flex flex-nowrap items-center gap-2 mb-2 overflow-x-auto py-1 px-1"
                         >
                             <CategoryTab
                                 tabId="ALL"
