@@ -185,10 +185,6 @@ export default function CustomerMenu() {
 
     // keep the active tab scrolled into view (horizontal)
     useEffect(() => {
-        // setActiveCategoryId("ALL");
-        // requestAnimationFrame(() => {
-        //     topSentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        // });
         const bar = tabsBarRef.current;
         if (!bar) return;
 

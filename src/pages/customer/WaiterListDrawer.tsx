@@ -1,5 +1,7 @@
 import React, { useMemo } from "react";
 import {WaiterListMap} from "../../types/menu.ts";
+import {BroomIcon, ClearIcon} from "../../assets/svg_icon.tsx";
+import {TrashIcon, XIcon} from "lucide-react";
 
 
 
@@ -49,16 +51,20 @@ export function WaiterListDrawer({
                         <button
                             type="button"
                             onClick={onClear}
-                            className="rounded-lg border px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                            className="inline-flex h-9 p-2 items-center justify-center rounded-lg border text-gray-700 hover:bg-gray-100"
+                            aria-label="Clear waiter list"
+                            title="Clear"
                         >
                             Clear
                         </button>
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-lg border px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border text-gray-700 hover:bg-gray-100"
+                            aria-label="Close waiter list"
+                            title="Close"
                         >
-                            Close
+                            <XIcon className="h-5 w-5"/>
                         </button>
                     </div>
                 </div>
@@ -112,7 +118,7 @@ export function WaiterListDrawer({
                                                 <button
                                                     type="button"
                                                     onClick={() => onDecrement(e.itemId)}
-                                                    className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-50"
+                                                    className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-100"
                                                     aria-label={`Decrease ${snap.name}`}
                                                 >
                                                     –
@@ -123,7 +129,7 @@ export function WaiterListDrawer({
                                                 <button
                                                     type="button"
                                                     onClick={() => onIncrement(e.itemId)}
-                                                    className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-50"
+                                                    className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-100"
                                                     aria-label={`Increase ${snap.name}`}
                                                 >
                                                     +
@@ -132,9 +138,9 @@ export function WaiterListDrawer({
                                                 <button
                                                     type="button"
                                                     onClick={() => onRemove(e.itemId)}
-                                                    className="ml-auto rounded-lg border px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                                                    className="ml-auto rounded-lg border px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                                                 >
-                                                    Remove
+                                                    <TrashIcon className="h-5 w-5" />
                                                 </button>
                                             </div>
                                         </div>
