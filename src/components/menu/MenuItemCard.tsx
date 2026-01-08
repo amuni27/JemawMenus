@@ -1,9 +1,10 @@
 type Props = {
     item: any;
     currency?: string; // pass from parent
+    onAddItem?: (item: any) => void;
 };
 
-export function MenuItemCard({ item, currency = "ETB" }: Props) {
+export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
     const price =
         typeof item.price === "number" || typeof item.price === "string"
             ? Number(item.price)
@@ -39,7 +40,7 @@ export function MenuItemCard({ item, currency = "ETB" }: Props) {
                     {/* ADD BUTTON (top-right like DoorDash/Airbnb) */}
                     <button
                         type="button"
-                        onClick={() => console.log("Add item:", item)}
+                        onClick={() => onAddItem?.(item)}
                         aria-label={`Add ${item.name}`}
                         className="
     absolute right-1 top-28 lg:top-32 lg:right-3

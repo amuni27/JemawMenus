@@ -5,6 +5,9 @@ import { usePublicBusinessMenu } from "../../features/menu/hooks/usePublicBusine
 import { MenuHeader } from "../../components/menu/MenuHeader";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
+import {useStorageState} from "../../features/menu/hooks/useStorageState.ts";
+import {WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
+import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 
 export default function CustomerMenu() {
     const { tenantSlug } = useParams<{ tenantSlug: string }>();
@@ -19,6 +22,101 @@ export default function CustomerMenu() {
     const topSentinelRef = useRef<HTMLDivElement | null>(null);
     const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const isProgrammaticScroll = useRef(false);
+
+    const WAITER_LIST_STORAGE_KEY = `waiter_list:${tenantSlug ?? "unknown"}`;
+    const [waiterList, setWaiterList] = useStorageState<WaiterListMap>(
+        WAITER_LIST_STORAGE_KEY,
+        {},
+        "session"
+    );
+
+    const [isWaiterListOpen, setIsWaiterListOpen] = useState(false);
+
+    const waiterListItemCount = useMemo(() => {
+        return Object.values(waiterList).reduce((sum, e) => sum + e.quantity, 0);
+    }, [waiterList]);
+
+    function openWaiterList() {
+        setIsWaiterListOpen(true);
+    }
+
+    function closeWaiterList() {
+        setIsWaiterListOpen(false);
+    }
+
+    function addMenuItemToWaiterList(menuItem: any) {
+        const itemId = String(menuItem.id);
+
+        // snapshot: keep it small + stable
+        const snapshot = {
+            name: String(menuItem.name ?? "Unnamed item"),
+            imageUrl: menuItem.imageUrl ? String(menuItem.imageUrl) : undefined,
+            price:
+                typeof menuItem.price === "number" || typeof menuItem.price === "string"
+                    ? Number(menuItem.price)
+                    : undefined,
+            currency: activeMenu?.currency,
+        };
+
+        setWaiterList((prev) => {
+            const existing = prev[itemId];
+
+            const next: WaiterListEntry = existing
+                ? {
+                    ...existing,
+                    quantity: existing.quantity + 1,
+                    // keep existing snapshot OR update it (choose one).
+                    // I recommend keeping existing snapshot for stability:
+                    snapshot: existing.snapshot,
+                }
+                : {
+                    itemId,
+                    quantity: 1,
+                    snapshot,
+                };
+
+            return { ...prev, [itemId]: next };
+        });
+    }
+
+    function incrementWaiterListItem(itemId: string) {
+        setWaiterList((prev) => {
+            const existing = prev[itemId];
+            if (!existing) return prev;
+            return {
+                ...prev,
+                [itemId]: { ...existing, quantity: existing.quantity + 1 },
+            };
+        });
+    }
+
+    function decrementWaiterListItem(itemId: string) {
+        setWaiterList((prev) => {
+            const existing = prev[itemId];
+            if (!existing) return prev;
+
+            if (existing.quantity <= 1) {
+                const { [itemId]: _, ...rest } = prev;
+                return rest;
+            }
+
+            return {
+                ...prev,
+                [itemId]: { ...existing, quantity: existing.quantity - 1 },
+            };
+        });
+    }
+
+    function removeWaiterListItem(itemId: string) {
+        setWaiterList((prev) => {
+            const { [itemId]: _, ...rest } = prev;
+            return rest;
+        });
+    }
+
+    function clearWaiterList() {
+        setWaiterList({});
+    }
 
     // pick first menu by default
     useEffect(() => {
@@ -87,6 +185,10 @@ export default function CustomerMenu() {
 
     // keep the active tab scrolled into view (horizontal)
     useEffect(() => {
+        setActiveCategoryId("ALL");
+        requestAnimationFrame(() => {
+            topSentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
         const bar = tabsBarRef.current;
         if (!bar) return;
 
@@ -161,6 +263,8 @@ export default function CustomerMenu() {
                 activeMenuId={activeMenuId}
                 handleSelectMenu={handleSelectMenu}
                 loading={loading}
+                orderCount={waiterListItemCount}
+                onOpenOrder={openWaiterList}
             />
 
             {loading ? (
@@ -219,6 +323,7 @@ export default function CustomerMenu() {
                                             category={g.category}
                                             items={g.items}
                                             currency={activeMenu?.currency}
+                                            onAddItem={addMenuItemToWaiterList}
                                         />
                                     </div>
                                 ))}
@@ -227,6 +332,15 @@ export default function CustomerMenu() {
                     </main>
                 </div>
             </div>
+            <WaiterListDrawer
+                open={isWaiterListOpen}
+                onClose={closeWaiterList}
+                waiterList={waiterList}
+                onIncrement={incrementWaiterListItem}
+                onDecrement={decrementWaiterListItem}
+                onRemove={removeWaiterListItem}
+                onClear={clearWaiterList}
+            />
         </div>
     );
 }

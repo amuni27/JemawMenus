@@ -96,3 +96,18 @@ export type CreateItemPayload = {
   spiceLevel?: "NONE" | "MILD" | "MEDIUM" | "HOT" | null;
   status?: ItemStatus;
 };
+
+export type WaiterListSnapshot = {
+  name: string;
+  imageUrl?: string;
+  price?: number;      // snapshot of price at time added
+  currency?: string;   // snapshot of currency at time added
+};
+
+export type WaiterListEntry = {
+  itemId: string;
+  quantity: number;
+  snapshot: WaiterListSnapshot;
+};
+
+export type WaiterListMap = Record<string, WaiterListEntry>;
