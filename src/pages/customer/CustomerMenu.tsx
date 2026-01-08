@@ -186,9 +186,9 @@ export default function CustomerMenu() {
     // keep the active tab scrolled into view (horizontal)
     useEffect(() => {
         // setActiveCategoryId("ALL");
-        requestAnimationFrame(() => {
-            topSentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
+        // requestAnimationFrame(() => {
+        //     topSentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        // });
         const bar = tabsBarRef.current;
         if (!bar) return;
 
@@ -281,7 +281,7 @@ export default function CustomerMenu() {
                     <div ref={topSentinelRef}/>
 
                     {/* Sticky category bar (header scrolls normally, this stays visible) */}
-                    <div ref={stickyBarRef} className="sticky top-0 z-20 bg-white border-b border-gray-50">
+                    <div ref={stickyBarRef} className="sticky top-0 z-20 bg-white border-b border-gray-50 lg:top-[100px]">
                         {/* horizontally scrollable tabs (same UI look, just scrollable) */}
                         <div
                             ref={tabsBarRef}
