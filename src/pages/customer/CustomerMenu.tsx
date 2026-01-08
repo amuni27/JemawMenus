@@ -5,10 +5,9 @@ import { usePublicBusinessMenu } from "../../features/menu/hooks/usePublicBusine
 import { MenuHeader } from "../../components/menu/MenuHeader";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
-
-import { useStorageState } from "../../features/menu/hooks/useStorageState.ts";
-import { WaiterListEntry, WaiterListMap } from "../../types/menu.ts";
-import { WaiterListDrawer } from "./WaiterListDrawer.tsx";
+import {useStorageState} from "../../features/menu/hooks/useStorageState.ts";
+import {WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
+import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 
 export default function CustomerMenu() {
     const { tenantSlug } = useParams<{ tenantSlug: string }>();
@@ -24,11 +23,6 @@ export default function CustomerMenu() {
     const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const isProgrammaticScroll = useRef(false);
 
-    // --- constants for sticky/scroll math (keep simple + stable) ---
-    const HEADER_ESTIMATE = 90; // approximate MenuHeader height (safe)
-    const GAP_UNDER_TABS = 12;
-
-    // --- Waiter list (session storage) ---
     const WAITER_LIST_STORAGE_KEY = `waiter_list:${tenantSlug ?? "unknown"}`;
     const [waiterList, setWaiterList] = useStorageState<WaiterListMap>(
         WAITER_LIST_STORAGE_KEY,
@@ -50,14 +44,10 @@ export default function CustomerMenu() {
         setIsWaiterListOpen(false);
     }
 
-    const activeMenu = useMemo(
-        () => menus?.find((m: any) => m.id === activeMenuId) ?? null,
-        [menus, activeMenuId]
-    );
-
     function addMenuItemToWaiterList(menuItem: any) {
         const itemId = String(menuItem.id);
 
+        // snapshot: keep it small + stable
         const snapshot = {
             name: String(menuItem.name ?? "Unnamed item"),
             imageUrl: menuItem.imageUrl ? String(menuItem.imageUrl) : undefined,
@@ -75,7 +65,8 @@ export default function CustomerMenu() {
                 ? {
                     ...existing,
                     quantity: existing.quantity + 1,
-                    // keep existing snapshot for stability
+                    // keep existing snapshot OR update it (choose one).
+                    // I recommend keeping existing snapshot for stability:
                     snapshot: existing.snapshot,
                 }
                 : {
@@ -133,9 +124,15 @@ export default function CustomerMenu() {
         setActiveMenuId((prev) => prev ?? menus[0].id);
     }, [menus]);
 
-    // when menu changes -> reset category + scroll to top
+    const activeMenu = useMemo(
+        () => menus?.find((m: any) => m.id === activeMenuId) ?? null,
+        [menus, activeMenuId]
+    );
+
+    // when menu changes -> reset category
     useEffect(() => {
         setActiveCategoryId("ALL");
+        // also scroll to top of list area
         requestAnimationFrame(() => {
             topSentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         });
@@ -169,29 +166,29 @@ export default function CustomerMenu() {
 
         requestAnimationFrame(() => {
             const stickyH = stickyBarRef.current?.getBoundingClientRect().height ?? 0;
+            const gap = 12; // small breathing room under the tabs
 
             const target =
                 catId === "ALL" ? topSentinelRef.current : sectionRefs.current[catId];
 
             if (!target) return;
 
-            const y =
-                window.scrollY +
-                target.getBoundingClientRect().top -
-                HEADER_ESTIMATE -
-                stickyH -
-                GAP_UNDER_TABS;
+            const y = window.scrollY + target.getBoundingClientRect().top - stickyH - gap;
 
             window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
 
             window.setTimeout(() => {
                 isProgrammaticScroll.current = false;
-            }, 700);
+            }, 500);
         });
     }
 
     // keep the active tab scrolled into view (horizontal)
     useEffect(() => {
+        // setActiveCategoryId("ALL");
+        requestAnimationFrame(() => {
+            topSentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
         const bar = tabsBarRef.current;
         if (!bar) return;
 
@@ -206,45 +203,46 @@ export default function CustomerMenu() {
         if (!groups.length) return;
 
         const stickyH = stickyBarRef.current?.getBoundingClientRect().height ?? 0;
-        const offset = Math.ceil(HEADER_ESTIMATE + stickyH + GAP_UNDER_TABS);
 
-        // section is active when it crosses just under (header + sticky tabs)
-        const rootMargin = `-${offset}px 0px -70% 0px`;
+        // We consider a section "active" when its top reaches just under the sticky category bar
+        const rootMargin = `-${Math.ceil(stickyH) + 8}px 0px -70% 0px`;
 
         const observer = new IntersectionObserver(
             (entries) => {
                 if (isProgrammaticScroll.current) return;
 
+                // find best candidate near top
                 const visible = entries
                     .filter((e) => e.isIntersecting)
-                    .sort(
-                        (a, b) =>
-                            Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top)
-                    );
+                    .sort((a, b) => {
+                        // closest to the top wins
+                        return Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top);
+                    });
 
                 if (!visible.length) return;
 
                 const best = visible[0].target as HTMLElement;
                 const catId = best.dataset.catId;
-                if (!catId) return;
 
+                if (!catId) return;
                 setActiveCategoryId(catId as any);
             },
             { root: null, rootMargin, threshold: [0.1, 0.25, 0.5] }
         );
 
+        // observe each category wrapper
         Object.values(sectionRefs.current).forEach((el) => {
             if (el) observer.observe(el);
         });
 
-        // top sentinel => activates "ALL"
+        // separate observer for top sentinel => activates "ALL"
         const topObs = new IntersectionObserver(
             (entries) => {
                 if (isProgrammaticScroll.current) return;
                 const hit = entries.some((e) => e.isIntersecting);
                 if (hit) setActiveCategoryId("ALL");
             },
-            { root: null, rootMargin: `-${offset}px 0px -85% 0px`, threshold: [0, 0.01, 0.1] }
+            { root: null, rootMargin: `-${Math.ceil(stickyH)}px 0px -85% 0px`, threshold: [0, 0.01, 0.1] }
         );
 
         if (topSentinelRef.current) topObs.observe(topSentinelRef.current);
@@ -259,9 +257,7 @@ export default function CustomerMenu() {
         <div className="bg-white">
             <MenuHeader
                 businessName={business?.name}
-                logoUrl={
-                    "https://static.spotapps.co/website_images/ab_websites/67806_website/logo.png"
-                }
+                logoUrl={"https://static.spotapps.co/website_images/ab_websites/67806_website/logo.png"}
                 activeMenuCurrency={activeMenu?.currency}
                 menus={menus}
                 activeMenuId={activeMenuId}
@@ -275,23 +271,18 @@ export default function CustomerMenu() {
                 <div className="mx-auto max-w-7xl px-6 py-10 text-gray-600">Loading menu...</div>
             ) : error ? (
                 <div className="mx-auto max-w-7xl px-6 py-10">
-                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-                        {error}
-                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>
                 </div>
             ) : null}
 
             <div className="mx-auto px-4 sm:px-6 py-4 sm:py-10 flex justify-center">
                 <div className="w-full max-w-4xl">
                     {/* sentinel for "ALL" (top of the list area) */}
-                    <div ref={topSentinelRef} />
+                    <div ref={topSentinelRef}/>
 
                     {/* Sticky category bar (header scrolls normally, this stays visible) */}
-                    <div
-                        ref={stickyBarRef}
-                        className="sticky top-0 z-20 bg-white border-b border-gray-50"
-                    >
-                        {/* horizontally scrollable tabs */}
+                    <div ref={stickyBarRef} className="sticky top-0 z-20 bg-white border-b border-gray-50 lg:top-[100px]">
+                        {/* horizontally scrollable tabs (same UI look, just scrollable) */}
                         <div
                             ref={tabsBarRef}
                             className="flex flex-nowrap items-center gap-2 overflow-x-auto py-2 px-1"
@@ -341,7 +332,6 @@ export default function CustomerMenu() {
                     </main>
                 </div>
             </div>
-
             <WaiterListDrawer
                 open={isWaiterListOpen}
                 onClose={closeWaiterList}
