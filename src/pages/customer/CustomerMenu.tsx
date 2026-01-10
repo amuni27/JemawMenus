@@ -8,11 +8,13 @@ import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../features/menu/hooks/useStorageState.ts";
 import {WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
 import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
+import { useToast } from "../../components/ui/ToastContext.tsx";
+
 
 export default function CustomerMenu() {
     const { tenantSlug } = useParams<{ tenantSlug: string }>();
     const { business, menus, loading, error } = usePublicBusinessMenu(tenantSlug);
-
+    const toast = useToast();
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [activeCategoryId, setActiveCategoryId] = useState<string | "ALL">("ALL");
 
@@ -77,6 +79,7 @@ export default function CustomerMenu() {
 
             return { ...prev, [itemId]: next };
         });
+        toast(`Added: ${menuItem.name ?? "Item"}`);
     }
 
     function incrementWaiterListItem(itemId: string) {
@@ -192,6 +195,7 @@ export default function CustomerMenu() {
         if (!el) return;
 
         el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+
     }, [activeCategoryId]);
 
     // IntersectionObserver: update active category as user scrolls the menu list
