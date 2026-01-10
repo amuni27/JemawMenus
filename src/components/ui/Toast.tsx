@@ -9,7 +9,7 @@ export function Toast({ message, show }: ToastProps) {
     if (!show) return null;
 
     return (
-        <div className="fixed top-6 left-1/2 z-[9999] -translate-x-1/2">
+        <div className="fixed bottom-6 left-1/2 z-[9999] -translate-x-1/2">
             <div className="flex items-center gap-2 rounded-full bg-black/90 px-4 py-2 text-white shadow-xl animate-toast">
                 <svg
                     className="h-5 w-5 text-emerald-400"
