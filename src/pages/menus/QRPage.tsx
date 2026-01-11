@@ -198,7 +198,7 @@ export default function QRPage() {
                 Admin
               </Link>
               <span className="mx-1">/</span>
-              <span>QR Code</span>
+              <span>qrcode</span>
             </nav>
             <h2 className="text-2xl font-bold">QR Code</h2>
           </div>
