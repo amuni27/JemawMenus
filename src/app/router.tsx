@@ -13,6 +13,7 @@ import React from "react";
 import MenusListPage from "../pages/menus/MenusListPage.tsx";
 import MenuCreatePage from "../pages/menus/MenuCreatePage.tsx";
 import MenuDetailPage from "../pages/menus/MenuDetailPage.tsx";
+import QRPage from "../pages/menus/QRPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -44,7 +45,7 @@ const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { index: true, element: <Dashboard /> },
-          { path: 'qr', element: <QrListPage /> },
+          { path: 'qrcode', element: <QRPage /> },
           { path: 'deals', element: <DealsPage /> },
           {
             path: 'menus',
