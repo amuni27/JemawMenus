@@ -1,91 +1,90 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import itemApi from "../../../api/itemsApi";
 import type {MenuItem, ItemStatus, CreateItemPayload} from "../../../types/menu";
 
 
-
 export function useItems(menuId?: string) {
-  const [items, setItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
+    const [items, setItems] = useState<MenuItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string>("");
 
-  // ✅ helper to support both: axiosResponse OR plain data
-  const unwrap = <T,>(res: any): T => (res?.data ?? res) as T;
+    // ✅ helper to support both: axiosResponse OR plain data
+    const unwrap = <T, >(res: any): T => (res?.data ?? res) as T;
 
-  useEffect(() => {
-    if (!menuId) return;
+    useEffect(() => {
+        if (!menuId) return;
 
-    let alive = true;
-    setLoading(true);
-    setError("");
+        let alive = true;
+        setLoading(true);
+        setError("");
 
-    itemApi
-        .list(menuId)
-        .then((res) => {
-          if (!alive) return;
-          console.log("row res", res)
-          console.log("unwined res", unwrap<MenuItem[]>(res))
-          setItems(unwrap<MenuItem[]>(res));
-        })
-        .catch((e: any) => {
-          if (!alive) return;
-          setError(e?.response?.data?.message || e?.message || "Failed to load items");
-          setItems([]);
-        })
-        .finally(() => {
-          if (!alive) return;
-          setLoading(false);
-        });
+        itemApi
+            .list(menuId)
+            .then((res) => {
+                if (!alive) return;
+                console.log("row res", res)
+                console.log("unwined res", unwrap<MenuItem[]>(res))
+                setItems(unwrap<MenuItem[]>(res));
+            })
+            .catch((e: any) => {
+                if (!alive) return;
+                setError(e?.response?.data?.message || e?.message || "Failed to load items");
+                setItems([]);
+            })
+            .finally(() => {
+                if (!alive) return;
+                setLoading(false);
+            });
 
-    return () => {
-      alive = false;
+        return () => {
+            alive = false;
+        };
+    }, [menuId]);
+
+    // ✅ CREATE: must hit POST /menus/:menuId/items
+    const createItem = async (payload: CreateItemPayload) => {
+        if (!menuId) throw new Error("menuId is required");
+
+        setError("");
+        const res = await itemApi.create(menuId, payload);
+        const created = unwrap<MenuItem>(res);
+
+        // optional: push to end or start
+        setItems((prev) => [...prev, created]);
+        return created;
     };
-  }, [menuId]);
 
-  // ✅ CREATE: must hit POST /menus/:menuId/items
-  const createItem = async (payload: CreateItemPayload) => {
-    if (!menuId) throw new Error("menuId is required");
+    const updateItem = async (itemId: string, patch: Partial<MenuItem>) => {
+        const res = await itemApi.update(itemId, patch);
+        const updated = unwrap<MenuItem>(res);
 
-    setError("");
-    const res = await itemApi.create(menuId, payload);
-    const created = unwrap<MenuItem>(res);
+        setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
+        return updated;
+    };
 
-    // optional: push to end or start
-    setItems((prev) => [...prev, created]);
-    return created;
-  };
+    const toggleStatus = async (itemId: string) => {
+        const current = items.find((i) => i.id === itemId);
+        if (!current) return;
 
-  const updateItem = async (itemId: string, patch: Partial<MenuItem>) => {
-    const res = await itemApi.update(itemId, patch);
-    const updated = unwrap<MenuItem>(res);
+        const body: { status: ItemStatus } = {
+            status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE"
+        }
 
-    setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
-    return updated;
-  };
-
-  const toggleStatus = async (itemId: string) => {
-    const current = items.find((i) => i.id === itemId);
-    if (!current) return;
-
-    const body = {
-      status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE"
-    }
-
-    setError("");
-    const res = await itemApi.updateStatus(itemId, body);
-    const updated = unwrap<MenuItem>(res);
-    setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
-    return updated;
-  };
+        setError("");
+        const res = await itemApi.updateStatus(itemId, body);
+        const updated = unwrap<MenuItem>(res);
+        setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
+        return updated;
+    };
 
 
-  const deleteItem = async (itemId: string) => {
-    setError("");
-    await itemApi.remove(itemId);
+    const deleteItem = async (itemId: string) => {
+        setError("");
+        await itemApi.remove(itemId);
 
-    // remove from UI
-    setItems((prev) => prev.filter((i) => i.id !== itemId));
-  };
+        // remove from UI
+        setItems((prev) => prev.filter((i) => i.id !== itemId));
+    };
 
-  return { items, loading, error, setItems, createItem, updateItem, toggleStatus,deleteItem };
+    return {items, loading, error, setItems, createItem, updateItem, toggleStatus, deleteItem};
 }
