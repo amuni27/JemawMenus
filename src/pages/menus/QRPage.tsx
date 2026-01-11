@@ -232,7 +232,15 @@ export default function QRPage() {
               </div>
 
               <div className="mt-4 break-all rounded-md bg-gray-50 p-3 text-xs text-gray-600">
-                {qrValue}
+
+                <a
+                    href={qrValue}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline hover:text-blue-800"
+                >
+                  {qrValue}
+                </a>
               </div>
             </div>
           </aside>
