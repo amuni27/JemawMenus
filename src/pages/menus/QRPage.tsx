@@ -19,15 +19,12 @@ function downloadBlob(blob: Blob, filename: string) {
 function svgToPngDataUrl(svgEl: SVGSVGElement, sizePx = 1024): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
-      // Serialize SVG
       const serializer = new XMLSerializer();
       const svgString = serializer.serializeToString(svgEl);
 
-      // Create SVG blob url
       const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
       const svgUrl = URL.createObjectURL(svgBlob);
 
-      // Draw into canvas
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
@@ -45,7 +42,7 @@ function svgToPngDataUrl(svgEl: SVGSVGElement, sizePx = 1024): Promise<string> {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Fit image to canvas
+        // Draw image scaled to canvas
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         const pngUrl = canvas.toDataURL("image/png");
@@ -70,7 +67,8 @@ export default function QRPage() {
   const [error] = useState<string>("");
   const auth = useAuth();
 
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  // ✅ Wrap ref (NOT svg ref) – avoids react-qr-code ref typing issue
+  const qrWrapRef = useRef<HTMLDivElement | null>(null);
 
   const businessName = auth.business?.name ?? "Venue";
   const businessId = auth.business?.id;
@@ -80,8 +78,12 @@ export default function QRPage() {
   if (loading) return <p className="p-6">Loading...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
+  const getSvgEl = (): SVGSVGElement | null => {
+    return (qrWrapRef.current?.querySelector("svg") as SVGSVGElement | null) ?? null;
+  };
+
   const handleDownloadSvg = () => {
-    const svgEl = svgRef.current;
+    const svgEl = getSvgEl();
     if (!svgEl) return;
 
     const serializer = new XMLSerializer();
@@ -92,7 +94,7 @@ export default function QRPage() {
   };
 
   const handleDownloadPng = async () => {
-    const svgEl = svgRef.current;
+    const svgEl = getSvgEl();
     if (!svgEl) return;
 
     // 1024px looks sharp for print
@@ -105,7 +107,7 @@ export default function QRPage() {
   };
 
   const handlePrint = () => {
-    const svgEl = svgRef.current;
+    const svgEl = getSvgEl();
     if (!svgEl) return;
 
     const serializer = new XMLSerializer();
@@ -114,7 +116,6 @@ export default function QRPage() {
     const win = window.open("", "_blank", "width=900,height=700");
     if (!win) return;
 
-    // Simple printable page
     win.document.open();
     win.document.write(`
       <!doctype html>
@@ -178,7 +179,6 @@ export default function QRPage() {
             window.onload = () => {
               window.focus();
               window.print();
-              // optional: close after print
               window.onafterprint = () => window.close();
             }
           </script>
@@ -225,13 +225,9 @@ export default function QRPage() {
               <p className="mt-1 text-xs text-gray-500">Customers can scan this QR</p>
 
               <div className="mt-4 flex justify-center">
-                <div className="w-full max-w-[260px]">
-                  <QRCode
-                      ref={svgRef}
-                      value={qrValue}
-                      className="h-auto w-full"
-                      level="M"
-                  />
+                {/* ✅ ref goes here (wrapper), not on <QRCode /> */}
+                <div ref={qrWrapRef} className="w-full max-w-[260px]">
+                  <QRCode value={qrValue} className="h-auto w-full" level="M" />
                 </div>
               </div>
 
@@ -245,9 +241,15 @@ export default function QRPage() {
           <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
             <h3 className="text-base font-semibold text-gray-900">Tips</h3>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-gray-600">
-              <li>Use <b>PNG</b> for sharing on WhatsApp and social media.</li>
-              <li>Use <b>SVG</b> for best quality in design tools.</li>
-              <li>Use <b>Print</b> to generate a clean A4 print page.</li>
+              <li>
+                Use <b>PNG</b> for sharing on WhatsApp and social media.
+              </li>
+              <li>
+                Use <b>SVG</b> for best quality in design tools.
+              </li>
+              <li>
+                Use <b>Print</b> to generate a clean A4 print page.
+              </li>
             </ul>
           </section>
         </div>
