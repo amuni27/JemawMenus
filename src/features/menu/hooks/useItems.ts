@@ -64,21 +64,16 @@ export function useItems(menuId?: string) {
   };
 
   const toggleStatus = async (itemId: string) => {
-    console.log("currentItem", itemId)
     const current = items.find((i) => i.id === itemId);
-    console.log("currentItem data", current);
     if (!current) return;
 
-
-    const body: ItemStatus = current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE";
-
+    const body = {
+      status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE"
+    }
 
     setError("");
     const res = await itemApi.updateStatus(itemId, body);
-    console.log("endewerede toggle res",res)
     const updated = unwrap<MenuItem>(res);
-    console.log("updated toggle res",res)
-
     setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
     return updated;
   };

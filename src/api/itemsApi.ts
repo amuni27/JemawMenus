@@ -27,7 +27,7 @@ export class ItemsApi {
   }
 
   // Update status using same update endpoint
-  static updateStatus( itemId: string, body: ItemStatus) {
+  static updateStatus( itemId: string, body: {status: ItemStatus }) {
     console.log("in side request itemid", itemId)
     return updateRequest(`/items/${itemId}/status`, body);
   }
