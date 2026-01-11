@@ -100,7 +100,6 @@ export default function MenusListPage() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Type
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR</th>
                             <th className="px-6 py-3 text-right"></th>
                         </tr>
                         </thead>
@@ -118,15 +117,6 @@ export default function MenusListPage() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {menu.menuType.name
                                     }
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="cursor-pointer" onClick={() => setQrMenu(menu)}>
-                                        <QRCode
-                                            value={buildMenuUrl(auth.business?.id)}
-                                            size={48}
-                                            level="M"
-                                        />
-                                    </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                     <Link
