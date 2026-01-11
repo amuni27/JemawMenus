@@ -1,17 +1,17 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { Menu } from "../../types/menu";
+import {useEffect, useState} from "react";
+import {Link, useNavigate, useParams} from "react-router-dom";
+import {Menu} from "../../types/menu";
 import menuApi from "../../api/menuApi";
 import MenuQrModal from "../../components/menu/MenuQrModal";
-import { useAuth } from "../../app/context/AuthContext";
+import {useAuth} from "../../app/context/AuthContext";
 import DeleteCategoryModal from "../../features/menu/components/DeleteCategoryModal";
-import { useMenus } from "../../features/menu/hooks/useMenus";
+import {useMenus} from "../../features/menu/hooks/useMenus";
 
 export default function MenusListPage() {
     const nav = useNavigate();
     const auth = useAuth();
-    const { tenantSlug } = useParams();
-    const { deleteMenu } = useMenus();
+    const {tenantSlug} = useParams();
+    const {deleteMenu} = useMenus();
 
     const [menus, setMenus] = useState<Menu[]>([]);
     const [qrMenu, setQrMenu] = useState<Menu | null>(null);
@@ -73,9 +73,7 @@ export default function MenusListPage() {
             {/* Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <nav className="mb-1 text-sm text-gray-500">
-                    <Link to={`/ert/admin/menus`} className="hover:underline">
-                        Admin
-                    </Link>
+                    Venue
                     <span className="mx-1">/</span>
                     <span>menus</span>
                     <h2 className="text-2xl font-bold">Menus</h2>

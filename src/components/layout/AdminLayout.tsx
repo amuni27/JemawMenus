@@ -40,15 +40,27 @@ export default function AdminLayout() {
                     onClick={() => setSidebarOpen(!sidebarOpen)}>
                 ☰
             </button>
+
+            {/* Backdrop (closes sidebar when clicking outside) */}
+            {sidebarOpen && (
+                <button
+                    type="button"
+                    className="fixed inset-0 z-30 bg-black/30 md:hidden"
+                    aria-label="Close sidebar"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside
                 className={`flex flex-col fixed inset-y-0 left-0 z-40 w-64 transform bg-gray-50 border-r border-gray-200 px-6 py-8 transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-                <h1 className="text-xl font-bold mb-6">Venue</h1>
+                <h1 className="text-xl font-bold mb-6 mt-6 lg:mt-0">Venue</h1>
                 <nav className="space-y-2">
                     {NAV_ITEMS.map((item) => (
                         <Link
                             key={item.path}
                             to={`/${tenantSlug}/${item.path}`}
+                            onClick={() => setSidebarOpen(false)}
                             className={`block px-3 py-2 rounded-lg hover:bg-gray-100 ${pathname.includes(item.path) ? "bg-gray-100 font-medium" : ""}`}
                         >
                             {item.label}
