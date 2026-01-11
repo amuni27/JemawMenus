@@ -6,6 +6,7 @@ import {useAuth} from "../../app/context/AuthContext.tsx";
 
 const NAV_ITEMS = [
     {label: "Menus", path: "admin/menus"},
+    {label: "QR Code", path: "admin/qrcode"},
 ];
 
 export default function AdminLayout() {
@@ -139,7 +140,7 @@ export default function AdminLayout() {
             <main className="flex-1">
                 <header className="border-b border-gray-200 bg-white h-14 flex items-center px-6">
                     {/* breadcrumb placeholder */}
-                    <span className="text-sm text-gray-500">{auth.business?.name}</span>
+                    <span className="text-sm text-gray-500 pl-4">{auth.business?.name}</span>
                 </header>
                 <div className="max-w-6xl mx-auto px-4 py-6">
                     <Outlet/>
