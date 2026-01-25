@@ -1,11 +1,15 @@
 import {
-     fetchPublicItems
+    fetchItems,
+    fetchPublicItems
 } from "../services/apiService";
 
 
 class PublicMenuApiService {
     listMenuTypes(endpoint: string) {
         return fetchPublicItems(endpoint);
+    }
+    findItem(endpoint: string) {
+        return fetchItems(endpoint)
     }
 }
 

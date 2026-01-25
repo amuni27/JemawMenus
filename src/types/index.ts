@@ -43,18 +43,18 @@ export interface MenuCategory {
   sortOrder: number;
 }
 
-export interface MenuItem {
-  id: ID;
-  tenantId: ID;
-  categoryId: ID;
-  name: string;
-  description?: string;
-  price: number;
-  imageUrl?: string;
-  tags?: FoodTag[];
-  allergens?: Allergen[];
-  available: boolean;
-}
+// export interface MenuItem {
+//   id: ID;
+//   tenantId: ID;
+//   categoryId: ID;
+//   name: string;
+//   description?: string;
+//   price: number;
+//   imageUrl?: string;
+//   tags?: FoodTag[];
+//   allergens?: Allergen[];
+//   available: boolean;
+// }
 
 export type OptionGroupType = 'single' | 'multiple';
 

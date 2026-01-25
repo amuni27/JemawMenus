@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import {createBrowserRouter, RouterProvider} from 'react-router-dom';
 import Landing from '../pages/public/Landing';
 import Pricing from '../pages/public/Pricing';
 import Login from '../pages/public/Login';
@@ -14,55 +14,60 @@ import MenusListPage from "../pages/menus/MenusListPage.tsx";
 import MenuCreatePage from "../pages/menus/MenuCreatePage.tsx";
 import MenuDetailPage from "../pages/menus/MenuDetailPage.tsx";
 import QRPage from "../pages/menus/QRPage.tsx";
+import MenuItemDetail from "../pages/customer/MenuItemDetail.tsx";
 
 const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Landing />,
-  },
-  {
-    path: '/pricing',
-    element: <Pricing />,
-  },
-  {
-    path: '/auth/login',
-    element: <Login />,
-  },
-  {
-    path: '/auth/register',
-    element: <RegisterWizard />,
-  },
-  // Tenant routes (simulate subdomain with :tenantSlug)
-  {
-    path: '/:tenantSlug',
-    children: [
-      {
-        path: 'menu',
-        element: <CustomerMenu />,
-      },
-      {
-        path: 'admin',
-        element: <AdminLayout />,
+    {
+        path: '/',
+        element: <Landing/>,
+    },
+    {
+        path: '/pricing',
+        element: <Pricing/>,
+    },
+    {
+        path: '/auth/login',
+        element: <Login/>,
+    },
+    {
+        path: '/auth/register',
+        element: <RegisterWizard/>,
+    },
+    // Tenant routes (simulate subdomain with :tenantSlug)
+    {
+        path: '/:tenantSlug',
         children: [
-          { index: true, element: <Dashboard /> },
-          { path: 'qrcode', element: <QRPage /> },
-          { path: 'deals', element: <DealsPage /> },
-          {
-            path: 'menus',
-            children: [
-              { index: true, element: <MenusListPage /> },
-              { path: 'new', element: <MenuCreatePage /> },
-              { path: ':menuId', element: <MenuDetailPage /> },
-            ],
-          },
-          {path: 'menus/new', element: <MenuCreatePage />},
-          { path: 'ads', element: <AdsPage /> },
+            {
+                path: 'menu',
+                element: <CustomerMenu/>,
+                children: [
+                    { path: "item/:itemId", element: <MenuItemDetail /> }, // child view
+                ],
+
+            },
+            {
+                path: 'admin',
+                element: <AdminLayout/>,
+                children: [
+                    {index: true, element: <Dashboard/>},
+                    {path: 'qrcode', element: <QRPage/>},
+                    {path: 'deals', element: <DealsPage/>},
+                    {
+                        path: 'menus',
+                        children: [
+                            {index: true, element: <MenusListPage/>},
+                            {path: 'new', element: <MenuCreatePage/>},
+                            {path: ':menuId', element: <MenuDetailPage/>},
+                        ],
+                    },
+                    {path: 'menus/new', element: <MenuCreatePage/>},
+                    {path: 'ads', element: <AdsPage/>},
+                ],
+            },
         ],
-      },
-    ],
-  },
+    },
 ]);
 
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+    return <RouterProvider router={router}/>;
 }

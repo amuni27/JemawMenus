@@ -67,6 +67,10 @@ export interface MenuItem {
   sortOrder?: number;
   createdAt: string;
   updatedAt: string;
+  allergens?: any;   // jsonb
+  tags?: any;        // jsonb
+  prepTimeMinutes?: number | null;
+  spiceLevel?: string | null;
 }
 
 export type CreateMenuItemDTO = {

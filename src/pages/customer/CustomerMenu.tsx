@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Outlet, useParams } from "react-router-dom";
 import { usePublicBusinessMenu } from "../../features/menu/hooks/usePublicBusinessMenu";
 
 import { MenuHeader } from "../../components/menu/MenuHeader";
@@ -12,7 +12,8 @@ import { useToast } from "../../components/ui/ToastContext.tsx";
 
 
 export default function CustomerMenu() {
-    const { tenantSlug } = useParams<{ tenantSlug: string }>();
+const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }>();
+    const isViewingItem = Boolean(itemId);
     const { business, menus, loading, error } = usePublicBusinessMenu(tenantSlug);
     const toast = useToast();
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -188,6 +189,7 @@ export default function CustomerMenu() {
 
     // keep the active tab scrolled into view (horizontal)
     useEffect(() => {
+      if (isViewingItem) return;
         const bar = tabsBarRef.current;
         if (!bar) return;
 
@@ -196,11 +198,12 @@ export default function CustomerMenu() {
 
         el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 
-    }, [activeCategoryId]);
+    }, [activeCategoryId, isViewingItem]);
 
     // IntersectionObserver: update active category as user scrolls the menu list
     useEffect(() => {
         if (!groups.length) return;
+        if (isViewingItem) return;
 
         const stickyH = stickyBarRef.current?.getBoundingClientRect().height ?? 0;
 
@@ -281,6 +284,7 @@ export default function CustomerMenu() {
                     <div ref={topSentinelRef}/>
 
                     {/* Sticky category bar (header scrolls normally, this stays visible) */}
+                     {!isViewingItem && (
                     <div ref={stickyBarRef} className="sticky top-0 z-20 bg-white border-b border-gray-50 lg:top-[100px]">
                         {/* horizontally scrollable tabs (same UI look, just scrollable) */}
                         <div
@@ -305,11 +309,16 @@ export default function CustomerMenu() {
                             ))}
                         </div>
                     </div>
-
+                    )}
                     <main className="pt-4">
                         {!activeMenu ? (
                             <div className="text-gray-600">Select a menu.</div>
-                        ) : (
+                        ) : isViewingItem ? (
+                            // ✅ REPLACE cards with item detail
+                            <div className="">
+                                <Outlet />
+                            </div>
+                         ) : (
                             <>
                                 {groups.map((g: any) => (
                                     <div

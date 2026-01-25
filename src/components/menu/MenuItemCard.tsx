@@ -1,3 +1,5 @@
+import {useNavigate} from "react-router-dom";
+
 type Props = {
     item: any;
     currency?: string; // pass from parent
@@ -5,6 +7,12 @@ type Props = {
 };
 
 export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
+
+    const navigate = useNavigate();
+
+    const openDetail = () => {
+        navigate(`item/${item.id}`);
+    };
     const price =
         typeof item.price === "number" || typeof item.price === "string"
             ? Number(item.price)
@@ -20,7 +28,9 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
         >
             {/* Image */}
             <div className="relative rounded-2xl border bg-white">
-                <div className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
+                <div
+                    onClick={openDetail}
+                    className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
@@ -59,7 +69,9 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
             </div>
 
             {/* Content */}
-            <div className="flex flex-1 flex-col p-3 sm:p-4">
+            <div
+                onClick={openDetail}
+                className="flex flex-1 flex-col p-3 sm:p-4">
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-1">
                     {item.name}
                 </h3>
