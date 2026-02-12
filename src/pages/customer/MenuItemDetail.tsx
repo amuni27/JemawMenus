@@ -15,7 +15,7 @@ export default function MenuItemDetail() {
 
         setLoading(true);
         publicMenueApi
-            .findItem(`/items/${itemId}`)
+            .findItem(`/venue/items/${itemId}`)
             .then((res) => setItem(res.data))
             .catch(() => setItem(null))
             .finally(() => setLoading(false));

@@ -9,7 +9,7 @@ class PublicMenuApiService {
         return fetchPublicItems(endpoint);
     }
     findItem(endpoint: string) {
-        return fetchItems(endpoint)
+        return fetchPublicItems(endpoint)
     }
 }
 

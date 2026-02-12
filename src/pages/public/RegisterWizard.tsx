@@ -87,7 +87,7 @@ const defaultState: WizardState = {
     open247: false,
     days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].reduce<Record<string, DayHours>>(
         (acc, d) => {
-          acc[d] = { enabled: true, start: "09:00", end: "17:00" };
+          acc[d] = { enabled: false, start: "02:00", end: "11:00" };
           return acc;
         },
         {}
@@ -181,6 +181,7 @@ export default function RegisterWizard() {
 
         // subdomain
         customSubdomain: data.subdomain.trim().toLowerCase(),
+        currency: "ETB",
 
         // hours
         open24_7: h.open247,
@@ -193,6 +194,8 @@ export default function RegisterWizard() {
               endTime: v.enabled ? v.end : null,
             })),
       };
+
+        console.log("payload ", payload)
 
       await register(payload);
 
@@ -342,24 +345,32 @@ export default function RegisterWizard() {
               Object.entries(h.days).map(([day, val]) => (
                   <div key={day} className="flex items-center gap-3">
                     <span className="w-14">{day}</span>
-                    <input
-                        type="checkbox"
-                        checked={val.enabled}
-                        onChange={(e) =>
-                            update("hours", {
-                              ...h,
-                              days: { ...h.days, [day]: { ...val, enabled: e.target.checked } },
-                            })
-                        }
-                    />
-                    <input
-                        type="time"
-                        value={val.start}
-                        disabled={!val.enabled}
-                        onChange={(e) =>
-                            update("hours", {
-                              ...h,
-                              days: { ...h.days, [day]: { ...val, start: e.target.value } },
+                      <input
+                          type="checkbox"
+                          checked={val.enabled}
+                          onChange={(e) => {
+                              const enabled = e.target.checked;
+                              console.log("isOpen",enabled)
+
+                              update("hours", {
+                                  ...h,
+                                  days: {
+                                      ...h.days,
+                                      [day]: enabled
+                                          ? {...val, enabled: true}
+                                          : {enabled: false, start: "", end: ""}, // reset times when closed
+                                  },
+                              });
+                          }}
+                      />
+                      <input
+                          type="time"
+                          value={val.start}
+                          disabled={!val.enabled}
+                          onChange={(e) =>
+                              update("hours", {
+                                  ...h,
+                                  days: {...h.days, [day]: {...val, start: e.target.value } },
                             })
                         }
                     />
