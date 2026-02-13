@@ -1,6 +1,12 @@
 import type { MenuItem, ItemStatus } from "../types/menu";
-import { fetchItems, fetchPublicItems,fetchPublicRequestById, postRequest, deleteRequest, updateRequest } from "../services/apiService";
-
+import {
+  fetchItems,
+  fetchPublicItems,
+  fetchPublicRequestById,
+  postRequest,
+  deleteRequest,
+  updateRequest,
+} from "../services/apiService";
 
 type CreateItemBody = Omit<MenuItem, "id" | "menuId" | "createdAt" | "updatedAt">;
 type ItemPatch = Partial<CreateItemBody>;
@@ -23,13 +29,24 @@ export class ItemsApi {
 
   // DELETE /apiAuth/items/:itemId
   static remove(itemId: string) {
-    return deleteRequest(`/items/`,itemId);
+    return deleteRequest(`/items/`, itemId);
   }
 
   // Update status using same update endpoint
-  static updateStatus( itemId: string, body: {status: ItemStatus }) {
-    console.log("in side request itemid", itemId)
+  static updateStatus(itemId: string, body: { status: ItemStatus }) {
     return updateRequest(`/items/${itemId}/status`, body);
+  }
+
+  // ✅ NEW: POST /apiAuth/items/:itemId/image/presign
+  // Returns: { item, upload?: { uploadUrl, objectKey, expiresInSeconds } }
+  static presignImage(itemId: string) {
+    return postRequest(`/items/${itemId}/image/presign`, {});
+  }
+
+  // ✅ NEW: POST /apiAuth/items/:itemId/image/confirm  body: { objectKey }
+  // Returns: MenuItem
+  static confirmImage(itemId: string, body: { objectKey: string }) {
+    return postRequest(`/items/${itemId}/image/confirm`, body);
   }
 
   static listPublic(businessId: string, menuId: string) {

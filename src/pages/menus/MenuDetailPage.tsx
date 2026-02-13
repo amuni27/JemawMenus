@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import {Menu} from "../../types/menu";
+import { Menu } from "../../types/menu";
 import CategoryPanel from "../../features/menu/components/CategoryPanel";
 import ItemsPanel from "../../features/menu/components/ItemsPanel";
 import Button from "../../components/ui/Button";
@@ -8,23 +8,30 @@ import CategoryModal from "../../features/menu/components/CategoryModal";
 import ItemModal from "../../features/menu/components/ItemModal";
 import { useCategories } from "../../features/menu/hooks/useCategories";
 import menuApi from "../../api/menuApi";
-import {useItems} from "../../features/menu/hooks/useItems.ts";
+import { useItems } from "../../features/menu/hooks/useItems.ts";
 
 export default function MenuDetailPage() {
-
   const { menuId } = useParams<{ menuId: string }>();
 
   const [loading, setLoading] = useState(true);
   const [menu, setMenu] = useState<Menu | null>(null);
-  const  categories  = useCategories(menuId);
-  const { items, toggleStatus,deleteItem, createItem, updateItem } = useItems(menuId);
+  const categories = useCategories(menuId);
+  // ✅ UPDATED: include presign + confirm from hook
+  const {
+    items,
+    toggleStatus,
+    deleteItem,
+    createItem,
+    updateItem,
+    presignItemImage,
+    confirmItemImage,
+  } = useItems(menuId);
+
   const [error, setError] = useState<string>("");
 
   // modal states
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [itemModalOpen, setItemModalOpen] = useState(false);
-
-
 
   useEffect(() => {
     if (!menuId) return;
@@ -32,10 +39,9 @@ export default function MenuDetailPage() {
     let alive = true;
     setLoading(true);
     setError("");
-      console.log(
-          menuId
-      )
-      menuApi.getMenu(menuId)
+
+    menuApi
+        .getMenu(menuId)
         .then((m) => {
           if (!alive) return;
           setMenu(m.data);
@@ -54,8 +60,6 @@ export default function MenuDetailPage() {
       alive = false;
     };
   }, [menuId]);
-
-
 
   if (loading) return <p className="p-6">Loading...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
@@ -99,7 +103,17 @@ export default function MenuDetailPage() {
           </aside>
 
           <section>
-            <ItemsPanel menuId={menuId} categories={categories.categories} items={items}  toggleStatus={toggleStatus} deleteItem={deleteItem} onUpdate={updateItem} onCreate={createItem} />
+            <ItemsPanel
+                menuId={menuId}
+                categories={categories.categories}
+                items={items}
+                toggleStatus={toggleStatus}
+                deleteItem={deleteItem}
+                onUpdate={updateItem}
+                onCreate={createItem}
+                onPresignImage={presignItemImage}
+                onConfirmImage={confirmItemImage}
+            />
           </section>
         </div>
 
@@ -111,6 +125,7 @@ export default function MenuDetailPage() {
             onCreate={categories.createCategory}
             onUpdate={categories.updateCategory}
         />
+
         <ItemModal
             open={itemModalOpen}
             onClose={() => setItemModalOpen(false)}
@@ -118,6 +133,8 @@ export default function MenuDetailPage() {
             categories={categories.categories}
             onUpdate={updateItem}
             onCreate={createItem}
+            onPresignImage={presignItemImage}
+            onConfirmImage={confirmItemImage}
         />
       </div>
   );

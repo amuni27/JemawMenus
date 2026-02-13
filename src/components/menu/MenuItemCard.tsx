@@ -7,7 +7,6 @@ type Props = {
 };
 
 export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
-
     const navigate = useNavigate();
 
     const openDetail = () => {

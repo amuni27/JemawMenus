@@ -1,21 +1,39 @@
-import {useState} from 'react';
-import ItemCard from './ItemCard';
-import ItemModal from './ItemModal';
-import {Category, type CreateItemPayload, MenuItem} from '../../../types/menu';
+import { useState } from "react";
+import ItemCard from "./ItemCard";
+import ItemModal from "./ItemModal";
+import { Category, type CreateItemPayload, MenuItem } from "../../../types/menu";
 import DeleteCategoryModal from "./DeleteCategoryModal.tsx";
 
 interface Props {
     menuId?: string;
-    categories: Category[]
-    items: MenuItem[],
+    categories: Category[];
+    items: MenuItem[];
     toggleStatus: (itemId: string) => Promise<MenuItem | undefined>;
     deleteItem: (itemId: string) => Promise<void>;
+    // ✅ create still returns MenuItem (matches updated ItemModal)
     onCreate: (payload: CreateItemPayload) => Promise<MenuItem>;
     onUpdate: (itemId: string, patch: Partial<MenuItem>) => Promise<MenuItem>;
+    // ✅ NEW: required for image upload flow
+    onConfirmImage: (itemId: string, objectKey: string) => Promise<MenuItem>;
+    // ✅ NEW: required when an image file is selected (create/edit)
+    onPresignImage: (itemId: string) => Promise<{
+        item: MenuItem;
+        upload?: { uploadUrl: string; objectKey: string; expiresInSeconds?: number } | null;
+    }>;
 }
 
-export default function ItemGrid({menuId,categories, items, toggleStatus,deleteItem, onUpdate, onCreate}: Props) {
-    const [search, setSearch] = useState('');
+export default function ItemGrid({
+                                     menuId,
+                                     categories,
+                                     items,
+                                     toggleStatus,
+                                     deleteItem,
+                                     onUpdate,
+                                     onCreate,
+                                     onConfirmImage,
+                                     onPresignImage,
+                                 }: Props) {
+    const [search, setSearch] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<MenuItem | undefined>();
 
@@ -51,7 +69,7 @@ export default function ItemGrid({menuId,categories, items, toggleStatus,deleteI
             await deleteItem(deleting.id);
             closeDelete();
         } catch (err: any) {
-            setDeleteError(err?.response?.data?.message || err?.message || "Failed to delete category");
+            setDeleteError(err?.response?.data?.message || err?.message || "Failed to delete item");
         } finally {
             setDeleteLoading(false);
         }
@@ -90,7 +108,10 @@ export default function ItemGrid({menuId,categories, items, toggleStatus,deleteI
                 categories={categories}
                 onCreate={onCreate}
                 onUpdate={onUpdate}
+                onConfirmImage={onConfirmImage}
+                onPresignImage={onPresignImage}
             />
+
             <DeleteCategoryModal
                 open={deleteOpen}
                 name={deleting?.name}

@@ -14,15 +14,14 @@ interface Props {
   item?: MenuItem; // edit mode if provided
   categories: Category[];
 
-  onCreate: (payload: any) => Promise<{
-    item: MenuItem;
-    upload?: { uploadUrl: string; objectKey: string; expiresInSeconds?: number } | null;
-  }>;
+  // ✅ FIX: onCreate returns MenuItem (NOT {item, upload})
+  onCreate: (payload: any) => Promise<MenuItem>;
 
   onUpdate: (itemId: string, patch: Partial<MenuItem>) => Promise<MenuItem>;
 
   onConfirmImage: (itemId: string, objectKey: string) => Promise<MenuItem>;
 
+  // Used for BOTH edit + create when an image is selected
   onPresignImage?: (itemId: string) => Promise<{
     item: MenuItem;
     upload?: { uploadUrl: string; objectKey: string; expiresInSeconds?: number } | null;
@@ -85,8 +84,6 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
 }
 
 async function uploadToR2(uploadUrl: string, file: File) {
-  // NOTE: PUT uploads usually require Content-Type to match what you signed.
-  // Keep Content-Type, but ensure your R2 CORS allows PUT.
   const res = await fetch(uploadUrl, {
     method: "PUT",
     body: file,
@@ -96,7 +93,6 @@ async function uploadToR2(uploadUrl: string, file: File) {
   });
 
   if (!res.ok) {
-    // Some R2 responses have empty body; still provide useful error
     let text = "";
     try {
       text = await res.text();
@@ -154,7 +150,6 @@ export default function ItemModal({
     const val = (draft.ingredientInput ?? "").trim();
     if (!val) return;
 
-    // ✅ Safe comparison (prevents toLowerCase crash)
     const exists = (draft.ingredients ?? []).some(
         (ing) => String(ing ?? "").toLowerCase() === val.toLowerCase()
     );
@@ -245,16 +240,29 @@ export default function ItemModal({
       // ---------------- CREATE ----------------
       const createPayload = {
         ...basePayload,
+        // keep if your backend expects image metadata; remove if not needed
         image: draft.imageFile
             ? { fileName: draft.imageFile.name, contentType: draft.imageFile.type || "image/jpeg" }
             : null,
       };
 
-      const created = await onCreate(createPayload);
+      const createdItem = await onCreate(createPayload);
 
-      if (draft.imageFile && created.upload?.uploadUrl && created.upload?.objectKey) {
-        await uploadToR2(created.upload.uploadUrl, draft.imageFile);
-        await onConfirmImage(created.item.id, created.upload.objectKey);
+      // if image selected: presign AFTER create -> upload -> confirm
+      if (draft.imageFile) {
+        if (!onPresignImage) {
+          throw new Error("Missing onPresignImage prop for create image uploads");
+        }
+
+        const presigned = await onPresignImage(createdItem.id);
+        const upload = presigned.upload;
+
+        if (!upload?.uploadUrl || !upload?.objectKey) {
+          throw new Error("Presign did not return uploadUrl/objectKey");
+        }
+
+        await uploadToR2(upload.uploadUrl, draft.imageFile);
+        await onConfirmImage(createdItem.id, upload.objectKey);
         toast("Item created with image");
       } else {
         toast("Item created");
@@ -327,7 +335,9 @@ export default function ItemModal({
                   if (/^\d*$/.test(v)) setDraft({ ...draft, calories: v });
                 }}
                 error={
-                  touched && draft.calories && (Number.isNaN(Number(draft.calories)) || Number(draft.calories) < 0)
+                  touched &&
+                  draft.calories &&
+                  (Number.isNaN(Number(draft.calories)) || Number(draft.calories) < 0)
                       ? "Invalid"
                       : undefined
                 }
@@ -419,10 +429,7 @@ export default function ItemModal({
             {(draft.ingredients ?? []).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {draft.ingredients.map((ing) => (
-                      <span
-                          key={ing}
-                          className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm"
-                      >
+                      <span key={ing} className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm">
                   {ing}
                         <button
                             type="button"
