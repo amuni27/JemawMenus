@@ -1,111 +1,196 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import itemApi from "../../../api/itemsApi";
 import type { MenuItem, ItemStatus, CreateItemPayload } from "../../../types/menu";
+
+
+type UploadInfo = { uploadUrl: string; objectKey: string; expiresInSeconds?: number };
+type PresignResponse = { item: MenuItem; upload?: UploadInfo | null };
+
+function isObject(v: unknown): v is Record<string, unknown> {
+    return typeof v === "object" && v !== null;
+}
+
+/** axios-like: response can be { data: ... } or already data */
+function unwrapData<T>(res: unknown): T {
+    if (isObject(res) && "data" in res) return (res as any).data as T;
+    return res as T;
+}
+
+/** create endpoint may return MenuItem or { item, upload } */
+function unwrapCreatedItem(res: unknown): MenuItem {
+    const data = unwrapData<any>(res);
+    if (data && typeof data === "object" && "item" in data) return data.item as MenuItem;
+    return data as MenuItem;
+}
+
+/** make sure we never call .map/filter with undefined list */
+function safeArray<T>(v: unknown): T[] {
+    return Array.isArray(v) ? (v as T[]) : [];
+}
 
 export function useItems(menuId?: string) {
     const [items, setItems] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>("");
 
-    // ✅ helper to support both: axiosResponse OR plain data
-    const unwrap = <T,>(res: any): T => (res?.data ?? res) as T;
+    // Prevent state updates after unmount or menuId change
+    const aliveRef = useRef(true);
+    useEffect(() => {
+        aliveRef.current = true;
+        return () => {
+            aliveRef.current = false;
+        };
+    }, []);
 
+    const safeSetItems = useCallback((updater: (prev: MenuItem[]) => MenuItem[]) => {
+        if (!aliveRef.current) return;
+        setItems((prev) => updater(prev));
+    }, []);
+
+    const safeSetLoading = useCallback((v: boolean) => {
+        if (!aliveRef.current) return;
+        setLoading(v);
+    }, []);
+
+    const safeSetError = useCallback((v: string) => {
+        if (!aliveRef.current) return;
+        setError(v);
+    }, []);
+
+    // --------- initial load / reload on menuId ----------
     useEffect(() => {
         if (!menuId) return;
 
-        let alive = true;
-        setLoading(true);
-        setError("");
+        let cancelled = false;
+        safeSetLoading(true);
+        safeSetError("");
 
         itemApi
             .list(menuId)
             .then((res) => {
-                if (!alive) return;
-                setItems(unwrap<MenuItem[]>(res));
+                if (cancelled || !aliveRef.current) return;
+                const data = unwrapData<unknown>(res);
+                const list = safeArray<MenuItem>(data);
+                setItems(list);
             })
             .catch((e: any) => {
-                if (!alive) return;
-                setError(e?.response?.data?.message || e?.message || "Failed to load items");
+                if (cancelled || !aliveRef.current) return;
                 setItems([]);
+                safeSetError(e?.response?.data?.message || e?.message || "Failed to load items");
             })
             .finally(() => {
-                if (!alive) return;
-                setLoading(false);
+                if (cancelled || !aliveRef.current) return;
+                safeSetLoading(false);
             });
 
         return () => {
-            alive = false;
+            cancelled = true;
         };
-    }, [menuId]);
+    }, [menuId, safeSetError, safeSetLoading]);
 
-    const createItem = async (payload: CreateItemPayload) => {
-        if (!menuId) throw new Error("menuId is required");
+    // --------- actions ----------
+    const createItem = useCallback(
+        async (payload: CreateItemPayload): Promise<MenuItem> => {
+            if (!menuId) throw new Error("menuId is required");
+            safeSetError("");
 
-        setError("");
-        const res = await itemApi.create(menuId, payload as any);
-        const created = unwrap<MenuItem>(res);
+            const res = await itemApi.create(menuId, payload);
 
-        setItems((prev) => [...prev, created]);
-        return created;
-    };
+            // Create can be MenuItem OR { item, upload }
+            const created = unwrapCreatedItem(res);
 
-    const updateItem = async (itemId: string, patch: Partial<MenuItem>) => {
-        const res = await itemApi.update(itemId, patch as any);
-        const updated = unwrap<MenuItem>(res);
+            // Stronger guard: ensure id exists (prevents /undefined/ calls later)
+            if (!created?.id) {
+                throw new Error("Create did not return a valid item id");
+            }
 
-        setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
-        return updated;
-    };
+            safeSetItems((prev) => [...prev, created]);
+            return created;
+        },
+        [menuId, safeSetError, safeSetItems]
+    );
 
-    const toggleStatus = async (itemId: string) => {
-        const current = items.find((i) => i.id === itemId);
-        if (!current) return;
+    const updateItem = useCallback(
+        async (itemId: string, patch: Partial<MenuItem>): Promise<MenuItem> => {
+            safeSetError("");
 
-        const body: { status: ItemStatus } = {
-            status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
-        };
+            // IMPORTANT: never send imageUrl in normal update
+            const { imageUrl: _ignore, ...safePatch } = patch as any;
 
-        setError("");
-        const res = await itemApi.updateStatus(itemId, body);
-        const updated = unwrap<MenuItem>(res);
+            const res = await itemApi.update(itemId, safePatch);
+            const updated = unwrapData<MenuItem>(res);
 
-        setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
-        return updated;
-    };
+            safeSetItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
+            return updated;
+        },
+        [safeSetError, safeSetItems]
+    );
 
-    const deleteItem = async (itemId: string) => {
-        setError("");
-        await itemApi.remove(itemId);
-        setItems((prev) => prev.filter((i) => i.id !== itemId));
-    };
+    const toggleStatus = useCallback(
+        async (itemId: string): Promise<MenuItem | undefined> => {
+            const current = items.find((i) => i.id === itemId);
+            if (!current) return;
 
-    // ✅ NEW: presign upload URL for item image
-    const presignItemImage = async (
-        itemId: string
-    ): Promise<{
-        item: MenuItem;
-        upload?: { uploadUrl: string; objectKey: string; expiresInSeconds?: number } | null;
-    }> => {
-        setError("");
+            const body: { status: ItemStatus } = {
+                status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
+            };
+
+            safeSetError("");
+            const res = await itemApi.updateStatus(itemId, body);
+            const updated = unwrapData<MenuItem>(res);
+
+            safeSetItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
+            return updated;
+        },
+        [items, safeSetError, safeSetItems]
+    );
+
+    const deleteItem = useCallback(
+        async (itemId: string): Promise<void> => {
+            safeSetError("");
+            await itemApi.remove(itemId);
+            safeSetItems((prev) => prev.filter((i) => i.id !== itemId));
+        },
+        [safeSetError, safeSetItems]
+    );
+
+    // --------- image upload helpers ----------
+    const presignItemImage = useCallback(async (itemId: string): Promise<PresignResponse> => {
         const res = await itemApi.presignImage(itemId);
-        return unwrap(res);
-    };
+        const data = unwrapData<PresignResponse>(res);
 
-    // ✅ NEW: confirm uploaded image
-    const confirmItemImage = async (itemId: string, objectKey: string): Promise<MenuItem> => {
-        setError("");
-        const res = await itemApi.confirmImage(itemId, { objectKey });
-        const updated = unwrap<MenuItem>(res);
+        // Guard for contract correctness
+        if (!data?.item?.id) {
+            throw new Error("Presign response missing item");
+        }
 
-        setItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
-        return updated;
-    };
+        return data;
+    }, []);
+
+    const confirmItemImage = useCallback(
+        async (itemId: string, objectKey: string): Promise<MenuItem> => {
+            const res = await itemApi.confirmImage(itemId, { objectKey });
+            const confirmed = unwrapData<MenuItem>(res);
+
+            // bust cache so user sees new image immediately
+            const withCacheBust: MenuItem = {
+                ...confirmed,
+                imageUrl: confirmed.imageUrl
+                    ? `${confirmed.imageUrl}${confirmed.imageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`
+                    : confirmed.imageUrl,
+            };
+
+            safeSetItems((prev) => prev.map((i) => (i.id === itemId ? withCacheBust : i)));
+            return withCacheBust;
+        },
+        [safeSetItems]
+    );
 
     return {
         items,
         loading,
         error,
-        setItems,
+        setItems, // keeping exposed API exactly as you had
         createItem,
         updateItem,
         toggleStatus,
