@@ -1,11 +1,12 @@
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import Modal from "../../../components/ui/Modal";
-import ModalHeader from "../../../components/ui/ModalHeader";
-import Button from "../../../components/ui/Button";
-import {Input} from "../../../components/ui/Input";
-import {FormSelect} from "../../../components/form/FormSelect";
-import type {MenuItem, Category, CreateItemPayload} from "../../../types/menu";
-import {useToast} from "../../../components/ui/ToastContext";
+import Modal from "../ui/Modal.tsx";
+import ModalHeader from "../ui/ModalHeader.tsx";
+import Button from "../ui/Button.tsx";
+import {Input} from "../ui/Input.tsx";
+import {FormSelect} from "../form/FormSelect.tsx";
+import type {MenuItem, Category, CreateItemPayload} from "../../types/menu.ts";
+import {useToast} from "../ui/ToastContext.tsx";
+import {uploadToR2} from "../../utils/r2Service.ts";
 
 type UploadInfo = { uploadUrl: string; objectKey: string; expiresInSeconds?: number };
 type PresignResponse = { item: MenuItem; upload?: UploadInfo | null };
@@ -85,34 +86,6 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
     };
 }
 
-/**
- * Upload that adapts to how the backend presigned:
- * - If presigned URL signed "content-type", send Content-Type header.
- * - Otherwise do NOT send it (prevents 403 signature mismatch).
- */
-async function uploadToR2(uploadUrl: string, file: File) {
-    const url = new URL(uploadUrl);
-    const signedHeaders = (url.searchParams.get("X-Amz-SignedHeaders") || "").toLowerCase();
-    const mustSendContentType = signedHeaders.includes("content-type");
-
-    const headers: Record<string, string> = {};
-    if (mustSendContentType) {
-        headers["Content-Type"] = file.type || "application/octet-stream";
-    }
-
-    const res = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers,
-        mode: "cors",
-        cache: "no-store",
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`Upload failed (${res.status}): ${text || res.statusText}`);
-    }
-}
 
 function isBlobUrl(url: string) {
     return typeof url === "string" && url.startsWith("blob:");

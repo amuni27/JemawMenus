@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiAuth = axios.create({
-    baseURL: 'https://agafari-menu-backend.onrender.com/api',
+    baseURL: 'http://localhost:8080/api',
 });
 
 apiAuth.interceptors.request.use(

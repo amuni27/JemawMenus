@@ -1,5 +1,5 @@
-import CategoryList from './CategoryList';
-import {Category} from "../../../types/menu.ts";
+import CategoryList from './CategoryList.tsx';
+import {Category} from "../../types/menu.ts";
 
 export interface CategoryPanelProps {
   menuId?: string;

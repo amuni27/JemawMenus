@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import itemApi from "../../../api/itemsApi";
-import type { MenuItem, ItemStatus, CreateItemPayload } from "../../../types/menu";
+import itemApi from "../api/itemsApi.ts";
+import type { MenuItem, ItemStatus, CreateItemPayload } from "../types/menu.ts";
 
 
 type UploadInfo = { uploadUrl: string; objectKey: string; expiresInSeconds?: number };

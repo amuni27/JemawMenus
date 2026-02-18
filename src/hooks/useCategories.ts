@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { Category } from "../../../types/menu";
-import categoryApi from "../../../api/categoriesApi"; // adjust path if needed
+import type { Category } from "../types/menu.ts";
+import categoryApi from "../api/categoriesApi.ts"; // adjust path if needed
 
 export function useCategories(menuId?: string) {
   const [categories, setCategories] = useState<Category[]>([]);

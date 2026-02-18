@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import menuApi from "../../../api/menuApi";
-import { Menu } from "../../../types/menu";
+import menuApi from "../api/menuApi.ts";
+import { Menu } from "../types/menu.ts";
 
 export function useMenus(businessId?: string) {
   const [menus, setMenus] = useState<Menu[]>([]);

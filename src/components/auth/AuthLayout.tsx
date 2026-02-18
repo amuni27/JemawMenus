@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import clsx from 'clsx';
+
 
 interface AuthLayoutProps {
   children: ReactNode;

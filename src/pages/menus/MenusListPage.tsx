@@ -4,8 +4,8 @@ import {Menu} from "../../types/menu";
 import menuApi from "../../api/menuApi";
 import MenuQrModal from "../../components/menu/MenuQrModal";
 import {useAuth} from "../../app/context/AuthContext";
-import DeleteCategoryModal from "../../features/menu/components/DeleteCategoryModal";
-import {useMenus} from "../../features/menu/hooks/useMenus";
+import DeleteCategoryModal from "../../components/menu/DeleteCategoryModal.tsx";
+import {useMenus} from "../../hooks/useMenus";
 
 export default function MenusListPage() {
     const nav = useNavigate();

@@ -6,9 +6,7 @@ import RegisterWizard from '../pages/public/RegisterWizard';
 import AdminLayout from '../components/layout/AdminLayout.tsx';
 import CustomerMenu from '../pages/customer/CustomerMenu.tsx';
 import Dashboard from '../pages/admin/Dashboard';
-import QrListPage from '../pages/admin/QrListPage';
 import DealsPage from '../pages/admin/DealsPage';
-import AdsPage from '../pages/admin/AdsPage';
 import React from "react";
 import MenusListPage from "../pages/menus/MenusListPage.tsx";
 import MenuCreatePage from "../pages/menus/MenuCreatePage.tsx";
@@ -61,7 +59,6 @@ const router = createBrowserRouter([
                         ],
                     },
                     {path: 'menus/new', element: <MenuCreatePage/>},
-                    {path: 'ads', element: <AdsPage/>},
                 ],
             },
         ],

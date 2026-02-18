@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import publicMenuApi from "../../../api/publicMenueApi.ts"; // adjust path
+import publicMenuApi from "../api/publicMenueApi.ts"; // adjust path
 
 type Business = {
     id: string;

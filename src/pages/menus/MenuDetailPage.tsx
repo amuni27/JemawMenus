@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Menu } from "../../types/menu";
-import CategoryPanel from "../../features/menu/components/CategoryPanel";
-import ItemsPanel from "../../features/menu/components/ItemsPanel";
+import CategoryPanel from "../../components/menu/CategoryPanel.tsx";
+import ItemsPanel from "../../components/menu/ItemsPanel.tsx";
 import Button from "../../components/ui/Button";
-import CategoryModal from "../../features/menu/components/CategoryModal";
-import ItemModal from "../../features/menu/components/ItemModal";
-import { useCategories } from "../../features/menu/hooks/useCategories";
+import CategoryModal from "../../components/menu/CategoryModal.tsx";
+import ItemModal from "../../components/menu/ItemModal.tsx";
+import { useCategories } from "../../hooks/useCategories";
 import menuApi from "../../api/menuApi";
-import { useItems } from "../../features/menu/hooks/useItems.ts";
+import { useItems } from "../../hooks/useItems.ts";
 
 export default function MenuDetailPage() {
   const { menuId } = useParams<{ menuId: string }>();

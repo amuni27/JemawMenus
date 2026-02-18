@@ -1,4 +1,4 @@
-import type {Category} from "../../../types/menu";
+import type {Category} from "../../types/menu.ts";
 import {X} from "lucide-react";
 
 type Props = {

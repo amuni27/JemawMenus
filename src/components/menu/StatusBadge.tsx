@@ -1,4 +1,4 @@
-import { ItemStatus } from '../../../types/menu';
+import { ItemStatus } from '../../types/menu.ts';
 import clsx from 'clsx';
 
 export default function StatusBadge({ status }: { status: ItemStatus }) {

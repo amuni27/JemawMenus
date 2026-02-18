@@ -1,6 +1,6 @@
 import {useState} from "react";
-import CategoryModal from "./CategoryModal";
-import type {Category} from "../../../types/menu";
+import CategoryModal from "./CategoryModal.tsx";
+import type {Category} from "../../types/menu.ts";
 import { Pencil, Trash2 } from "lucide-react";
 import DeleteCategoryModal from "./DeleteCategoryModal.tsx";
 

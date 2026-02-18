@@ -1,14 +1,14 @@
 // src/app/context/AuthContext.tsx
-import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
 import type {ReactNode} from 'react';
+import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
 import {
+    type AuthSession,
+    type BusinessDTO,
     login as loginService,
-    register as registerService,
     logout as logoutService,
     me as meService,
-    type AuthSession,
+    register as registerService,
     type UserDTO,
-    type BusinessDTO,
 } from '../../services/authService';
 
 interface AuthContextValue {
@@ -65,9 +65,8 @@ export function AuthProvider({children}: { children: ReactNode }) {
     const register = async (payload: any): Promise<AuthSession> => {
         setLoading(true);
         try {
-            const session = await registerService(payload); // now returns AuthSession
-            persistSession(session);
-            return session;
+             // now returns AuthSession
+            return registerService(payload);
         } finally {
             setLoading(false);
         }

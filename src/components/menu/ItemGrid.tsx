@@ -1,7 +1,7 @@
 import { useState } from "react";
-import ItemCard from "./ItemCard";
-import ItemModal from "./ItemModal";
-import { Category, type CreateItemPayload, MenuItem } from "../../../types/menu";
+import ItemCard from "./ItemCard.tsx";
+import ItemModal from "./ItemModal.tsx";
+import { Category, type CreateItemPayload, MenuItem } from "../../types/menu.ts";
 import DeleteCategoryModal from "./DeleteCategoryModal.tsx";
 
 interface Props {

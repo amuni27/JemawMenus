@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
-import { usePublicBusinessMenu } from "../../features/menu/hooks/usePublicBusinessMenu";
+import { usePublicBusinessMenu } from "../../hooks/usePublicBusinessMenu";
 
 import { MenuHeader } from "../../components/menu/MenuHeader";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
-import {useStorageState} from "../../features/menu/hooks/useStorageState.ts";
+import {useStorageState} from "../../hooks/useStorageState.ts";
 import {WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
 import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 import { useToast } from "../../components/ui/ToastContext.tsx";

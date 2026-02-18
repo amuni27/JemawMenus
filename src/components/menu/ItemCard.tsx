@@ -1,5 +1,5 @@
-import StatusBadge from './StatusBadge';
-import {ItemStatus, MenuItem} from '../../../types/menu';
+import StatusBadge from './StatusBadge.tsx';
+import {ItemStatus, MenuItem} from '../../types/menu.ts';
 import {Pencil, Trash2} from "lucide-react";
 
 interface Props {

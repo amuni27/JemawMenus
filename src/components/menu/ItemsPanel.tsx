@@ -1,5 +1,5 @@
-import ItemGrid from "./ItemGrid";
-import { Category, CreateItemPayload, MenuItem } from "../../../types/menu.ts";
+import ItemGrid from "./ItemGrid.tsx";
+import { Category, CreateItemPayload, MenuItem } from "../../types/menu.ts";
 
 interface Props {
     menuId?: string;

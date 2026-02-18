@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import Modal from "../../../components/ui/Modal";
-import ModalHeader from "../../../components/ui/ModalHeader";
-import { Input } from "../../../components/ui/Input";
-import Button from "../../../components/ui/Button";
-import { Category } from "../../../types/menu";
-import { useCategories } from "../hooks/useCategories";
-import { useToast } from "../../../components/ui/ToastContext";
+import Modal from "../ui/Modal.tsx";
+import ModalHeader from "../ui/ModalHeader.tsx";
+import { Input } from "../ui/Input.tsx";
+import Button from "../ui/Button.tsx";
+import { Category } from "../../types/menu.ts";
+import { useCategories } from "../../hooks/useCategories.ts";
+import { useToast } from "../ui/ToastContext.tsx";
 
 interface Props {
   open: boolean;
