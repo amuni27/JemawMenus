@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const apiAuth = axios.create({
-    baseURL: 'http://localhost:8080/api',
+    baseURL: 'https://jemaw-menu-backend-spring.onrender.com',
+    // baseURL: 'http://localhost:8080/api',
 });
 
 apiAuth.interceptors.request.use(
