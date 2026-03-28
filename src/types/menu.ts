@@ -12,15 +12,10 @@ export interface Menu {
   name: string;
   menuType: MenuType;
   description?: string;
-  currency: Currency;
   createdAt: string;
   updatedAt: string;
 }
 
-export type CreateMenuDto = Omit<
-    MenuDto,
-    "id" | "menuId" | "createdAt" | "updatedAt"
->;
 
 export interface MenuDto {
   name: string;

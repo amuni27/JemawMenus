@@ -6,7 +6,7 @@ import {
   fetchItems, fetchPublicItems, fetchPublicRequestById,
 } from "../services/apiService";
 
-import {Menu, Category, MenuItem, ItemStatus, MenuDto,CreateMenuDto} from "../types/menu";
+import {Menu, Category, MenuItem, ItemStatus, MenuDto} from "../types/menu";
 
 class MenuService {
   // ================= MENUS =================
@@ -23,7 +23,7 @@ class MenuService {
     return fetchRequestById("/menus/", menuId); // -> /menus/{id}
   }
 
-  createMenu(data: CreateMenuDto) {
+  createMenu(data: MenuDto) {
     return postRequest("/menus", data);
   }
 

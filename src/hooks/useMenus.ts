@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import menuApi from "../api/menuApi.ts";
-import { Menu } from "../types/menu.ts";
+import {Menu, MenuDto} from "../types/menu.ts";
 
 export function useMenus(businessId?: string) {
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -21,14 +21,11 @@ export function useMenus(businessId?: string) {
   }, [businessId]);
 
   const createMenu = async (
-      payload: Omit<Menu, "id" | "menuId" | "businessId" | "createdAt" | "updatedAt">
+      payload: MenuDto
   ) => {
     if (!businessId) return;
 
-    const res: any = await menuApi.createMenu({
-      ...payload,
-      businessId,
-    });
+    const res: any = await menuApi.createMenu(payload);
 
     setMenus((prev) => [...prev, res.data]);
   };
