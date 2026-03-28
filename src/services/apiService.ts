@@ -13,6 +13,8 @@ export const fetchRequestById = (endpoint: string, id: string | number) => {
 
 // POST: Create new item
 export const postRequest = (endpoint: string, data: any) => {
+    console.log("data: ", data)
+    console.log("endpoint: ", endpoint)
     return apiAuth.post(endpoint, data);
 };
 
