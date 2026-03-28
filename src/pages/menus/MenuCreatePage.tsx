@@ -9,8 +9,6 @@ export default function MenuCreatePage() {
 
   const handleSave = async (menu: MenuDto) => {
     if (!tenantSlug) return;
-    const now = new Date().toISOString();
-
     await menuApi.createMenu(menu as any);
     navigate(`/${tenantSlug}/admin/menus`);
   };

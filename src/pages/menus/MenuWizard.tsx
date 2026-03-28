@@ -22,16 +22,11 @@ export default function MenuWizard({ initial, onSave }: Props) {
   const [step, setStep] = useState(0);
 
   const [data, setData] = useState<MenuDto>(() => {
-    const now = new Date().toISOString();
     return {
-      id: initial?.id ?? "",
-      businessId: initial?.businessId ?? "",
       name: initial?.name ?? "",
-      menuId: initial?.menuId ?? "", // REQUIRED in your DTO
+      menuTypeId: initial?.menuTypeId ?? "", // REQUIRED in your DTO
       description: initial?.description ?? "",
-      currency: initial?.currency ?? "USD",
-      createdAt: initial?.createdAt ?? now,
-      updatedAt: initial?.updatedAt ?? now,
+      visibility: initial?.visibility ?? "PUBLIC",
     };
   });
 
@@ -69,24 +64,21 @@ export default function MenuWizard({ initial, onSave }: Props) {
   const validateStep1 = () => {
     const e: Record<string, string> = {};
     if (!data.name.trim()) e.name = "Name is required";
-    if (!data.menuId) e.menuId = "Menu type is required";
-    if (!data.currency) e.currency = "Currency is required";
+    if (!data.menuTypeId) e.menuTypeId = "MenuTypeId is required";
+    if (!data.description) e.name = "Name is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleNext = async () => {
-    if (step === 0 && !validateStep1()) return;
-    setStep((s) => Math.min(s + 1, steps.length - 1));
+  const saveMenu = async (data : MenuDto) => {
+    if (!validateStep1()) return;
+    onSave(data)
   };
-
-  const handleBack = () => setStep((s) => Math.max(s - 1, 0));
 
   const handleChange = <K extends keyof MenuDto>(field: K, value: MenuDto[K]) => {
     setData((d) => ({
       ...d,
       [field]: value,
-      updatedAt: new Date().toISOString(),
     }));
 
   };
@@ -102,12 +94,12 @@ export default function MenuWizard({ initial, onSave }: Props) {
                   onChange={(e) => handleChange("name", e.target.value)}
               />
 
-              {/* menuId = Menu Type ID */}
+              {/* menuTypeId = Menu Type ID */}
               <FormSelect
                   label="Menu Type"
-                  value={data.menuId} // ✅ stored id
-                  error={errors.menuId || menuTypesError}
-                  onChange={(e) => handleChange("menuId", e.target.value)} // ✅ set id
+                  value={data.menuTypeId} // ✅ stored id
+                  error={errors.menuTypeId || menuTypesError}
+                  onChange={(e) => handleChange("menuTypeId", e.target.value)} // ✅ set id
               >
                 <option value="">
                   {menuTypesLoading ? "Loading..." : "-- select --"}
@@ -126,34 +118,11 @@ export default function MenuWizard({ initial, onSave }: Props) {
                   onChange={(e) => handleChange("description", e.target.value)}
               />
 
-              <FormSelect
-                  label="Currency"
-                  value={data.currency}
-                  error={errors.currency}
-                  onChange={(e) => handleChange("currency", e.target.value)}
-              >
-                <option value="USD">USD</option>
-                <option value="ETB">ETB</option>
-              </FormSelect>
             </div>
         )}
 
-        {step > 0 && <p className="text-gray-500">This step is WIP. Coming soon.</p>}
-
         <div className="mt-8 flex justify-between">
-          {step > 0 ? (
-              <Button variant="secondary" onClick={handleBack}>
-                Back
-              </Button>
-          ) : (
-              <span />
-          )}
-
-          {step === steps.length - 1 ? (
-              <Button onClick={() => onSave(data)}>Save Menu</Button>
-          ) : (
-              <Button onClick={handleNext}>Next</Button>
-          )}
+              <Button onClick={() => saveMenu(data)}>Save Menu</Button>
         </div>
       </WizardLayout>
   );

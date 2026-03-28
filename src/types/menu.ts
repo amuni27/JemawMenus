@@ -23,14 +23,10 @@ export type CreateMenuDto = Omit<
 >;
 
 export interface MenuDto {
-  id: string;
-  businessId: string;
   name: string;
-  menuId: string;
+  menuTypeId: string;
   description?: string;
-  currency: string;
-  createdAt: string;
-  updatedAt: string;
+  visibility: string;
 }
 
 export interface Category {

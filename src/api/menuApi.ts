@@ -24,7 +24,7 @@ class MenuService {
   }
 
   createMenu(data: CreateMenuDto) {
-    return postRequest("/menus/", data);
+    return postRequest("/menus", data);
   }
 
   listPublic(businessId: string) {
