@@ -6,6 +6,8 @@ import WizardStepper from "../../components/wizard/WizardStepper";
 import {useAuth} from "../../app/context/AuthContext";
 import {useToast} from "../../components/ui/ToastContext";
 import {useNavigate} from "react-router-dom";
+import PhoneInput, {isValidPhoneNumber} from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 // ----- Types ---------------------------------------------------------------
 interface PersonalInfo {
@@ -49,6 +51,67 @@ interface WizardState {
     hours: BusinessHours;
     subdomain: string;
 }
+
+// ----- Password Validation ------------------------------------------------
+const validatePasswordStrength = (password: string) => {
+    return {
+        minLength: password.length >= 8,
+        lowercase: /[a-z]/.test(password),
+        uppercase: /[A-Z]/.test(password),
+        number: /[0-9]/.test(password),
+        symbol: /[^A-Za-z0-9]/.test(password),
+    };
+};
+
+const isStrongPassword = (password: string) => {
+    const checks = validatePasswordStrength(password);
+    return Object.values(checks).every(Boolean);
+};
+
+function PasswordStrength({password}: { password: string }) {
+    const checks = validatePasswordStrength(password);
+
+    const ruleClass = (valid: boolean) =>
+        valid ? "text-green-600" : "text-gray-500";
+
+    return (
+        <div className="text-sm space-y-1 -mt-2">
+            <p className={ruleClass(checks.minLength)}>
+                {checks.minLength ? "✓" : "•"} At least 8 characters
+            </p>
+
+            <p className={ruleClass(checks.lowercase)}>
+                {checks.lowercase ? "✓" : "•"} One lowercase letter
+            </p>
+
+            <p className={ruleClass(checks.uppercase)}>
+                {checks.uppercase ? "✓" : "•"} One uppercase letter
+            </p>
+
+            <p className={ruleClass(checks.number)}>
+                {checks.number ? "✓" : "•"} One number
+            </p>
+
+            <p className={ruleClass(checks.symbol)}>
+                {checks.symbol ? "✓" : "•"} One symbol
+            </p>
+        </div>
+    );
+}
+
+// ----- Ethiopia Phone Validation ------------------------------------------
+const isValidEthiopianPhoneNumber = (phone?: string) => {
+    if (!phone) return false;
+
+    // Library validates phone number format.
+    // startsWith("+251") makes sure only Ethiopian numbers are accepted.
+    return phone.startsWith("+251") && isValidPhoneNumber(phone);
+};
+
+// ----- Tailwind Classes ----------------------------------------------------
+const phoneInputClass =
+    "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm " +
+    "focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500";
 
 // ----- Day Mapping (CRITICAL) ---------------------------------------------
 const DAY_MAP: Record<string, string> = {
@@ -110,13 +173,17 @@ export default function RegisterWizard() {
     // ---------- Validation --------------------------------------------------
     const validateStep = () => {
         if (step === 0) {
-            const {fullName, email, password, confirm} = data.personal;
+            const {fullName, email, phone, password, confirm} = data.personal;
 
             if (!fullName || !email || !password || !confirm) return false;
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
-            if (password.length < 6 || password !== confirm) return false;
 
-            // phone is optional
+            // Personal phone is optional.
+            // But if entered, it must be a valid Ethiopian phone number.
+            if (phone && !isValidEthiopianPhoneNumber(phone)) return false;
+
+            if (!isStrongPassword(password) || password !== confirm) return false;
+
             return true;
         }
 
@@ -124,14 +191,19 @@ export default function RegisterWizard() {
             const b = data.business;
 
             // Ethiopia backend required fields:
-            if (!b.businessName || !b.businessPhone || !b.address || !b.city || !b.region) return false;
+            if (!b.businessName || !b.businessPhone || !b.address || !b.city || !b.region) {
+                return false;
+            }
 
-            // postalCode and other Ethiopia details are optional
+            // Business phone is required and must be Ethiopian.
+            if (!isValidEthiopianPhoneNumber(b.businessPhone)) return false;
+
             return true;
         }
 
         if (step === 2) {
             const sub = data.subdomain.trim().toLowerCase();
+
             // matches backend: /^[a-z0-9]+(?:-[a-z0-9]+)*$/
             return sub.length >= 3 && sub.length <= 30 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(sub);
         }
@@ -145,6 +217,7 @@ export default function RegisterWizard() {
     // ---------- Submit ------------------------------------------------------
     const complete = async () => {
         if (!validateStep()) return;
+
         setSubmitting(true);
         setError(undefined);
 
@@ -157,7 +230,7 @@ export default function RegisterWizard() {
                 // user
                 fullName: p.fullName.trim(),
                 email: p.email.trim().toLowerCase(),
-                phoneNumber: p.phone.trim() || undefined, // ✅ optional
+                phoneNumber: p.phone.trim() || undefined,
                 password: p.password,
 
                 // business
@@ -166,13 +239,11 @@ export default function RegisterWizard() {
                 streetAddress: b.address.trim(),
                 city: b.city.trim(),
 
-                // ✅ Region maps to backend "state"
+                // Region maps to backend "state"
                 state: b.region.trim(),
 
-                // ✅ optional (Ethiopia)
+                // optional Ethiopia details
                 zipcode: b.postalCode.trim() || "",
-
-                // ✅ optional Ethiopia details
                 subCity: b.subCity?.trim() || undefined,
                 woreda: b.woreda?.trim() || undefined,
                 kebele: b.kebele?.trim() || undefined,
@@ -195,9 +266,9 @@ export default function RegisterWizard() {
             };
 
             await register(payload);
-            nav('/auth/login', { replace: true });
-            toast("Account created");
 
+            nav("/auth/login", {replace: true});
+            toast("Account created");
         } catch (err: any) {
             const msg = err?.response?.data?.message || err?.message || "Registration failed";
             toast(msg);
@@ -208,12 +279,14 @@ export default function RegisterWizard() {
     };
 
     // ---------- Helpers -----------------------------------------------------
-    const update = (key: keyof WizardState, value: any) => setData((d) => ({...d, [key]: value}));
+    const update = (key: keyof WizardState, value: any) =>
+        setData((d) => ({...d, [key]: value}));
 
     // ---------- Render ------------------------------------------------------
     const renderStep = () => {
         if (step === 0) {
             const p = data.personal;
+
             return (
                 <div className="space-y-4">
                     <Input
@@ -229,12 +302,28 @@ export default function RegisterWizard() {
                         onChange={(e) => update("personal", {...p, email: e.target.value})}
                     />
 
-                    <Input
-                        label="Phone "
-                        type="tel"
-                        value={p.phone}
-                        onChange={(e) => update("personal", {...p, phone: e.target.value})}
-                    />
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            Phone
+                        </label>
+
+                        <PhoneInput
+                            international
+                            defaultCountry="ET"
+                            countries={["ET"]}
+                            countryCallingCodeEditable={false}
+                            value={p.phone}
+                            onChange={(value) => update("personal", {...p, phone: value || ""})}
+                            placeholder="Enter phone number"
+                            className={phoneInputClass}
+                        />
+
+                        {p.phone && !isValidEthiopianPhoneNumber(p.phone) && (
+                            <p className="text-sm text-red-600 mt-1">
+                                Enter a valid Ethiopian phone number.
+                            </p>
+                        )}
+                    </div>
 
                     <Input
                         label="Password *"
@@ -243,18 +332,27 @@ export default function RegisterWizard() {
                         onChange={(e) => update("personal", {...p, password: e.target.value})}
                     />
 
+                    <PasswordStrength password={p.password}/>
+
                     <Input
                         label="Confirm Password *"
                         type="password"
                         value={p.confirm}
                         onChange={(e) => update("personal", {...p, confirm: e.target.value})}
                     />
+
+                    {p.confirm && p.password !== p.confirm && (
+                        <p className="text-sm text-red-600 -mt-2">
+                            Passwords do not match.
+                        </p>
+                    )}
                 </div>
             );
         }
 
         if (step === 1) {
             const b = data.business;
+
             return (
                 <div className="space-y-4">
                     <Input
@@ -263,11 +361,28 @@ export default function RegisterWizard() {
                         onChange={(e) => update("business", {...b, businessName: e.target.value})}
                     />
 
-                    <Input
-                        label="Business Phone *"
-                        value={b.businessPhone}
-                        onChange={(e) => update("business", {...b, businessPhone: e.target.value})}
-                    />
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            Business Phone *
+                        </label>
+
+                        <PhoneInput
+                            international
+                            defaultCountry="ET"
+                            countries={["ET"]}
+                            countryCallingCodeEditable={false}
+                            value={b.businessPhone}
+                            onChange={(value) => update("business", {...b, businessPhone: value || ""})}
+                            placeholder="Enter business phone number"
+                            className={phoneInputClass}
+                        />
+
+                        {b.businessPhone && !isValidEthiopianPhoneNumber(b.businessPhone) && (
+                            <p className="text-sm text-red-600 mt-1">
+                                Enter a valid Ethiopian business phone number.
+                            </p>
+                        )}
+                    </div>
 
                     <Input
                         label="Street Address *"
@@ -302,6 +417,7 @@ export default function RegisterWizard() {
                             value={b.subCity ?? ""}
                             onChange={(e) => update("business", {...b, subCity: e.target.value})}
                         />
+
                         <Input
                             label="Woreda "
                             value={b.woreda ?? ""}
@@ -315,6 +431,7 @@ export default function RegisterWizard() {
                             value={b.kebele ?? ""}
                             onChange={(e) => update("business", {...b, kebele: e.target.value})}
                         />
+
                         <Input
                             label="House No. "
                             value={b.houseNumber ?? ""}
@@ -326,6 +443,7 @@ export default function RegisterWizard() {
         }
 
         const h = data.hours;
+
         return (
             <div className="space-y-4">
                 <label className="flex items-center gap-2 text-sm font-medium">
@@ -341,12 +459,12 @@ export default function RegisterWizard() {
                     Object.entries(h.days).map(([day, val]) => (
                         <div key={day} className="flex items-center gap-3">
                             <span className="w-14">{day}</span>
+
                             <input
                                 type="checkbox"
                                 checked={val.enabled}
                                 onChange={(e) => {
                                     const enabled = e.target.checked;
-                                    console.log("isOpen", enabled)
 
                                     update("hours", {
                                         ...h,
@@ -354,11 +472,12 @@ export default function RegisterWizard() {
                                             ...h.days,
                                             [day]: enabled
                                                 ? {...val, enabled: true}
-                                                : {enabled: false, start: "", end: ""}, // reset times when closed
+                                                : {enabled: false, start: "", end: ""},
                                         },
                                     });
                                 }}
                             />
+
                             <input
                                 type="time"
                                 value={val.start}
@@ -366,11 +485,16 @@ export default function RegisterWizard() {
                                 onChange={(e) =>
                                     update("hours", {
                                         ...h,
-                                        days: {...h.days, [day]: {...val, start: e.target.value}},
+                                        days: {
+                                            ...h.days,
+                                            [day]: {...val, start: e.target.value},
+                                        },
                                     })
                                 }
                             />
+
                             <span>to</span>
+
                             <input
                                 type="time"
                                 value={val.end}
@@ -378,7 +502,10 @@ export default function RegisterWizard() {
                                 onChange={(e) =>
                                     update("hours", {
                                         ...h,
-                                        days: {...h.days, [day]: {...val, end: e.target.value}},
+                                        days: {
+                                            ...h.days,
+                                            [day]: {...val, end: e.target.value},
+                                        },
                                     })
                                 }
                             />
@@ -392,6 +519,7 @@ export default function RegisterWizard() {
                         placeholder="your-restaurant"
                         onChange={(e) => update("subdomain", e.target.value.toLowerCase())}
                     />
+
                     <span className="mt-6 text-sm">.menuqrs.com</span>
                 </div>
             </div>
@@ -403,7 +531,11 @@ export default function RegisterWizard() {
             <div className="max-w-xl mx-auto">
                 <WizardStepper steps={steps} current={step} completed={step}/>
 
-                {error && <p className="bg-red-50 text-red-600 p-2 rounded mt-4">{error}</p>}
+                {error && (
+                    <p className="bg-red-50 text-red-600 p-2 rounded mt-4">
+                        {error}
+                    </p>
+                )}
 
                 <div className="mt-6">{renderStep()}</div>
 
