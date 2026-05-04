@@ -20,7 +20,8 @@ export default function Login() {
       if (session.business) nav(`/${session.business.id}/admin/menus`);
       else nav('/');
     } catch (err: any) {
-      setError(err.message);
+      const msg = err?.response?.data?.message || err?.message || "Registration failed";
+      setError(msg);
     }
   };
   return (
