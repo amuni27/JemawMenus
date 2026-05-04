@@ -66,7 +66,9 @@ export function AuthProvider({children}: { children: ReactNode }) {
         setLoading(true);
         try {
              // now returns AuthSession
-            return registerService(payload);
+            const sess = await registerService(payload);
+            persistSession(sess);
+            return sess;
         } finally {
             setLoading(false);
         }

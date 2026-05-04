@@ -265,10 +265,9 @@ export default function RegisterWizard() {
                     })),
             };
 
-            await register(payload);
-
-            nav("/auth/login", {replace: true});
-            toast("Account created");
+            const session = await register(payload);
+            if (session.business) nav(`/${session.business.id}/admin/menus`);
+            else nav('/');
         } catch (err: any) {
             const msg = err?.response?.data?.message || err?.message || "Registration failed";
             toast(msg);
