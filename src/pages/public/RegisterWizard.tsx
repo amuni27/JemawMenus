@@ -265,9 +265,9 @@ export default function RegisterWizard() {
                     })),
             };
 
-            const session = await register(payload);
-            if (session.business) nav(`/${session.business.id}/admin/menus`);
-            else nav('/');
+            await register(payload);
+            toast("Registration successful!");
+            nav('/auth/login');
         } catch (err: any) {
             const msg = err?.response?.data?.message || err?.message || "Registration failed";
             toast(msg);

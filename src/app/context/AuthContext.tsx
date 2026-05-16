@@ -19,7 +19,7 @@ interface AuthContextValue {
     loading: boolean;
 
     login: (emailOrPhone: string, password: string) => Promise<AuthSession>;
-    register: (payload: any) => Promise<AuthSession>;
+    register: (payload: any) => Promise<void>;
     logout: () => Promise<void>;
     refresh: () => Promise<void>;
 }
@@ -62,13 +62,10 @@ export function AuthProvider({children}: { children: ReactNode }) {
         }
     };
 
-    const register = async (payload: any): Promise<AuthSession> => {
+    const register = async (payload: any): Promise<void> => {
         setLoading(true);
         try {
-             // now returns AuthSession
-            const sess = await registerService(payload);
-            persistSession(sess);
-            return sess;
+            await registerService(payload);
         } finally {
             setLoading(false);
         }
