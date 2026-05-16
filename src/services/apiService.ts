@@ -20,7 +20,7 @@ export const postRequest = (endpoint: string, data: any) => {
 
 // PUT: Update item
 export const updateRequest = (endpoint: string, data: any) => {
-    return apiAuth.put(`${endpoint}`, data);
+    return apiAuth.patch(`${endpoint}`, data);
 };
 
 // DELETE: Remove item

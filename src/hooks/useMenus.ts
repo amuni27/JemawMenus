@@ -30,12 +30,15 @@ export function useMenus(businessId?: string) {
     setMenus((prev) => [...prev, res.data]);
   };
 
+  const updateMenu = async (menuId: string, payload: MenuDto) => {
+    const res: any = await menuApi.updateMenu(menuId, payload);
+    setMenus((prev) => prev.map((m) => (m.id === menuId ? res.data : m)));
+  };
+
   const deleteMenu = async (menuId: string) => {
     await menuApi.deleteMenu(menuId);
-
-    // remove from UI
     setMenus((prev) => prev.filter((i) => i.id !== menuId));
   };
 
-  return { menus, loading,deleteMenu, createMenu, setMenus };
+  return { menus, loading, deleteMenu, createMenu, updateMenu, setMenus };
 }

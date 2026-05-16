@@ -13,6 +13,7 @@ import MenuCreatePage from "../pages/menus/MenuCreatePage.tsx";
 import MenuDetailPage from "../pages/menus/MenuDetailPage.tsx";
 import QRPage from "../pages/menus/QRPage.tsx";
 import MenuItemDetail from "../pages/customer/MenuItemDetail.tsx";
+import MenuEditPage from "../pages/menus/MenuEditPage.tsx";
 
 const router = createBrowserRouter([
     {
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
                             {index: true, element: <MenusListPage/>},
                             {path: 'new', element: <MenuCreatePage/>},
                             {path: ':menuId', element: <MenuDetailPage/>},
+                            {path: ':menuId/edit', element: <MenuEditPage/>},
                         ],
                     },
                     {path: 'menus/new', element: <MenuCreatePage/>},
