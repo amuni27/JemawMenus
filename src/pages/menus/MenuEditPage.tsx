@@ -33,7 +33,7 @@ export default function MenuEditPage() {
 
   const initial: Partial<MenuDto> = {
     name: menu.name,
-    menuTypeId: menu.menuType?.id,
+    menuTypeId: menu.menuType?.id ?? menu.menuTypeId,
     description: menu.description,
     visibility: "PUBLIC",
   };

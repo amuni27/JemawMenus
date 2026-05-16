@@ -11,6 +11,7 @@ export interface Menu {
   businessId: string;
   name: string;
   menuType: MenuType;
+  menuTypeId?: string;
   description?: string;
   createdAt: string;
   updatedAt: string;
