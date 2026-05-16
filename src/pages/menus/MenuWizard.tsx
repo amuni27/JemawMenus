@@ -122,7 +122,7 @@ export default function MenuWizard({ initial, onSave }: Props) {
         )}
 
         <div className="mt-8 flex justify-between">
-              <Button onClick={() => saveMenu(data)}>Save Menu</Button>
+              <Button onClick={() => saveMenu(data)}>{initial ? "Update" : "Save Menu"}</Button>
         </div>
       </WizardLayout>
   );
