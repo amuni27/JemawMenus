@@ -260,8 +260,8 @@ export default function RegisterWizard() {
                     : Object.entries(h.days).map(([day, v]) => ({
                         dayOfWeek: DAY_MAP[day],
                         isOpen: v.enabled,
-                        startTime: v.enabled ? v.start : null,
-                        endTime: v.enabled ? v.end : null,
+                        startTime: v.enabled && v.start ? v.start : null,
+                        endTime: v.enabled && v.end ? v.end : null,
                     })),
             };
 
@@ -463,15 +463,11 @@ export default function RegisterWizard() {
                                 type="checkbox"
                                 checked={val.enabled}
                                 onChange={(e) => {
-                                    const enabled = e.target.checked;
-
                                     update("hours", {
                                         ...h,
                                         days: {
                                             ...h.days,
-                                            [day]: enabled
-                                                ? {...val, enabled: true}
-                                                : {enabled: false, start: "", end: ""},
+                                            [day]: {...val, enabled: e.target.checked},
                                         },
                                     });
                                 }}
