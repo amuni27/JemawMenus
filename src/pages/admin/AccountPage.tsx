@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
@@ -44,6 +44,8 @@ export default function AccountPage() {
   const auth = useAuth();
   const user = auth.user;
   const business = auth.business;
+
+  useEffect(() => { auth.refresh(); }, []);
 
   const [userModal, setUserModal] = useState(false);
   const [passwordModal, setPasswordModal] = useState(false);

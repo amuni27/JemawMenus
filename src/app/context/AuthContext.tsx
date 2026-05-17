@@ -1,6 +1,6 @@
 // src/app/context/AuthContext.tsx
 import type {ReactNode} from 'react';
-import React, {createContext, useContext, useEffect, useMemo, useState} from 'react';
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {
     type AuthSession,
     type BusinessDTO,
@@ -51,47 +51,40 @@ export function AuthProvider({children}: { children: ReactNode }) {
         }
     };
 
-    const login = async (emailOrPhone: string, password: string) => {
+    const login = useCallback(async (emailOrPhone: string, password: string) => {
         setLoading(true);
         try {
-            const sess = await loginService(emailOrPhone, password); // must return { token, user, business }
+            const sess = await loginService(emailOrPhone, password);
             persistSession(sess);
             return sess;
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const register = async (payload: any): Promise<void> => {
+    const register = useCallback(async (payload: any): Promise<void> => {
         setLoading(true);
         try {
             await registerService(payload);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const logout = async () => {
+    const logout = useCallback(async () => {
         setLoading(true);
         try {
             await logoutService();
+            persistSession(null);
             window.location.href = '/auth/login';
-            persistSession(null);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const refresh = async () => {
-        const raw = localStorage.getItem(SESSION_KEY);
-        if (!raw) {
-            persistSession(null);
-            setLoading(false);
-            return;
-        }
-
-        const saved = JSON.parse(raw) as AuthSession;
-        if (!saved?.token) {
+    const refresh = useCallback(async () => {
+        const token = localStorage.getItem(TOKEN_KEY);
+        if (!token) {
             persistSession(null);
             setLoading(false);
             return;
@@ -99,15 +92,20 @@ export function AuthProvider({children}: { children: ReactNode }) {
 
         setLoading(true);
         try {
-            const {user, business} = await meService(); // must use token in Authorization header
-            persistSession({token: saved.token, user, business});
-        } catch {
-            await logoutService();
-            persistSession(null);
+            const { user, business } = await meService();
+            persistSession({ token, user, business });
+        } catch (err: any) {
+            // Only clear the session on 401 — the axios interceptor already
+            // redirects, but we also clear React state here.
+            // Network errors / 5xx should NOT log the user out.
+            if (err?.response?.status === 401) {
+                await logoutService();
+                persistSession(null);
+            }
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         refresh();
@@ -127,7 +125,7 @@ export function AuthProvider({children}: { children: ReactNode }) {
             logout,
             refresh,
         }),
-        [session, user, business, loading]
+        [session, user, business, loading, login, register, logout, refresh]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
