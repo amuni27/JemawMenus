@@ -27,6 +27,7 @@ export interface BusinessDTO {
     zipcode?: string;
     ownerUserId?: string;
     open24_7?: boolean;
+    logoUrl?: string;
     updatedAt: Date
     createdAt: Date
 }

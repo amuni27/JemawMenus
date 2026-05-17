@@ -14,6 +14,7 @@ import MenuDetailPage from "../pages/menus/MenuDetailPage.tsx";
 import QRPage from "../pages/menus/QRPage.tsx";
 import MenuItemDetail from "../pages/customer/MenuItemDetail.tsx";
 import MenuEditPage from "../pages/menus/MenuEditPage.tsx";
+import AccountPage from "../pages/admin/AccountPage.tsx";
 
 const router = createBrowserRouter([
     {
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
                         ],
                     },
                     {path: 'menus/new', element: <MenuCreatePage/>},
+                    {path: 'account', element: <AccountPage/>},
                 ],
             },
         ],

@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {Link, Outlet, useLocation} from "react-router-dom";
+import {Link, Outlet, useLocation, useNavigate} from "react-router-dom";
 import {Settings, HelpCircle, User, LogOut} from "lucide-react";
 import {useAuth} from "../../app/context/AuthContext.tsx";
 
@@ -10,7 +10,8 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminLayout() {
-    const auth =  useAuth();
+    const auth = useAuth();
+    const nav = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const {pathname} = useLocation();
     const tenantSlug = pathname.split("/")[1]; // crude extract
@@ -127,6 +128,7 @@ export default function AdminLayout() {
                                     className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition"
                                     onClick={() => {
                                         setAccountOpen(false);
+                                        nav(`/${tenantSlug}/admin/account`);
                                     }}
                                 >
                                     <User className="h-4 w-4 text-gray-500"/>
