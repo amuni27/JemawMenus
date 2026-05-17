@@ -44,7 +44,7 @@ export default function UserProfileModal({ open, onClose, user, onSaved }: Props
     setSaving(true);
     setError("");
     try {
-      await profileApi.updateUser(user.id, {
+      await profileApi.updateUser({
         fullName: fullName.trim(),
         phoneNumber: phone || undefined,
       });

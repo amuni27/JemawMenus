@@ -34,8 +34,8 @@ export interface UpdateBusinessHoursPayload {
 }
 
 export const profileApi = {
-  updateUser: (userId: string, payload: UpdateUserPayload) =>
-    updateRequest(`/users/${userId}`, payload),
+  updateUser: (payload: UpdateUserPayload) =>
+    updateRequest(`/user`, payload),
 
   changePassword: (payload: ChangePasswordPayload) =>
     apiAuth.post('/auth/change-password', payload),
