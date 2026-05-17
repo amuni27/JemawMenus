@@ -553,6 +553,16 @@ export default function RegisterWizard() {
                         </Button>
                     )}
                 </div>
+
+                <p className="mt-6 text-center text-sm text-gray-500">
+                    Already have an account?{" "}
+                    <button
+                        onClick={() => nav("/auth/login")}
+                        className="font-semibold hover:underline"
+                    >
+                       <span className="text-brand">Log in</span>
+                    </button>
+                </p>
             </div>
         </AuthLayout>
     );
