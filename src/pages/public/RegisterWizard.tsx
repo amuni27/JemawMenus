@@ -515,7 +515,7 @@ export default function RegisterWizard() {
                         onChange={(e) => update("subdomain", e.target.value.toLowerCase())}
                     />
 
-                    <span className="mt-6 text-sm">.menuqrs.com</span>
+                    <span className="mt-6 text-sm">.{import.meta.env.VITE_APP_DOMAIN ?? "agafarimenu.com"}</span>
                 </div>
             </div>
         );
