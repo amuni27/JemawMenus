@@ -231,14 +231,10 @@ export default function ItemModal({
             setStep("confirming");
             const confirmed = await onConfirmImage(itemId, upload.objectKey);
 
-            const newUrl = confirmed.imageUrl
-                ? `${confirmed.imageUrl}${confirmed.imageUrl.includes("?") ? "&" : "?"}v=${Date.now()}`
-                : "";
-
             setDraft((d) => ({
                 ...d,
                 imageFile: null,
-                imagePreview: newUrl,
+                imagePreview: confirmed.imageUrl ?? "",
             }));
 
             return confirmed;
@@ -261,11 +257,8 @@ export default function ItemModal({
 
             // EDIT
             if (item) {
-                const updated = await onUpdate(item.id, basePayload);
-                const confirmed = await doImageFlow(item.id);
-
-                // Prefer latest server state
-                const _finalItem = confirmed ?? updated;
+                await onUpdate(item.id, basePayload);
+                await doImageFlow(item.id);
 
                 toast("Item updated");
                 onClose();
