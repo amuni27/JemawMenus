@@ -16,9 +16,14 @@ export const postRequest = (endpoint: string, data: any) => {
     return apiAuth.post(endpoint, data);
 };
 
-// PUT: Update item
+// PATCH: Partial update
 export const updateRequest = (endpoint: string, data: any) => {
     return apiAuth.patch(`${endpoint}`, data);
+};
+
+// PUT: For endpoints the backend maps with PUT only (e.g. /items/{id}/status)
+export const putRequest = (endpoint: string, data: unknown) => {
+    return apiAuth.put(endpoint, data);
 };
 
 // DELETE: Remove item

@@ -6,6 +6,7 @@ import {
   postRequest,
   deleteRequest,
   updateRequest,
+  putRequest,
 } from "../services/apiService";
 
 type CreateItemBody = Omit<MenuItem, "id" | "menuId" | "createdAt" | "updatedAt">;
@@ -28,8 +29,9 @@ export class ItemsApi {
     return deleteRequest(`/items/`, itemId);
   }
 
+  // Backend maps this endpoint with PUT only (PATCH returned HTTP 500)
   static updateStatus(itemId: string, body: { status: ItemStatus }) {
-    return updateRequest(`/items/${itemId}/status`, body);
+    return putRequest(`/items/${itemId}/status`, body);
   }
 
   // ✅ NEW: GET presign for existing item
