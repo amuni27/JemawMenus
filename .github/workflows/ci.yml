@@ -3,7 +3,8 @@ name: Frontend CI
 on:
   pull_request:
   push:
-    branches: [feature/init]
+    branches: [feature/init, "feature/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read

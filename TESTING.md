@@ -23,6 +23,6 @@ Examples: `src/services/apiService.test.ts` (Node, mocked Axios) and `src/compon
 
 ## CI
 
-`.github/workflows/ci.yml` runs install, lint, build and test for every pull request and every push to `feature/init`.
+`.github/workflows/ci.yml` runs install, lint, build and test for every pull request, every push to `feature/init` or any `feature/**` branch, and on manual dispatch.
 
 **Lint is currently non-blocking:** the codebase has 98 pre-existing lint errors, mostly `no-explicit-any`. New code should not add lint errors. Make lint blocking once the existing errors are fixed.
