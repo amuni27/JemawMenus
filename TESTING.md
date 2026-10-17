@@ -26,3 +26,14 @@ Examples: `src/services/apiService.test.ts` (Node, mocked Axios) and `src/compon
 `.github/workflows/ci.yml` runs install, lint, build and test for every pull request, every push to `feature/init` or any `feature/**` branch, and on manual dispatch.
 
 **Lint is currently non-blocking:** the codebase has 98 pre-existing lint errors, mostly `no-explicit-any`. New code should not add lint errors. Make lint blocking once the existing errors are fixed.
+
+## Secret scanning (AGF-S1-02)
+
+CI runs gitleaks 8.30.1 over the full Git history (`secret-scan` job) and fails on any finding; output is redacted. `.gitleaks.toml` allowlists only explicit placeholders. Never put credentials in `VITE_*` variables or `.env`; private local values belong in `.env.local`, which is git-ignored.
+
+Optional pre-commit hook (requires a local gitleaks install):
+
+```bash
+printf '#!/bin/sh\nexec gitleaks git --pre-commit --staged --redact --no-banner\n' > .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
