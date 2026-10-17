@@ -15,7 +15,7 @@ export default function MenuItemDetail() {
 
         setLoading(true);
         publicMenueApi
-            .findItem(`/venue/items/${itemId}`)
+            .findItem(`/venue/${tenantSlug}/items/${itemId}`) // tenant-scoped (AGF-S1-05)
             .then((res) => setItem(res.data))
             .catch(() => setItem(null))
             .finally(() => setLoading(false));
