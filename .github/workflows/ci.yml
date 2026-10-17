@@ -1,0 +1,38 @@
+name: Frontend CI
+
+on:
+  pull_request:
+  push:
+    branches: [feature/init]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Lint, build and test (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Non-blocking until the 98 pre-existing lint errors are fixed (approved exception, AGF-S1-03 report).
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Type-check and build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+  # The secret-scanning job is added by AGF-S1-02.
