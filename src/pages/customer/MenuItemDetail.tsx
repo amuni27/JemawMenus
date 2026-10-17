@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
 import { MenuItem } from "../../types/menu.ts";
+import { isSoldOut } from "../../utils/itemAvailability.ts";
 
 export default function MenuItemDetail() {
     const navigate = useNavigate();
@@ -106,6 +107,12 @@ export default function MenuItemDetail() {
                             </div>
                         </div>
 
+                        {isSoldOut(item.status) ? (
+                            <span className="w-fit rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                                Sold Out
+                            </span>
+                        ) : null}
+
                         {/* Desktop price under title (slightly softer color) */}
                         <div className="hidden lg:block">
                             {priceNumber !== null ? (
@@ -184,8 +191,9 @@ export default function MenuItemDetail() {
 
                     <div className="mt-6">
                         <button
-                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-600"
+                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-400"
                             onClick={() => navigate(-1)}
+                            disabled={isSoldOut(item.status)}
                         >
                             <span className="text-white">Add to list</span>
                         </button>

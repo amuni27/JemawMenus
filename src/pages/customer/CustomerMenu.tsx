@@ -9,6 +9,7 @@ import {useStorageState} from "../../hooks/useStorageState.ts";
 import {WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
 import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 import { useToast } from "../../components/ui/ToastContext.tsx";
+import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
 
 
 export default function CustomerMenu() {
@@ -47,7 +48,19 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         setIsWaiterListOpen(false);
     }
 
+    // Items currently sold out anywhere on this business's menus (AGF-S1-13)
+    const soldOutItemIds = useMemo(() => {
+        const ids = new Set<string>();
+        type GuestMenu = { categories?: { items?: { id: string | number; status?: string }[] }[] };
+        for (const menu of (menus ?? []) as GuestMenu[])
+            for (const cat of menu.categories ?? [])
+                for (const i of cat.items ?? [])
+                    if (isSoldOut(i.status)) ids.add(String(i.id));
+        return ids;
+    }, [menus]);
+
     function addMenuItemToWaiterList(menuItem: any) {
+        if (isSoldOut(menuItem.status)) return; // sold-out items cannot be added
         const itemId = String(menuItem.id);
 
         // snapshot: keep it small + stable
@@ -84,6 +97,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     }
 
     function incrementWaiterListItem(itemId: string) {
+        if (soldOutItemIds.has(itemId)) return; // entry stays, but cannot be increased while sold out
         setWaiterList((prev) => {
             const existing = prev[itemId];
             if (!existing) return prev;
@@ -155,7 +169,8 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     const groups = useMemo(() => {
         if (!activeMenu) return [];
         return sortedCategories.map((cat: any) => {
-            const items = (cat.items ?? []).filter((i: any) => i.status === "AVAILABLE");
+            // AVAILABLE and OUT_OF_STOCK are shown (sold-out counted, PO-8); anything else stays hidden
+            const items = (cat.items ?? []).filter((i: any) => isGuestVisible(i.status));
             return { category: cat, items };
         });
     }, [activeMenu, sortedCategories]);
@@ -345,6 +360,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                 open={isWaiterListOpen}
                 onClose={closeWaiterList}
                 waiterList={waiterList}
+                soldOutItemIds={soldOutItemIds}
                 onIncrement={incrementWaiterListItem}
                 onDecrement={decrementWaiterListItem}
                 onRemove={removeWaiterListItem}

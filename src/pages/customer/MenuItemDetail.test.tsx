@@ -44,3 +44,26 @@ describe("MenuItemDetail", () => {
         expect(get).toHaveBeenLastCalledWith("/venue/biz-1/items/hidden-item");
     });
 });
+
+describe("MenuItemDetail sold-out state (AGF-S1-13)", () => {
+    it("shows Sold Out and disables Add to list for an OUT_OF_STOCK item", async () => {
+        get.mockResolvedValue({ data: { id: "s1", name: "Tibs", price: 420, ingredients: ["beef"], status: "OUT_OF_STOCK" } });
+
+        renderAt("/biz-1/menu/item/s1");
+
+        expect(await screen.findByText("Tibs")).toBeTruthy();
+        expect(screen.getByText("Sold Out")).toBeTruthy();
+        const addButton = screen.getByRole("button", { name: /add to list/i }) as HTMLButtonElement;
+        expect(addButton.disabled).toBe(true);
+    });
+
+    it("keeps Add to list enabled for an AVAILABLE item", async () => {
+        get.mockResolvedValue({ data: { id: "a1", name: "Doro Wat", price: 350, ingredients: ["chicken"], status: "AVAILABLE" } });
+
+        renderAt("/biz-1/menu/item/a1");
+
+        expect(await screen.findByText("Doro Wat")).toBeTruthy();
+        expect(screen.queryByText("Sold Out")).toBeNull();
+        expect((screen.getByRole("button", { name: /add to list/i }) as HTMLButtonElement).disabled).toBe(false);
+    });
+});

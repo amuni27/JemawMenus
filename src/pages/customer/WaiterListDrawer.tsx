@@ -9,6 +9,7 @@ type Props = {
     open: boolean;
     onClose: () => void;
     waiterList: WaiterListMap;
+    soldOutItemIds?: Set<string>; // entries for these items are marked Sold out and cannot be increased
 
     onIncrement: (itemId: string) => void;
     onDecrement: (itemId: string) => void;
@@ -20,6 +21,7 @@ export function WaiterListDrawer({
                                      open,
                                      onClose,
                                      waiterList,
+                                     soldOutItemIds,
                                      onIncrement,
                                      onDecrement,
                                      onRemove,
@@ -81,6 +83,7 @@ export function WaiterListDrawer({
                         <div className="space-y-3">
                             {entries.map((e) => {
                                 const snap = e.snapshot;
+                                const soldOut = soldOutItemIds?.has(e.itemId) ?? false;
                                 return (
                                     <div key={e.itemId} className="flex gap-3 rounded-2xl border p-3">
                                         <div className="h-14 w-14 overflow-hidden rounded-xl bg-gray-100">
@@ -95,8 +98,15 @@ export function WaiterListDrawer({
                                         </div>
 
                                         <div className="min-w-0 flex-1">
-                                            <div className="truncate font-semibold text-gray-900">
-                                                {snap.name}
+                                            <div className="flex items-center gap-2">
+                                                <div className="truncate font-semibold text-gray-900">
+                                                    {snap.name}
+                                                </div>
+                                                {soldOut ? (
+                                                    <span className="shrink-0 rounded-full bg-gray-900 px-2 py-0.5 text-xs font-semibold text-white">
+                                                        Sold out
+                                                    </span>
+                                                ) : null}
                                             </div>
 
                                             <div className="mt-1 text-sm text-gray-500">
@@ -129,7 +139,8 @@ export function WaiterListDrawer({
                                                 <button
                                                     type="button"
                                                     onClick={() => onIncrement(e.itemId)}
-                                                    className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-100"
+                                                    disabled={soldOut}
+                                                    className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                                                     aria-label={`Increase ${snap.name}`}
                                                 >
                                                     +
