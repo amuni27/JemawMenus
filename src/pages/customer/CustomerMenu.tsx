@@ -6,7 +6,7 @@ import { MenuHeader } from "../../components/menu/MenuHeader";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../hooks/useStorageState.ts";
-import {WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
+import {GuestMenuOutletContext, WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
 import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 import { useToast } from "../../components/ui/ToastContext.tsx";
 import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
@@ -71,7 +71,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                 typeof menuItem.price === "number" || typeof menuItem.price === "string"
                     ? Number(menuItem.price)
                     : undefined,
-            currency: activeMenu?.currency,
+            currency: menuItem.currency ?? activeMenu?.currency, // item detail carries its own currency (S2-02)
         };
 
         setWaiterList((prev) => {
@@ -336,7 +336,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                         ) : isViewingItem ? (
                             // ✅ REPLACE cards with item detail
                             <div className="">
-                                <Outlet />
+                                <Outlet context={{ addToWaiterList: addMenuItemToWaiterList } satisfies GuestMenuOutletContext} />
                             </div>
                          ) : (
                             <>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 
 // AGF-S1-05: the guest item page must use the tenant-scoped public endpoint.
 
@@ -10,11 +10,16 @@ vi.mock("../../services/apiPublic.ts", () => ({ default: { get } }));
 
 const { default: MenuItemDetail } = await import("./MenuItemDetail.tsx");
 
+// In the app the detail page is nested in the guest menu, which provides the waiter list (AGF-S2-04)
+const GuestMenuStub = () => <Outlet context={{ addToWaiterList: vi.fn() }} />;
+
 const renderAt = (path: string) =>
     render(
         <MemoryRouter initialEntries={[path]}>
             <Routes>
-                <Route path="/:tenantSlug/menu/item/:itemId" element={<MenuItemDetail />} />
+                <Route path="/:tenantSlug/menu" element={<GuestMenuStub />}>
+                    <Route path="item/:itemId" element={<MenuItemDetail />} />
+                </Route>
             </Routes>
         </MemoryRouter>
     );

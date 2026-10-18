@@ -122,3 +122,9 @@ export type WaiterListEntry = {
 };
 
 export type WaiterListMap = Record<string, WaiterListEntry>;
+
+/** Shared with the guest item-detail page through the router outlet (AGF-S2-04). */
+export interface GuestMenuOutletContext {
+  /** Adds an item to the session waiter list (sold-out items are ignored) and confirms with a toast. */
+  addToWaiterList: (item: MenuItem) => void;
+}

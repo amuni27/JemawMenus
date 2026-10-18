@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatPrice } from "../../utils/currency";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
-import { MenuItem } from "../../types/menu.ts";
+import { GuestMenuOutletContext, MenuItem } from "../../types/menu.ts";
 import { isSoldOut } from "../../utils/itemAvailability.ts";
 
 export default function MenuItemDetail() {
     const navigate = useNavigate();
     const { tenantSlug, itemId } = useParams();
+    // The guest menu's waiter list (session storage), shared with the menu cards (AGF-S2-04)
+    const outlet = useOutletContext<GuestMenuOutletContext | undefined>();
 
     const [item, setItem] = useState<MenuItem | null>(null);
     const [loading, setLoading] = useState(true);
@@ -193,8 +195,8 @@ export default function MenuItemDetail() {
                     <div className="mt-6">
                         <button
                             className="rounded-lg border px-4 py-2 text-sm bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-400"
-                            onClick={() => navigate(-1)}
-                            disabled={isSoldOut(item.status)}
+                            onClick={() => outlet?.addToWaiterList(item)}
+                            disabled={isSoldOut(item.status) || !outlet}
                         >
                             <span className="text-white">Add to list</span>
                         </button>
