@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { Input } from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../app/context/AuthContext';
-import * as api from '../../api';
+import { safeNextPath } from '../../services/session';
+
+// Why the owner was sent here (AGF-S1-11)
+const REASON_MESSAGES: Record<string, string> = {
+  expired: 'Your session expired, please sign in again.',
+  inactive: 'Your account is not active. Contact support.',
+};
 
 export default function Login() {
   const { login, loading } = useAuth();
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const reasonMessage = REASON_MESSAGES[params.get('reason') ?? ''];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -17,10 +25,13 @@ export default function Login() {
     e.preventDefault();
     try {
       const session = await login(email, password);
-      if (session.business) nav(`/${session.business.id}/admin/menus`);
+      const businessId = session.business?.id;
+      // Return to the page the owner was on, if it is one of their own admin pages
+      const next = safeNextPath(params.get('next'), businessId);
+      if (businessId) nav(next ?? `/${businessId}/admin/menus`, { replace: true });
       else nav('/');
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Registration failed";
+      const msg = err?.response?.data?.message || "Sign in failed. Please try again.";
       setError(msg);
     }
   };
@@ -28,6 +39,9 @@ export default function Login() {
     <AuthLayout>
       <form onSubmit={submit} className="space-y-6">
         <h1 className="text-2xl font-bold">Welcome back</h1>
+        {reasonMessage && !error && (
+          <p role="status" className="rounded bg-amber-50 p-2 text-sm text-amber-800">{reasonMessage}</p>
+        )}
         {error && <p className="rounded bg-red-50 p-2 text-sm text-red-600">{error}</p>}
         <Input
           label="Email"

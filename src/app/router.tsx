@@ -4,6 +4,7 @@ import Pricing from '../pages/public/Pricing';
 import Login from '../pages/public/Login';
 import RegisterWizard from '../pages/public/RegisterWizard';
 import AdminLayout from '../components/layout/AdminLayout.tsx';
+import RequireAuth from '../components/auth/RequireAuth.tsx';
 import CustomerMenu from '../pages/customer/CustomerMenu.tsx';
 import Dashboard from '../pages/admin/Dashboard';
 import DealsPage from '../pages/admin/DealsPage';
@@ -47,7 +48,7 @@ const router = createBrowserRouter([
             },
             {
                 path: 'admin',
-                element: <AdminLayout/>,
+                element: <RequireAuth><AdminLayout/></RequireAuth>,
                 children: [
                     {index: true, element: <Dashboard/>},
                     {path: 'qrcode', element: <QRPage/>},

@@ -1,14 +1,15 @@
 import {useEffect, useState} from "react";
-import {Link, useNavigate, useParams} from "react-router-dom";
+import {Link, useParams} from "react-router-dom";
 import {Menu} from "../../types/menu";
 import menuApi from "../../api/menuApi";
 import MenuQrModal from "../../components/menu/MenuQrModal";
 import {useAuth} from "../../app/context/AuthContext";
 import DeleteCategoryModal from "../../components/menu/DeleteCategoryModal.tsx";
 import {useMenus} from "../../hooks/useMenus";
+import LoadError from "../../components/ui/LoadError";
+import {errorMessage} from "../../utils/errorMessage";
 
 export default function MenusListPage() {
-    const nav = useNavigate();
     const auth = useAuth();
     const {tenantSlug} = useParams();
     const {deleteMenu} = useMenus();
@@ -16,6 +17,7 @@ export default function MenusListPage() {
     const [menus, setMenus] = useState<Menu[]>([]);
     const [qrMenu, setQrMenu] = useState<Menu | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
 
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState<Menu>();
@@ -34,20 +36,23 @@ export default function MenusListPage() {
         setDeleteError("");
     };
 
+    // Failures show an error with Retry instead of loading forever (AGF-S1-11);
+    // an expired session is handled by the route guard
     const load = async () => {
         setLoading(true);
-        const response = await menuApi.listMenus();
-        if (response.status === 401) {
-            nav("/auth/login");
-            return;
+        setLoadError("");
+        try {
+            const response = await menuApi.listMenus();
+            setMenus(response.data);
+        } catch (err) {
+            setLoadError(errorMessage(err, "Failed to load menus"));
+        } finally {
+            setLoading(false);
         }
-        setMenus(response.data);
-        setLoading(false);
     };
 
     useEffect(() => {
         load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tenantSlug]);
 
     const confirmDelete = async () => {
@@ -91,6 +96,8 @@ export default function MenusListPage() {
             {/* Content */}
             {loading ? (
                 <p className="text-gray-600">Loading...</p>
+            ) : loadError ? (
+                <LoadError message={loadError} onRetry={load}/>
             ) : menus.length === 0 ? (
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center">
                     <p className="mb-4 text-gray-700">No menus yet.</p>

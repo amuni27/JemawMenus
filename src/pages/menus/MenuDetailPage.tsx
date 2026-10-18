@@ -9,6 +9,8 @@ import ItemModal from "../../components/menu/ItemModal.tsx";
 import { useCategories } from "../../hooks/useCategories";
 import menuApi from "../../api/menuApi";
 import { useItems } from "../../hooks/useItems.ts";
+import LoadError from "../../components/ui/LoadError";
+import { errorMessage } from "../../utils/errorMessage";
 
 export default function MenuDetailPage() {
   const { menuId } = useParams<{ menuId: string }>();
@@ -29,6 +31,7 @@ export default function MenuDetailPage() {
   } = useItems(menuId);
 
   const [error, setError] = useState<string>("");
+  const [attempt, setAttempt] = useState(0);
 
   // modal states
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
@@ -49,7 +52,7 @@ export default function MenuDetailPage() {
         })
         .catch((err: any) => {
           if (!alive) return;
-          setError(err?.message || "Failed to load menu");
+          setError(errorMessage(err, "Failed to load menu"));
           setMenu(null);
         })
         .finally(() => {
@@ -60,10 +63,10 @@ export default function MenuDetailPage() {
     return () => {
       alive = false;
     };
-  }, [menuId]);
+  }, [menuId, attempt]);
 
   if (loading) return <p className="p-6">Loading...</p>;
-  if (error) return <p className="p-6 text-red-600">{error}</p>;
+  if (error) return <div className="p-6"><LoadError message={error} onRetry={() => setAttempt((n) => n + 1)} /></div>;
   if (!menu) return <p className="p-6 text-red-600">Menu not found.</p>;
 
   return (

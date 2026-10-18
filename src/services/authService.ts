@@ -64,12 +64,13 @@ export async function register(payload: any): Promise<void> {
     await apiAuth.post("/auth/register", payload);
 }
 
-export async function me(): Promise<{ user: UserDTO; business?: BusinessDTO }> {
+export async function me(): Promise<{ token?: string; user: UserDTO; business?: BusinessDTO }> {
     const res = await apiAuth.get('/auth/me');
     const data = res.data?.data ?? res.data;
     if (!data?.user) throw new Error('Invalid /me response');
 
     return {
+        token: data.token, // /me issues a fresh token (AGF-S1-11)
         user: data.user,
         business: data.business ?? data.vendor,
     };
