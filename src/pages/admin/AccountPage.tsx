@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { displayCurrency } from "../../utils/currency";
+import { formatSubdomain } from "../../utils/subdomain";
+import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import CopyLinkButton from "../../components/ui/CopyLinkButton";
 import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
@@ -95,7 +98,24 @@ export default function AccountPage() {
           <InfoRow label="Address" value={business.streetAddress} />
           <InfoRow label="City" value={business.city} />
           <InfoRow label="Region" value={business.state} />
-          <InfoRow label="Subdomain" value={business.customSubdomain ? `${business.customSubdomain}.menuqrs.com` : undefined} />
+          {/* AGF-S2-10: the stored host as-is (no second domain); the guest link is built exactly like the QR code */}
+          <InfoRow label="Subdomain" value={formatSubdomain(business.customSubdomain)} />
+          {business.id && (
+            <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+              <span className="text-sm text-gray-500 shrink-0">Guest menu link</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <a
+                  href={buildMenuUrl(business.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-sm font-medium text-blue-600 hover:underline"
+                >
+                  {buildMenuUrl(business.id)}
+                </a>
+                <CopyLinkButton url={buildMenuUrl(business.id)} successMessage="Guest menu link copied" />
+              </span>
+            </div>
+          )}
           <InfoRow label="Currency" value={displayCurrency(business.currency)} />
         </Card>
 
