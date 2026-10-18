@@ -275,9 +275,6 @@ export default function ItemModal({
             // CREATE
             const created = await onCreate(basePayload);
 
-            // ✅ keep your log EXACTLY as you want
-            console.log("create response:", created);
-
             if (!created?.id) {
                 throw new Error("Create did not return a valid item id");
             }

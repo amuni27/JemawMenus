@@ -19,5 +19,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // AGF-S1-16: keep the browser console free of application data
+      'no-console': 'warn',
+    },
   },
 ])

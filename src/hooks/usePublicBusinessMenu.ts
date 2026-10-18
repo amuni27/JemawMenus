@@ -57,7 +57,6 @@ export function usePublicBusinessMenu(businessId?: string) {
         publicMenuApi
             .listMenuTypes(`/venue/${businessId}/menu`)
             .then((res) => {
-                console.log(res)
                 if (!alive) return;
                 setData(res.data);
             })
