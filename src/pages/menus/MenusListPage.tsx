@@ -127,7 +127,7 @@ export default function MenusListPage() {
                                             {menu.name}
                                         </Link>
                                         <p className="mt-1 text-sm text-gray-500">
-                                            {menu.menuType?.name}
+                                            {menu.menuTypeName ?? menu.menuType?.name}
                                         </p>
                                     </div>
 
@@ -187,7 +187,7 @@ export default function MenusListPage() {
                                     </td>
 
                                     <td className="px-6 py-4 text-sm text-gray-500">
-                                        {menu.menuType?.name}
+                                        {menu.menuTypeName ?? menu.menuType?.name}
                                     </td>
 
                                     <td className="px-6 py-4 text-right text-sm font-medium">

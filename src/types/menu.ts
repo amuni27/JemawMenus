@@ -6,13 +6,18 @@ export interface MenuType {
   updatedAt: Date;
 }
 export type Currency = "USD" | "ETB" | (string & {});
+// Matches the backend MenuResponse (AGF-S1-14 / AGF-DEF-01): menu type fields are flat
 export interface Menu {
   id: string;
   businessId: string;
   name: string;
-  menuType: MenuType;
   menuTypeId?: string;
-  description?: string;
+  menuTypeName?: string;
+  /** @deprecated not sent by the API; kept for older callers */
+  menuType?: MenuType;
+  description?: string | null;
+  visibility?: string;
+  active?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,7 +27,8 @@ export interface MenuDto {
   name: string;
   menuTypeId: string;
   description?: string;
-  visibility: string;
+  /** Omitted when unknown, so an edit never changes the menu's visibility by accident */
+  visibility?: string;
 }
 
 export interface Category {
