@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from "react";
+import { ALLOWED_IMAGE_TYPES, imageFileProblem } from "../../utils/imagePolicy";
 import Modal from "../ui/Modal.tsx";
 import ModalHeader from "../ui/ModalHeader.tsx";
 import Button from "../ui/Button.tsx";
@@ -34,7 +35,7 @@ interface Props {
     onConfirmImage: (itemId: string, objectKey: string) => Promise<MenuItem>;
 
     // Presign PUT upload URL for the item
-    onPresignImage?: (itemId: string) => Promise<PresignResponse>;
+    onPresignImage?: (itemId: string, contentType: string) => Promise<PresignResponse>;
 }
 
 
@@ -225,7 +226,7 @@ export default function ItemModal({
             if (!onPresignImage) throw new Error("Missing onPresignImage prop");
 
             setStep("presigning");
-            const presigned = await onPresignImage(itemId);
+            const presigned = await onPresignImage(itemId, draft.imageFile.type);
             const upload = presigned?.upload;
 
             if (!upload?.uploadUrl || !upload?.objectKey) {
@@ -408,17 +409,16 @@ export default function ItemModal({
 
                     <input
                         type="file"
-                        accept="image/*"
+                        accept={ALLOWED_IMAGE_TYPES.join(",")}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
                         onChange={(e) => {
                             const file = e.target.files?.[0] || null;
 
-                            if (file && !file.type.startsWith("image/")) {
-                                toast("Please select an image file");
-                                return;
-                            }
-                            if (file && file.size > 8 * 1024 * 1024) {
-                                toast("Image too large (max 8MB)");
+                            // Same rules as the backend (AGF-S1-17): JPEG, PNG or WebP, max 8 MB
+                            const problem = file ? imageFileProblem(file) : null;
+                            if (problem) {
+                                toast(problem);
+                                e.target.value = "";
                                 return;
                             }
 

@@ -1,4 +1,5 @@
 import {useState} from "react";
+import { isStrongPassword, passwordChecks } from "../../utils/passwordPolicy";
 import AuthLayout from "../../components/auth/AuthLayout";
 import {Input} from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -52,21 +53,8 @@ interface WizardState {
     subdomain: string;
 }
 
-// ----- Password Validation ------------------------------------------------
-const validatePasswordStrength = (password: string) => {
-    return {
-        minLength: password.length >= 8,
-        lowercase: /[a-z]/.test(password),
-        uppercase: /[A-Z]/.test(password),
-        number: /[0-9]/.test(password),
-        symbol: /[^A-Za-z0-9]/.test(password),
-    };
-};
-
-const isStrongPassword = (password: string) => {
-    const checks = validatePasswordStrength(password);
-    return Object.values(checks).every(Boolean);
-};
+// ----- Password Validation (shared policy, AGF-S1-17) ----------------------
+const validatePasswordStrength = passwordChecks;
 
 function PasswordStrength({password}: { password: string }) {
     const checks = validatePasswordStrength(password);

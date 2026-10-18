@@ -17,7 +17,7 @@ interface Props {
     // ✅ NEW: required for image upload flow
     onConfirmImage: (itemId: string, objectKey: string) => Promise<MenuItem>;
     // ✅ NEW: required when an image file is selected (create/edit)
-    onPresignImage: (itemId: string) => Promise<{
+    onPresignImage: (itemId: string, contentType: string) => Promise<{
         item: MenuItem;
         upload?: { uploadUrl: string; objectKey: string; expiresInSeconds?: number } | null;
     }>;

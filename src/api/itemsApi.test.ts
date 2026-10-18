@@ -53,3 +53,13 @@ describe("useItems.toggleStatus (Hide / Show button)", () => {
         expect(result.current.items[0].status).toBe("AVAILABLE");
     });
 });
+
+describe("ItemsApi.presignImage (AGF-S1-17)", () => {
+    it("sends the image content type as a query parameter", async () => {
+        http.get.mockResolvedValue({ data: { upload: {} } });
+
+        await ItemsApi.presignImage("item-1", "image/png");
+
+        expect(http.get).toHaveBeenCalledWith("/items/item-1/image/presign?contentType=image%2Fpng");
+    });
+});

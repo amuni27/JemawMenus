@@ -15,7 +15,7 @@ interface Props {
     onConfirmImage: (itemId: string, objectKey: string) => Promise<MenuItem>;
 
     // ✅ NEW: presign upload URL (create/edit when image selected)
-    onPresignImage: (itemId: string) => Promise<{
+    onPresignImage: (itemId: string, contentType: string) => Promise<{
         item: MenuItem;
         upload?: { uploadUrl: string; objectKey: string; expiresInSeconds?: number } | null;
     }>;

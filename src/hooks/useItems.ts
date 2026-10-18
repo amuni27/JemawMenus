@@ -176,8 +176,8 @@ export function useItems(menuId?: string) {
     );
 
     // --------- image upload helpers ----------
-    const presignItemImage = useCallback(async (itemId: string): Promise<PresignResponse> => {
-        const res = await itemApi.presignImage(itemId);
+    const presignItemImage = useCallback(async (itemId: string, contentType: string): Promise<PresignResponse> => {
+        const res = await itemApi.presignImage(itemId, contentType);
         const data = unwrapData<PresignResponse>(res);
 
         // Guard for contract correctness

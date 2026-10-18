@@ -35,8 +35,9 @@ export class ItemsApi {
   }
 
   // ✅ NEW: GET presign for existing item
-  static presignImage(itemId: string) {
-    return fetchItems(`/items/${itemId}/image/presign`);
+  // AGF-S1-17: the backend allows JPEG, PNG or WebP and signs this content type into the upload URL
+  static presignImage(itemId: string, contentType: string) {
+    return fetchItems(`/items/${itemId}/image/presign?contentType=${encodeURIComponent(contentType)}`);
   }
 
   // ✅ NEW: confirm upload (backend HEAD check + returns item with public imageUrl)
