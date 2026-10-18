@@ -1,4 +1,5 @@
 import {useEffect, useState} from "react";
+import { useFieldErrors } from "../../utils/fieldErrors";
 import { FormInput } from "../../components/form/FormInput";
 import { FormSelect } from "../../components/form/FormSelect";
 import { FormTextarea } from "../../components/form/FormTextarea";
@@ -28,6 +29,7 @@ export default function MenuWizard({ initial, onSave }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const serverErrors = useFieldErrors(); // AGF-S2-11
 
   const [menuTypes, setMenuTypes] = useState<MenuType[]>([]);
   const [menuTypesLoading, setMenuTypesLoading] = useState(true);
@@ -76,7 +78,11 @@ export default function MenuWizard({ initial, onSave }: Props) {
       if (payload.isActive === undefined) delete payload.isActive;
       await onSave(payload);
     } catch (err) {
-      setSaveError(errorMessage(err, "Failed to save menu"));
+      // Field errors appear under their fields; otherwise the server message is shown (AGF-S2-11)
+      setSaveError(serverErrors.apply(err, {
+        name: data.name, menuTypeId: data.menuTypeId, description: data.description ?? "",
+        visibility: data.visibility, isActive: data.isActive,
+      }, "Failed to save menu") ?? "");
       setSaving(false);
     }
   };
@@ -100,14 +106,14 @@ export default function MenuWizard({ initial, onSave }: Props) {
           <FormInput
               label="Menu Name"
               value={data.name}
-              error={errors.name}
+              error={errors.name || serverErrors.errorFor("name", data.name)}
               onChange={(e) => handleChange("name", e.target.value)}
           />
 
           <FormSelect
               label="Menu Type"
               value={data.menuTypeId}
-              error={errors.menuTypeId || menuTypesError}
+              error={errors.menuTypeId || serverErrors.errorFor("menuTypeId", data.menuTypeId) || menuTypesError}
               onChange={(e) => handleChange("menuTypeId", e.target.value)}
           >
             <option value="">
@@ -124,6 +130,7 @@ export default function MenuWizard({ initial, onSave }: Props) {
           <FormTextarea
               label="Description (optional)"
               value={data.description ?? ""}
+              error={serverErrors.errorFor("description", data.description ?? "")}
               onChange={(e) => handleChange("description", e.target.value)}
           />
 

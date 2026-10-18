@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from "react";
+import { useFieldErrors } from "../../utils/fieldErrors";
 import { displayCurrency } from "../../utils/currency";
 import { ALLOWED_IMAGE_TYPES, imageFileProblem } from "../../utils/imagePolicy";
 import Modal from "../ui/Modal.tsx";
@@ -121,6 +122,9 @@ export default function ItemModal({
                                       currency,
                                   }: Props) {
     const toast = useToast();
+    const serverErrors = useFieldErrors(); // AGF-S2-11
+    const clearServerErrors = serverErrors.clear;
+    const applyServerErrors = serverErrors.apply;
 
     const [draft, setDraft] = useState<Draft>(() => buildDraft(item, categories));
     const [touched, setTouched] = useState(false);
@@ -140,9 +144,10 @@ export default function ItemModal({
         if (!open) return;
         setDraft(buildDraft(item, categories));
         setTouched(false);
+        clearServerErrors();
         setStep("idle");
         setImgOk(true);
-    }, [open, item, categories]);
+    }, [open, item, categories, clearServerErrors]);
 
     // Ensure category on create
     useEffect(() => {
@@ -289,14 +294,20 @@ export default function ItemModal({
             toast(draft.imageFile ? "Item created with image" : "Item created");
             onClose();
         } catch (e: any) {
-            toast(e?.response?.data?.message || e?.message || "Failed to save item");
+            // AGF-S2-11: field errors go under their fields; anything else keeps the server message
+            const banner = applyServerErrors(e, {
+                name: draft.name, categoryId: draft.categoryId, price: draft.price, calories: draft.calories,
+                description: draft.description, ingredients: draft.ingredients,
+            }, "Failed to save item");
+            if (banner) toast(banner);
         } finally {
             setStep("idle");
         }
     }, [
+        applyServerErrors,
         buildBasePayload,
         doImageFlow,
-        draft.imageFile,
+        draft,
         isValid,
         item,
         menuId,
@@ -337,14 +348,14 @@ export default function ItemModal({
                         label="Name"
                         value={draft.name}
                         onChange={(e) => setDraft({...draft, name: e.target.value})}
-                        error={touched && !draft.name.trim() ? "Required" : undefined}
+                        error={(touched && !draft.name.trim() ? "Required" : undefined) ?? serverErrors.errorFor("name", draft.name)}
                     />
 
                     <FormSelect
                         label="Category"
                         value={draft.categoryId}
                         onChange={(e) => setDraft({...draft, categoryId: e.target.value})}
-                        error={touched && !draft.categoryId ? "Required" : undefined}
+                        error={(touched && !draft.categoryId ? "Required" : undefined) ?? serverErrors.errorFor("categoryId", draft.categoryId)}
                     >
                         {categories.length === 0 ? (
                             <option value="">No categories found</option>
@@ -365,9 +376,9 @@ export default function ItemModal({
                             if (next !== null) setDraft({...draft, price: next});
                         }}
                         error={
-                            touched && (!draft.price || Number.isNaN(Number(draft.price)) || Number(draft.price) < 0)
+                            (touched && (!draft.price || Number.isNaN(Number(draft.price)) || Number(draft.price) < 0)
                                 ? "Invalid"
-                                : undefined
+                                : undefined) ?? serverErrors.errorFor("price", draft.price)
                         }
                     />
 
@@ -379,11 +390,11 @@ export default function ItemModal({
                             if (/^\d*$/.test(v)) setDraft({...draft, calories: v});
                         }}
                         error={
-                            touched &&
+                            (touched &&
                             draft.calories &&
                             (Number.isNaN(Number(draft.calories)) || Number(draft.calories) < 0)
                                 ? "Invalid"
-                                : undefined
+                                : undefined) ?? serverErrors.errorFor("calories", draft.calories)
                         }
                     />
                 </div>
@@ -406,6 +417,9 @@ export default function ItemModal({
                     value={draft.description}
                     onChange={(e) => setDraft({...draft, description: e.target.value})}
                 />
+                {serverErrors.errorFor("description", draft.description) && (
+                    <p className="-mt-2 text-xs text-red-600">{serverErrors.errorFor("description", draft.description)}</p>
+                )}
 
                 {/* Image Upload */}
                 <div className="space-y-2">
@@ -483,6 +497,9 @@ export default function ItemModal({
 
                     {touched && (draft.ingredients ?? []).length === 0 && (
                         <p className="text-xs text-red-600">At least 1 ingredient required</p>
+                    )}
+                    {serverErrors.errorFor("ingredients", draft.ingredients) && (
+                        <p className="text-xs text-red-600">{serverErrors.errorFor("ingredients", draft.ingredients)}</p>
                     )}
 
                     {(draft.ingredients ?? []).length > 0 && (
