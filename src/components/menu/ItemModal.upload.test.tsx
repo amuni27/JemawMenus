@@ -13,7 +13,9 @@ vi.mock("../../utils/r2Service.ts", () => ({ uploadToR2 }));
 const { default: ItemModal } = await import("./ItemModal.tsx");
 
 beforeAll(() => {
+    // jsdom has no blob URLs; Node 22 (CI) also lacks URL.revokeObjectURL, which ItemModal calls on cleanup
     URL.createObjectURL = () => "blob:preview";
+    URL.revokeObjectURL = () => {};
 });
 afterEach(() => cleanup());
 
