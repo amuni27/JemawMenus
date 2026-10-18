@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const apiAuth = axios.create({
-    baseURL: 'https://jemaw-menu-backend-spring.onrender.com/api',
-    // baseURL: 'http://localhost:8080/api',
+    // VITE_API_BASE_URL overrides the backend for local runs (e.g. the local demo); defaults to production.
+    baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'https://jemaw-menu-backend-spring.onrender.com'}/api`,
 });
 
 apiAuth.interceptors.request.use(
