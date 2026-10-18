@@ -327,7 +327,12 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                     )}
                     <main className="pt-4">
                         {!activeMenu ? (
-                            <div className="text-gray-600">Select a menu.</div>
+                            // PO-2: a restaurant with no published, public menu yet (AGF-S1-15)
+                            loading || error ? null : menus.length === 0 ? (
+                                <div className="py-10 text-center text-gray-600">Menu coming soon</div>
+                            ) : (
+                                <div className="text-gray-600">Select a menu.</div>
+                            )
                         ) : isViewingItem ? (
                             // ✅ REPLACE cards with item detail
                             <div className="">

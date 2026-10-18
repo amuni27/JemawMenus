@@ -10,6 +10,7 @@ import { useCategories } from "../../hooks/useCategories";
 import menuApi from "../../api/menuApi";
 import { useItems } from "../../hooks/useItems.ts";
 import LoadError from "../../components/ui/LoadError";
+import MenuStatusBadge from "../../components/menu/MenuStatusBadge";
 import { errorMessage } from "../../utils/errorMessage";
 
 export default function MenuDetailPage() {
@@ -32,6 +33,8 @@ export default function MenuDetailPage() {
 
   const [error, setError] = useState<string>("");
   const [attempt, setAttempt] = useState(0);
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState("");
 
   // modal states
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
@@ -65,6 +68,21 @@ export default function MenuDetailPage() {
     };
   }, [menuId, attempt]);
 
+  // Publish / unpublish from the header (AGF-S1-15)
+  const togglePublished = async () => {
+    if (!menu || !menuId) return;
+    setPublishing(true);
+    setPublishError("");
+    try {
+      const res = await menuApi.updateMenu(menuId, { isActive: !menu.active } as Partial<Menu>);
+      setMenu((m) => (m ? { ...m, ...res?.data, active: res?.data?.active ?? !m.active } : m));
+    } catch (err) {
+      setPublishError(errorMessage(err, "Failed to update the menu"));
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   if (loading) return <p className="p-6">Loading...</p>;
   if (error) return <div className="p-6"><LoadError message={error} onRetry={() => setAttempt((n) => n + 1)} /></div>;
   if (!menu) return <p className="p-6 text-red-600">Menu not found.</p>;
@@ -81,10 +99,17 @@ export default function MenuDetailPage() {
               <span className="mx-1">/</span>
               <span>{menu.name}</span>
             </nav>
-            <h2 className="text-2xl font-bold">{menu.name}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold">{menu.name}</h2>
+              <MenuStatusBadge menu={menu} />
+            </div>
+            {publishError && <p role="alert" className="mt-1 text-sm text-red-600">{publishError}</p>}
           </div>
 
           <div className="flex gap-2">
+            <Button variant="secondary" onClick={togglePublished} disabled={publishing}>
+              {menu.active ? "Unpublish" : "Publish"}
+            </Button>
             <Button variant="secondary" onClick={() => setCategoryModalOpen(true)}>
               + Add Category
             </Button>
@@ -103,6 +128,7 @@ export default function MenuDetailPage() {
                 onCreate={categories.createCategory}
                 onUpdate={categories.updateCategory}
                 onDelete={categories.deleteCategory}
+                onToggleActive={categories.setCategoryActive}
             />
           </aside>
 

@@ -20,8 +20,9 @@ export default function MenuWizard({ initial, onSave }: Props) {
     name: initial?.name ?? "",
     menuTypeId: initial?.menuTypeId ?? "",
     description: initial?.description ?? "",
-    // New menus keep today's default; edits send the menu's own visibility (never forced to PUBLIC)
+    // New menus: Public but Unpublished (PO-2). Edits send the menu's own state (never forced).
     visibility: isEdit ? initial?.visibility : "PUBLIC",
+    isActive: isEdit ? initial?.isActive : false,
   }));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,6 +73,7 @@ export default function MenuWizard({ initial, onSave }: Props) {
     try {
       const payload: MenuDto = { ...data };
       if (payload.visibility === undefined) delete payload.visibility;
+      if (payload.isActive === undefined) delete payload.isActive;
       await onSave(payload);
     } catch (err) {
       setSaveError(errorMessage(err, "Failed to save menu"));
@@ -124,6 +126,42 @@ export default function MenuWizard({ initial, onSave }: Props) {
               value={data.description ?? ""}
               onChange={(e) => handleChange("description", e.target.value)}
           />
+
+          {/* Publishing controls (AGF-S1-15) with the guest impact of each choice */}
+          <div>
+            <FormSelect
+                label="Visibility"
+                value={data.visibility ?? "PUBLIC"}
+                onChange={(e) => handleChange("visibility", e.target.value)}
+            >
+              <option value="PUBLIC">Public</option>
+              <option value="PRIVATE">Private – only you</option>
+            </FormSelect>
+            <p className="mt-1 text-xs text-gray-500">
+              {data.visibility === "PRIVATE"
+                  ? "Only you can see this menu. Guests never see it, even when published."
+                  : "Guests can see this menu on your QR menu once it is published."}
+            </p>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                  type="checkbox"
+                  checked={Boolean(data.isActive)}
+                  onChange={(e) => handleChange("isActive", e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+              />
+              Published
+            </label>
+            <p className="mt-1 text-xs text-gray-500">
+              {data.isActive
+                  ? data.visibility === "PRIVATE"
+                      ? "Published, but Private: still hidden from guests."
+                      : "Live: guests can see this menu."
+                  : "Guests can't see this menu until you publish it."}
+            </p>
+          </div>
         </div>
 
         <div className="mt-8 flex justify-between">

@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { ToastProvider } from "../../components/ui/ToastContext";
 
 // AGF-S1-14: menu create/edit form defects, and AGF-DEF-01 (menu type missing from the menus list).
 
@@ -29,18 +30,20 @@ function Where() {
 
 function renderAt(path: string) {
     render(
-        <MemoryRouter initialEntries={[path]}>
-            <Routes>
-                <Route path="/:tenantSlug/admin/menus" element={<><MenusListPage /><Where /></>} />
-                <Route path="/:tenantSlug/admin/menus/new" element={<MenuCreatePage />} />
-                <Route path="/:tenantSlug/admin/menus/:menuId/edit" element={<MenuEditPage />} />
-            </Routes>
-        </MemoryRouter>
+        <ToastProvider>
+            <MemoryRouter initialEntries={[path]}>
+                <Routes>
+                    <Route path="/:tenantSlug/admin/menus" element={<><MenusListPage /><Where /></>} />
+                    <Route path="/:tenantSlug/admin/menus/new" element={<MenuCreatePage />} />
+                    <Route path="/:tenantSlug/admin/menus/:menuId/edit" element={<MenuEditPage />} />
+                </Routes>
+            </MemoryRouter>
+        </ToastProvider>
     );
 }
 
 const nameInput = () => screen.getAllByRole("textbox")[0] as HTMLInputElement;
-const typeSelect = () => screen.getByRole("combobox") as HTMLSelectElement;
+const typeSelect = () => screen.getByLabelText("Menu Type") as HTMLSelectElement;
 const fieldOf = (label: string) => screen.getByText(label).parentElement as HTMLElement;
 
 async function typesLoaded() {
@@ -65,7 +68,7 @@ describe("menu create form", () => {
         fireEvent.click(screen.getByRole("button", { name: "Save Menu" }));
 
         expect(await screen.findByText("At /biz-1/admin/menus")).toBeTruthy();
-        expect(createMenu).toHaveBeenCalledWith({ name: "Lunch Specials", menuTypeId: "t-lunch", description: "", visibility: "PUBLIC" });
+        expect(createMenu).toHaveBeenCalledWith({ name: "Lunch Specials", menuTypeId: "t-lunch", description: "", visibility: "PUBLIC", isActive: false });
     });
 
     it("shows 'Name is required' under Name only, and nothing under Description (AC2)", async () => {

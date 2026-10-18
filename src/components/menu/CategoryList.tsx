@@ -1,7 +1,7 @@
 import {useState} from "react";
 import CategoryModal from "./CategoryModal.tsx";
 import type {Category} from "../../types/menu.ts";
-import { Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
 import DeleteCategoryModal from "./DeleteCategoryModal.tsx";
 
 interface Props {
@@ -15,9 +15,10 @@ interface Props {
     onCreate: (name: string) => Promise<Category>;
     onUpdate: (categoryId: string, name: string) => Promise<Category>;
     onDelete: (categoryId: string) => Promise<void>;
+    onToggleActive?: (categoryId: string, active: boolean) => Promise<Category>;
 }
 
-export default function CategoryList({ menuId, categories, loading, error, onCreate, onUpdate,onDelete }: Props) {
+export default function CategoryList({ menuId, categories, loading, error, onCreate, onUpdate, onDelete, onToggleActive }: Props) {
 
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Category | undefined>();
@@ -82,8 +83,26 @@ export default function CategoryList({ menuId, categories, loading, error, onCre
                             key={c.id}
                             className="flex items-center justify-between rounded border px-3 py-1 text-sm"
                         >
-                            <span>{c.name}</span>
+                            <span className="flex items-center gap-2">
+                                {c.name}
+                                {(c.active ?? c.isActive ?? true) === false && (
+                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Hidden</span>
+                                )}
+                            </span>
                             <div>
+                                {onToggleActive && (() => {
+                                    const visible = (c.active ?? c.isActive ?? true) !== false;
+                                    return (
+                                        <button
+                                            type="button"
+                                            onClick={() => onToggleActive(c.id, !visible)}
+                                            aria-label={visible ? `Hide ${c.name} from guests` : `Show ${c.name} to guests`}
+                                            className="rounded bg-gray-50 px-2 py-0.5 text-xs hover:bg-gray-100"
+                                        >
+                                            {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    );
+                                })()}
                                 <button
                                     onClick={() => openEdit(c)}
                                     className="rounded bg-gray-50 px-2 py-0.5 text-xs hover:bg-gray-100"

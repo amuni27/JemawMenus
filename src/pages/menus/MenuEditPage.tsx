@@ -40,6 +40,7 @@ export default function MenuEditPage() {
     menuTypeId: menu.menuTypeId ?? menu.menuType?.id,
     description: menu.description ?? "",
     visibility: menu.visibility,
+    isActive: menu.active,
   };
 
   return <MenuWizard initial={initial} onSave={handleSave} />;

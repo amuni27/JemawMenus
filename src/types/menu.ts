@@ -29,13 +29,17 @@ export interface MenuDto {
   description?: string;
   /** Omitted when unknown, so an edit never changes the menu's visibility by accident */
   visibility?: string;
+  /** Published state (AGF-S1-15). The API reads `isActive` and returns `active`. */
+  isActive?: boolean;
 }
 
 export interface Category {
   id: string;
   menuId: string;
   name: string;
-  isActive:true
+  /** Returned by the API as `active` */
+  active?: boolean;
+  isActive?: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;

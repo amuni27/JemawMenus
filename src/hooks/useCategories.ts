@@ -52,6 +52,14 @@ export function useCategories(menuId?: string) {
     return cat as Category;
   };
 
+  // Hide or show a category for guests (AGF-S1-15); the owner keeps seeing it
+  const setCategoryActive = async (categoryId: string, active: boolean) => {
+    const updated = await categoryApi.updateCategory(categoryId, { isActive: active });
+    const cat = updated?.data ?? updated;
+    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, ...cat, active: cat?.active ?? active } : c)));
+    return cat as Category;
+  };
+
   const deleteCategory = async (categoryId: string) => {
       await categoryApi.deleteCategory(categoryId);
     setCategories((prev) => prev.filter((c) => (c.id !== categoryId )));
@@ -65,5 +73,6 @@ export function useCategories(menuId?: string) {
     createCategory,
     updateCategory,
     deleteCategory,
+    setCategoryActive,
   };
 }
