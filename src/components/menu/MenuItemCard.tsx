@@ -1,4 +1,5 @@
 import {useNavigate} from "react-router-dom";
+import { displayCurrency } from "../../utils/currency";
 import {isSoldOut} from "../../utils/itemAvailability.ts";
 
 type Props = {
@@ -7,7 +8,7 @@ type Props = {
     onAddItem?: (item: any) => void;
 };
 
-export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
+export function MenuItemCard({ item, currency, onAddItem  }: Props) {
     const navigate = useNavigate();
 
     const openDetail = () => {
@@ -97,7 +98,7 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
                     <div className="text-base font-bold text-gray-900">
                         {price !== null && Number.isFinite(price) ? (
                             <>
-                                <span className="text-sm font-semibold text-gray-500">{currency}</span>{" "}
+                                <span className="text-sm font-semibold text-gray-500">{displayCurrency(currency)}</span>{" "}
                                 {price.toFixed(2)}
                             </>
                         ) : (

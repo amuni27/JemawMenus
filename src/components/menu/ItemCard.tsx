@@ -1,4 +1,5 @@
 import StatusBadge from './StatusBadge.tsx';
+import { formatPrice } from "../../utils/currency";
 import {ItemStatus, MenuItem} from '../../types/menu.ts';
 import {Pencil, Trash2} from "lucide-react";
 
@@ -8,9 +9,11 @@ interface Props {
     onToggle: () => void; // Hide (-> UNAVAILABLE) / Show (-> AVAILABLE)
     onSoldOutToggle?: () => void; // Mark sold out (-> OUT_OF_STOCK) / Back in stock (-> AVAILABLE)
     onDelete: () => void;
+    /** The restaurant's currency (AGF-S2-02) */
+    currency?: string;
 }
 
-export default function ItemCard({item, onEdit, onToggle, onSoldOutToggle, onDelete}: Props) {
+export default function ItemCard({item, onEdit, onToggle, onSoldOutToggle, onDelete, currency}: Props) {
     const status = (item.status ?? "AVAILABLE") as ItemStatus;
     // ✅ Normalize price safely (handles string or number)
     const price =
@@ -33,7 +36,7 @@ export default function ItemCard({item, onEdit, onToggle, onSoldOutToggle, onDel
                 <h3 className="font-semibold">{item.name}</h3>
 
                 <p className="text-sm text-gray-500">
-                    ${price.toFixed(2)}
+                    {formatPrice(price, currency)}
                 </p>
 
                 <StatusBadge status={status} />

@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from "react";
+import { displayCurrency } from "../../utils/currency";
 import { ALLOWED_IMAGE_TYPES, imageFileProblem } from "../../utils/imagePolicy";
 import Modal from "../ui/Modal.tsx";
 import ModalHeader from "../ui/ModalHeader.tsx";
@@ -20,6 +21,8 @@ type UploadInfo = { uploadUrl: string; objectKey: string; expiresInSeconds?: num
 type PresignResponse = { item: MenuItem; upload?: UploadInfo | null };
 
 interface Props {
+    /** The restaurant's currency, shown in the price label (AGF-S2-02) */
+    currency?: string;
     open: boolean;
     onClose: () => void;
     menuId?: string;
@@ -115,6 +118,7 @@ export default function ItemModal({
                                       onUpdate,
                                       onConfirmImage,
                                       onPresignImage,
+                                      currency,
                                   }: Props) {
     const toast = useToast();
 
@@ -354,7 +358,7 @@ export default function ItemModal({
                     </FormSelect>
 
                     <Input
-                        label="Price ($)"
+                        label={`Price (${displayCurrency(currency)})`}
                         value={draft.price}
                         onChange={(e) => {
                             const next = formatMoneyInput(e.target.value);

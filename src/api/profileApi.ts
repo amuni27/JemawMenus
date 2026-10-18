@@ -23,6 +23,8 @@ export interface UpdateBusinessPayload {
   state?: string;
   zipcode?: string;
   logoUrl?: string;
+  /** ETB or USD (AGF-S2-02) */
+  currency?: string;
 }
 
 export interface BusinessHourEntry {

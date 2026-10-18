@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatPrice } from "../../utils/currency";
 import { useNavigate, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
 import { MenuItem } from "../../types/menu.ts";
@@ -99,7 +100,7 @@ export default function MenuItemDetail() {
                             <div className="text-right lg:hidden">
                                 {priceNumber !== null ? (
                                     <div className="text-sm font-semibold text-gray-900">
-                                        ETB {priceNumber.toFixed(2)}
+                                        {formatPrice(priceNumber, item.currency)}
                                     </div>
                                 ) : (
                                     <div className="text-sm text-gray-400">Price not set</div>
@@ -117,7 +118,7 @@ export default function MenuItemDetail() {
                         <div className="hidden lg:block">
                             {priceNumber !== null ? (
                                 <div className="text-xl font-semibold text-gray-700">
-                                    ETB {priceNumber.toFixed(2)}
+                                    {formatPrice(priceNumber, item.currency)}
                                 </div>
                             ) : (
                                 <div className="text-sm text-gray-400">Price not set</div>

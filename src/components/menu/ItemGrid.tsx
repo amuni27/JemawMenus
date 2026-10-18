@@ -5,6 +5,8 @@ import { Category, type CreateItemPayload, MenuItem } from "../../types/menu.ts"
 import DeleteCategoryModal from "./DeleteCategoryModal.tsx";
 
 interface Props {
+    /** The restaurant's currency (AGF-S2-02) */
+    currency?: string;
     menuId?: string;
     categories: Category[];
     items: MenuItem[];
@@ -34,6 +36,7 @@ export default function ItemGrid({
                                      onCreate,
                                      onConfirmImage,
                                      onPresignImage,
+                                     currency,
                                  }: Props) {
     const [search, setSearch] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
@@ -92,6 +95,7 @@ export default function ItemGrid({
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {filtered.map((item) => (
                         <ItemCard
+                            currency={currency}
                             key={item.id}
                             item={item}
                             onEdit={() => openEdit(item)}
@@ -113,6 +117,7 @@ export default function ItemGrid({
                 onUpdate={onUpdate}
                 onConfirmImage={onConfirmImage}
                 onPresignImage={onPresignImage}
+                currency={currency}
             />
 
             <DeleteCategoryModal

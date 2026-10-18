@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { displayCurrency } from "../../utils/currency";
 import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
@@ -95,6 +96,7 @@ export default function AccountPage() {
           <InfoRow label="City" value={business.city} />
           <InfoRow label="Region" value={business.state} />
           <InfoRow label="Subdomain" value={business.customSubdomain ? `${business.customSubdomain}.menuqrs.com` : undefined} />
+          <InfoRow label="Currency" value={displayCurrency(business.currency)} />
         </Card>
 
         {/* Business Logo */}

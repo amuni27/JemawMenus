@@ -18,6 +18,8 @@ export interface Menu {
   description?: string | null;
   visibility?: string;
   active?: boolean;
+  /** The restaurant's currency (AGF-S2-02) */
+  currency?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +76,8 @@ export interface MenuItem {
   tags?: any;        // jsonb
   prepTimeMinutes?: number | null;
   spiceLevel?: string | null;
+  /** The restaurant's currency, on public item responses (AGF-S2-02) */
+  currency?: string;
 }
 
 export type CreateMenuItemDTO = {

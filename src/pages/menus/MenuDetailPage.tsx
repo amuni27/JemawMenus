@@ -144,6 +144,7 @@ export default function MenuDetailPage() {
                 onCreate={createItem}
                 onPresignImage={presignItemImage}
                 onConfirmImage={confirmItemImage}
+                currency={menu.currency}
             />
           </section>
         </div>
@@ -158,6 +159,7 @@ export default function MenuDetailPage() {
         />
 
         <ItemModal
+            currency={menu.currency}
             open={itemModalOpen}
             onClose={() => setItemModalOpen(false)}
             menuId={menuId}

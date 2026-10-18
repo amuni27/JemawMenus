@@ -2,6 +2,8 @@ import ItemGrid from "./ItemGrid.tsx";
 import { Category, CreateItemPayload, MenuItem } from "../../types/menu.ts";
 
 interface Props {
+    /** The restaurant's currency (AGF-S2-02) */
+    currency?: string;
     menuId?: string;
     categories: Category[];
     items: MenuItem[];
@@ -32,6 +34,7 @@ export default function ItemsPanel({
                                        onCreate,
                                        onConfirmImage,
                                        onPresignImage,
+                                       currency,
                                    }: Props) {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -46,6 +49,7 @@ export default function ItemsPanel({
                 onCreate={onCreate}
                 onConfirmImage={onConfirmImage}
                 onPresignImage={onPresignImage}
+                currency={currency}
             />
         </div>
     );

@@ -26,6 +26,8 @@ export interface BusinessDTO {
     state?: string;
     zipcode?: string;
     ownerUserId?: string;
+    /** AGF-S2-02 */
+    currency?: string;
     open24_7?: boolean;
     logoUrl?: string;
     updatedAt: Date

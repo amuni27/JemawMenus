@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { FormSelect } from "../form/FormSelect";
+import { DEFAULT_CURRENCY, SUPPORTED_CURRENCIES, displayCurrency } from "../../utils/currency";
 import Modal from "../ui/Modal";
 import ModalHeader from "../ui/ModalHeader";
 import { FormInput } from "../form/FormInput";
@@ -31,6 +33,7 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
   const [city, setCity] = useState("");
   const [region, setRegion] = useState("");
   const [zipcode, setZipcode] = useState("");
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,6 +45,7 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
     setCity(business.city ?? "");
     setRegion(business.state ?? "");
     setZipcode(business.zipcode ?? "");
+    setCurrency(displayCurrency(business.currency));
     setError("");
   }, [open, business]);
 
@@ -59,6 +63,8 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
         city: city.trim() || undefined,
         state: region.trim() || undefined,
         zipcode: zipcode.trim() || undefined,
+        // Only when changed, so a legacy stored value never blocks other profile edits
+        currency: currency !== displayCurrency(business.currency) ? currency : undefined,
       });
       toast("Business profile updated");
       onSaved();
@@ -120,6 +126,16 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
           value={zipcode}
           onChange={(e) => setZipcode(e.target.value)}
         />
+
+        {/* AGF-S2-02: one currency for all prices on this restaurant's menus */}
+        <FormSelect label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+          {SUPPORTED_CURRENCIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+          {!(SUPPORTED_CURRENCIES as readonly string[]).includes(displayCurrency(business.currency)) && (
+            <option value={displayCurrency(business.currency)}>{displayCurrency(business.currency)} (current)</option>
+          )}
+        </FormSelect>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} isLoading={saving}>Save Changes</Button>
