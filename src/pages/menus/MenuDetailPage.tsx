@@ -20,6 +20,7 @@ export default function MenuDetailPage() {
   const {
     items,
     toggleStatus,
+    toggleSoldOut,
     deleteItem,
     createItem,
     updateItem,
@@ -108,6 +109,7 @@ export default function MenuDetailPage() {
                 categories={categories.categories}
                 items={items}
                 toggleStatus={toggleStatus}
+                toggleSoldOut={toggleSoldOut}
                 deleteItem={deleteItem}
                 onUpdate={updateItem}
                 onCreate={createItem}

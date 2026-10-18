@@ -4,9 +4,16 @@ import ModalHeader from "../ui/ModalHeader.tsx";
 import Button from "../ui/Button.tsx";
 import {Input} from "../ui/Input.tsx";
 import {FormSelect} from "../form/FormSelect.tsx";
-import type {MenuItem, Category, CreateItemPayload} from "../../types/menu.ts";
+import type {MenuItem, Category, CreateItemPayload, ItemStatus} from "../../types/menu.ts";
 import {useToast} from "../ui/ToastContext.tsx";
 import {uploadToR2} from "../../utils/r2Service.ts";
+
+// What each status means for guests (AGF-S1-12)
+const STATUS_HELP: Record<ItemStatus, string> = {
+    AVAILABLE: "Guests can see and add this item.",
+    OUT_OF_STOCK: "Guests see this item marked Sold Out and cannot add it.",
+    UNAVAILABLE: "Hidden from guests.",
+};
 
 type UploadInfo = { uploadUrl: string; objectKey: string; expiresInSeconds?: number };
 type PresignResponse = { item: MenuItem; upload?: UploadInfo | null };
@@ -38,7 +45,7 @@ type Draft = {
     price: string;
     calories: string;
     categoryId: string;
-    status: "AVAILABLE" | "UNAVAILABLE";
+    status: ItemStatus;
     imageFile: File | null;
     imagePreview: string; // blob or public url
     ingredients: string[];
@@ -384,9 +391,11 @@ export default function ItemModal({
                     value={draft.status}
                     onChange={(e) => setDraft({...draft, status: e.target.value as Draft["status"]})}
                 >
-                    <option value="AVAILABLE">AVAILABLE</option>
-                    <option value="UNAVAILABLE">UNAVAILABLE</option>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="OUT_OF_STOCK">Out of stock — shown to guests as Sold Out</option>
+                    <option value="UNAVAILABLE">Unavailable — hidden from guests</option>
                 </FormSelect>
+                <p className="-mt-2 text-xs text-gray-500">{STATUS_HELP[draft.status]}</p>
 
                 <textarea
                     className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-brand focus:border-brand-dark"

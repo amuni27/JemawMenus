@@ -6,6 +6,7 @@ interface Props {
     categories: Category[];
     items: MenuItem[];
     toggleStatus: (itemId: string) => Promise<MenuItem | undefined>;
+    toggleSoldOut?: (itemId: string) => Promise<MenuItem | undefined>;
     deleteItem: (itemId: string) => Promise<void>;
     onCreate: (payload: CreateItemPayload) => Promise<MenuItem>;
     onUpdate: (itemId: string, patch: Partial<MenuItem>) => Promise<MenuItem>;
@@ -25,6 +26,7 @@ export default function ItemsPanel({
                                        categories,
                                        items,
                                        toggleStatus,
+                                       toggleSoldOut,
                                        deleteItem,
                                        onUpdate,
                                        onCreate,
@@ -38,6 +40,7 @@ export default function ItemsPanel({
                 categories={categories}
                 items={items}
                 toggleStatus={toggleStatus}
+                toggleSoldOut={toggleSoldOut}
                 deleteItem={deleteItem}
                 onUpdate={onUpdate}
                 onCreate={onCreate}

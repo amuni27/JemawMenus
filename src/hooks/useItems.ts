@@ -131,8 +131,29 @@ export function useItems(menuId?: string) {
             const current = items.find((i) => i.id === itemId);
             if (!current) return;
 
+            // Hide: AVAILABLE or OUT_OF_STOCK -> UNAVAILABLE; Show: UNAVAILABLE -> AVAILABLE
             const body: { status: ItemStatus } = {
-                status: current.status === "AVAILABLE" ? "UNAVAILABLE" : "AVAILABLE",
+                status: current.status === "UNAVAILABLE" ? "AVAILABLE" : "UNAVAILABLE",
+            };
+
+            safeSetError("");
+            const res = await itemApi.updateStatus(itemId, body);
+            const updated = unwrapData<MenuItem>(res);
+
+            safeSetItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
+            return updated;
+        },
+        [items, safeSetError, safeSetItems]
+    );
+
+    // Mark sold out: AVAILABLE -> OUT_OF_STOCK; Back in stock: OUT_OF_STOCK -> AVAILABLE. No-op for hidden items.
+    const toggleSoldOut = useCallback(
+        async (itemId: string): Promise<MenuItem | undefined> => {
+            const current = items.find((i) => i.id === itemId);
+            if (!current || current.status === "UNAVAILABLE") return;
+
+            const body: { status: ItemStatus } = {
+                status: current.status === "OUT_OF_STOCK" ? "AVAILABLE" : "OUT_OF_STOCK",
             };
 
             safeSetError("");
@@ -194,6 +215,7 @@ export function useItems(menuId?: string) {
         createItem,
         updateItem,
         toggleStatus,
+        toggleSoldOut,
         deleteItem,
         presignItemImage,
         confirmItemImage,

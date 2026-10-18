@@ -9,6 +9,7 @@ interface Props {
     categories: Category[];
     items: MenuItem[];
     toggleStatus: (itemId: string) => Promise<MenuItem | undefined>;
+    toggleSoldOut?: (itemId: string) => Promise<MenuItem | undefined>;
     deleteItem: (itemId: string) => Promise<void>;
     // ✅ create still returns MenuItem (matches updated ItemModal)
     onCreate: (payload: CreateItemPayload) => Promise<MenuItem>;
@@ -27,6 +28,7 @@ export default function ItemGrid({
                                      categories,
                                      items,
                                      toggleStatus,
+                                     toggleSoldOut,
                                      deleteItem,
                                      onUpdate,
                                      onCreate,
@@ -94,6 +96,7 @@ export default function ItemGrid({
                             item={item}
                             onEdit={() => openEdit(item)}
                             onToggle={() => toggleStatus(item.id)}
+                            onSoldOutToggle={toggleSoldOut ? () => toggleSoldOut(item.id) : undefined}
                             onDelete={() => openDelete(item)}
                         />
                     ))}

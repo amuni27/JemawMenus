@@ -41,7 +41,8 @@ export type CreateCategoryDTO = {
   isActive?: boolean;
 };
 
-export type ItemStatus = "AVAILABLE" | "UNAVAILABLE";
+// OUT_OF_STOCK: shown to guests as Sold Out, not orderable (AGF-S1-12/S1-13)
+export type ItemStatus = "AVAILABLE" | "OUT_OF_STOCK" | "UNAVAILABLE";
 
 export type SpiceLevel = "NONE" | "MILD" | "MEDIUM" | "HOT";
 

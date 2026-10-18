@@ -5,11 +5,13 @@ import {Pencil, Trash2} from "lucide-react";
 interface Props {
     item: MenuItem;
     onEdit: () => void;
-    onToggle: () => void;
+    onToggle: () => void; // Hide (-> UNAVAILABLE) / Show (-> AVAILABLE)
+    onSoldOutToggle?: () => void; // Mark sold out (-> OUT_OF_STOCK) / Back in stock (-> AVAILABLE)
     onDelete: () => void;
 }
 
-export default function ItemCard({item, onEdit, onToggle, onDelete}: Props) {
+export default function ItemCard({item, onEdit, onToggle, onSoldOutToggle, onDelete}: Props) {
+    const status = (item.status ?? "AVAILABLE") as ItemStatus;
     // ✅ Normalize price safely (handles string or number)
     const price =
         typeof item.price === 'number'
@@ -34,7 +36,16 @@ export default function ItemCard({item, onEdit, onToggle, onDelete}: Props) {
                     ${price.toFixed(2)}
                 </p>
 
-                <StatusBadge status={(item.status ?? "AVAILABLE") as ItemStatus} />
+                <StatusBadge status={status} />
+
+                {onSoldOutToggle && status !== "UNAVAILABLE" ? (
+                    <button
+                        onClick={onSoldOutToggle}
+                        className="mt-1 block rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                    >
+                        {status === "OUT_OF_STOCK" ? "Back in stock" : "Mark sold out"}
+                    </button>
+                ) : null}
             </div>
 
             <div className="absolute top-2 right-2 flex gap-1">
@@ -42,7 +53,7 @@ export default function ItemCard({item, onEdit, onToggle, onDelete}: Props) {
                     onClick={onToggle}
                     className="rounded bg-white/80 px-2 py-1 text-xs shadow hover:bg-white"
                 >
-                    {item.status === "AVAILABLE" ? 'Hide' : 'Show'}
+                    {status === "UNAVAILABLE" ? 'Show' : 'Hide'}
                 </button>
                 <button
                     onClick={onEdit}

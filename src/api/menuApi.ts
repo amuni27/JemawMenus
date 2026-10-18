@@ -6,7 +6,7 @@ import {
   fetchItems, fetchPublicItems, fetchPublicRequestById,
 } from "../services/apiService";
 
-import {Menu, Category, MenuItem, ItemStatus, MenuDto} from "../types/menu";
+import {Menu, Category, MenuItem, MenuDto} from "../types/menu";
 
 class MenuService {
   // ================= MENUS =================
@@ -87,10 +87,6 @@ class MenuService {
     return deleteRequest("/items/", itemId);
   }
 
-  updateItemStatus(itemId: string, status: ItemStatus) {
-    // If you have a dedicated endpoint like /items/{id}/status:
-    return updateRequest(`/items/${itemId}`, { status });
-  }
 }
 
 const menuApi = new MenuService();
