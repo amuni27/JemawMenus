@@ -4,6 +4,7 @@ import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
 import { GuestMenuOutletContext, MenuItem } from "../../types/menu.ts";
 import { isSoldOut } from "../../utils/itemAvailability.ts";
+import { spiceLabel } from "../../utils/spiceLevel.ts";
 
 export default function MenuItemDetail() {
     const navigate = useNavigate();
@@ -142,7 +143,8 @@ export default function MenuItemDetail() {
                         {typeof item.prepTimeMinutes === "number" && (
                             <span>⏱ {item.prepTimeMinutes} min</span>
                         )}
-                        {item.spiceLevel && <span>🌶 {item.spiceLevel}</span>}
+                        {/* AGF-S2-06: readable level; "None" is not shown */}
+                        {spiceLabel(item.spiceLevel) && <span>🌶 {spiceLabel(item.spiceLevel)}</span>}
                     </div>
 
                     {ingredients.length > 0 && (

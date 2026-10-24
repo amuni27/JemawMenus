@@ -56,7 +56,7 @@ export type CreateCategoryDTO = {
 // OUT_OF_STOCK: shown to guests as Sold Out, not orderable (AGF-S1-12/S1-13)
 export type ItemStatus = "AVAILABLE" | "OUT_OF_STOCK" | "UNAVAILABLE";
 
-export type SpiceLevel = "NONE" | "MILD" | "MEDIUM" | "HOT";
+export type SpiceLevel = "NONE" | "MILD" | "MEDIUM" | "HOT" | "EXTRA_HOT";
 
 export interface MenuItem {
   id: string;
@@ -76,6 +76,9 @@ export interface MenuItem {
   tags?: any;        // jsonb
   prepTimeMinutes?: number | null;
   spiceLevel?: string | null;
+  /** Owner and guest responses name the flag "featured"; "isFeatured" kept for older shapes (AGF-S2-06) */
+  featured?: boolean;
+  isFeatured?: boolean;
   /** The restaurant's currency, on public item responses (AGF-S2-02) */
   currency?: string;
 }
@@ -104,7 +107,7 @@ export type CreateItemPayload = {
   tags?: string[] | null;
   isFeatured?: boolean;
   prepTimeMinutes?: number | null;
-  spiceLevel?: "NONE" | "MILD" | "MEDIUM" | "HOT" | null;
+  spiceLevel?: string | null;
   status?: ItemStatus;
 };
 
