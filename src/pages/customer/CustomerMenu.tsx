@@ -5,6 +5,7 @@ import { usePublicBusinessMenu } from "../../hooks/usePublicBusinessMenu";
 import { MenuHeader } from "../../components/menu/MenuHeader";
 import GuestInfoPanel from "../../components/menu/GuestInfoPanel";
 import { CategorySection } from "../../components/menu/CategorySection";
+import { FeaturedSection, type FeaturedItem } from "../../components/menu/FeaturedSection";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../hooks/useStorageState.ts";
 import {GuestMenuOutletContext, WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
@@ -12,6 +13,7 @@ import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 import { useToast } from "../../components/ui/ToastContext.tsx";
 import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
 import { itemMatches, normalizeSearch, type Searchable } from "../../utils/menuSearch.ts";
+import { featuredItems } from "../../utils/featured.ts";
 
 
 export default function CustomerMenu() {
@@ -185,6 +187,9 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
             .map((g) => ({ ...g, items: g.items.filter((i: Searchable) => itemMatches(i, searchQuery)) }))
             .filter((g) => g.items.length > 0);
     }, [groups, searching, searchQuery]);
+
+    // AGF-S2-15: the active menu's featured items, from the same guest-visible groups (not copied)
+    const picks = useMemo(() => featuredItems<FeaturedItem>(groups), [groups]);
 
     const tabCategories = searching ? displayedGroups.map((g) => g.category) : sortedCategories;
 
@@ -375,6 +380,10 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                             Clear search
                                         </button>
                                     </div>
+                                )}
+                                {/* AGF-S2-15: hidden while searching, so results aren't listed twice */}
+                                {!searching && (
+                                    <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} />
                                 )}
                                 {displayedGroups.map((g: any) => (
                                     <div
