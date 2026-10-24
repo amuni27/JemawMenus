@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import { Input } from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -59,6 +59,10 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        {/* AGF-S2-13A */}
+        <p className="-mt-3 text-right text-sm">
+          <Link className="text-rose-500 hover:underline" to="/auth/forgot-password">Forgot password?</Link>
+        </p>
         <Button type="submit" variant="primary" isLoading={loading} className="w-full">
           {loading ? 'Signing in…' : 'Sign in'}
         </Button>
