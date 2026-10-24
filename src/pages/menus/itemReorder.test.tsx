@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "../../components/ui/ToastContext";
 
-// AGF-S2-08: with a category chosen in the items panel, owners move items earlier or later; the full order of
-// that category is saved, one move at a time, and restored if saving fails.
+// AGF-S2-08: with a category chosen in the items panel, owners reorder its items; the full order of that
+// category is saved, one reorder at a time, and restored if saving fails. Since AGF-S2-08A the cards are dragged
+// (no Earlier / Later buttons), so these cases use keyboard dragging; mouse, touch and grid cases are in
+// itemDragDrop.test.tsx.
 
 const getMenu = vi.fn();
 vi.mock("../../api/menuApi", () => ({ default: { getMenu, listMenuTypes: vi.fn(), updateMenu: vi.fn() } }));
@@ -23,6 +25,18 @@ const reorder = vi.fn();
 vi.mock("../../api/itemsApi.ts", () => ({ default: { list, reorder, create: vi.fn(), update: vi.fn(), updateStatus: vi.fn(), delete: vi.fn() } }));
 
 const { default: MenuDetailPage } = await import("./MenuDetailPage.tsx");
+
+// jsdom has no layout: one card per row (so ArrowUp / ArrowDown move one place)
+const originalRect = Element.prototype.getBoundingClientRect;
+beforeAll(() => {
+    Element.prototype.getBoundingClientRect = function () {
+        const index = (this as HTMLElement).closest?.("[data-item-index]")?.getAttribute("data-item-index");
+        if (index == null) return originalRect.call(this);
+        const top = Number(index) * 300;
+        return { x: 0, y: top, left: 0, top, right: 200, bottom: top + 280, width: 200, height: 280, toJSON: () => ({}) } as DOMRect;
+    };
+});
+afterAll(() => { Element.prototype.getBoundingClientRect = originalRect; });
 
 const cat = (id: string, name: string, sortOrder: number) =>
     ({ id, menuId: "m1", name, sortOrder, active: true, isActive: true, createdAt: "", updatedAt: "" });
@@ -61,13 +75,26 @@ const choose = (name: string) => {
     fireEvent.change(categoryFilter(), { target: { value: option.value } });
 };
 const order = () => within(screen.getByRole("list", { name: "Items" })).getAllByRole("listitem").map((li) => li.getAttribute("data-name"));
-const button = (name: string) => screen.getByRole("button", { name }) as HTMLButtonElement;
+const card = (name: string) => screen.getByRole("group", { name: `Reorder ${name}` });
+
+async function press(el: Element, code: string) {
+    await act(async () => { fireEvent.keyDown(el, { code, key: code === "Space" ? " " : code }); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+}
+/** Keyboard drag on a card: focus, Space, arrows, Space. */
+async function keyboardMove(name: string, ...arrows: ("ArrowUp" | "ArrowDown")[]) {
+    const c = card(name);
+    c.focus();
+    await press(c, "Space");
+    for (const a of arrows) await press(c, a);
+    await press(c, "Space");
+}
 
 describe("item reordering", () => {
-    it("offers moves only with one category chosen", async () => {
+    it("offers reordering only with one category chosen", async () => {
         await renderPage();
         expect(order()).toEqual(["X Tibs", "Y Shiro", "Z Kitfo", "Tea"]);
-        expect(screen.queryByRole("button", { name: /^Move .* (earlier|later)$/ })).toBeNull();
+        expect(screen.queryByRole("group", { name: /^Reorder / })).toBeNull();
         expect(screen.getByText("Choose a category to change the order of its items.")).toBeTruthy();
         // categories listed in their saved order
         expect(within(categoryFilter()).getAllByRole("option").map((o) => o.textContent)).toEqual(["All categories", "Mains", "Drinks"]);
@@ -78,12 +105,9 @@ describe("item reordering", () => {
         choose("Mains");
         expect(order()).toEqual(["X Tibs", "Y Shiro", "Z Kitfo"]);
 
-        fireEvent.click(button("Move Z Kitfo earlier"));
-        expect(order()).toEqual(["X Tibs", "Z Kitfo", "Y Shiro"]); // shown at once
+        await keyboardMove("Z Kitfo", "ArrowUp");
         await waitFor(() => expect(reorder).toHaveBeenLastCalledWith("c1", ["x", "z", "y"]));
-        await waitFor(() => expect(button("Move Z Kitfo earlier").disabled).toBe(false));
-
-        fireEvent.click(button("Move Z Kitfo earlier"));
+        await keyboardMove("Z Kitfo", "ArrowUp");
         await waitFor(() => expect(reorder).toHaveBeenLastCalledWith("c1", ["z", "x", "y"]));
         expect(order()).toEqual(["Z Kitfo", "X Tibs", "Y Shiro"]);
 
@@ -96,55 +120,54 @@ describe("item reordering", () => {
         await renderPage();
         choose("Mains");
 
-        fireEvent.click(button("Move Y Shiro later"));
+        await keyboardMove("Y Shiro", "ArrowDown");
         expect((await screen.findByRole("alert")).textContent)
             .toBe("Couldn't save the new order: orderedIds must list every item of this category exactly once");
         expect(order()).toEqual(["X Tibs", "Y Shiro", "Z Kitfo"]);
     });
 
-    it("shows saving, and ignores other moves until the save finishes", async () => {
+    it("shows saving, and ignores other reorders until the save finishes", async () => {
         let finish: (v: unknown) => void = () => {};
         reorder.mockImplementation(() => new Promise((r) => { finish = r; }));
         await renderPage();
         choose("Mains");
 
-        fireEvent.click(button("Move Y Shiro earlier"));
+        await keyboardMove("Y Shiro", "ArrowUp");
         // the category list's drag-and-drop live region is a status too (S2-07A), so find this one by text
         expect(screen.getByText("Saving order…").getAttribute("role")).toBe("status");
-        expect(button("Move Z Kitfo earlier").disabled).toBe(true);
-        fireEvent.click(button("Move Z Kitfo earlier"));
+        expect(card("Z Kitfo").getAttribute("aria-disabled")).toBe("true");
+        await keyboardMove("Z Kitfo", "ArrowUp");
         expect(reorder).toHaveBeenCalledTimes(1);
 
-        finish({ data: { success: true } });
+        await act(async () => finish({ data: { success: true } }));
         await waitFor(() => expect(screen.queryByText("Saving order…")).toBeNull());
-        expect(button("Move Z Kitfo earlier").disabled).toBe(false);
+        expect(card("Z Kitfo").getAttribute("aria-disabled")).toBe("false");
     });
 
-    it("disables moves past the ends, and for a single item", async () => {
+    it("saves nothing when moving past the ends, or for a single item", async () => {
         await renderPage();
         choose("Mains");
-        expect(button("Move X Tibs earlier").disabled).toBe(true);
-        expect(button("Move Z Kitfo later").disabled).toBe(true);
-        expect(button("Move Y Shiro earlier").disabled).toBe(false);
+        await keyboardMove("X Tibs", "ArrowUp");
+        await keyboardMove("Z Kitfo", "ArrowDown");
 
         choose("Drinks");
-        expect(button("Move Tea earlier").disabled).toBe(true);
-        expect(button("Move Tea later").disabled).toBe(true);
+        await keyboardMove("Tea", "ArrowUp", "ArrowDown");
+        expect(reorder).not.toHaveBeenCalled();
     });
 
-    it("hides moves while searching", async () => {
+    it("turns reordering off while searching", async () => {
         await renderPage();
         choose("Mains");
         fireEvent.change(screen.getByPlaceholderText("Search items"), { target: { value: "tibs" } });
         expect(order()).toEqual(["X Tibs"]);
-        expect(screen.queryByRole("button", { name: /^Move .* (earlier|later)$/ })).toBeNull();
+        expect(screen.queryByRole("group", { name: /^Reorder / })).toBeNull();
         expect(screen.getByText("Clear the search to change the order.")).toBeTruthy();
     });
 
     it("includes hidden and sold-out items, which keep their status", async () => {
         await renderPage([item("x", "X Tibs", "c1", 0), item("y", "Y Shiro", "c1", 1, "UNAVAILABLE"), item("z", "Z Kitfo", "c1", 2, "OUT_OF_STOCK")]);
         choose("Mains");
-        fireEvent.click(button("Move Z Kitfo earlier"));
+        await keyboardMove("Z Kitfo", "ArrowUp");
         await waitFor(() => expect(reorder).toHaveBeenLastCalledWith("c1", ["x", "z", "y"]));
         const cards = within(screen.getByRole("list", { name: "Items" })).getAllByRole("listitem");
         expect(within(cards[1]).getByText(/sold out/i)).toBeTruthy();

@@ -10,8 +10,8 @@ interface Props {
     toggleStatus: (itemId: string) => Promise<MenuItem | undefined>;
     toggleSoldOut?: (itemId: string) => Promise<MenuItem | undefined>;
     deleteItem: (itemId: string) => Promise<void>;
-    /** AGF-S2-08 */
-    onMoveItem?: (itemId: string, direction: -1 | 1) => Promise<void>;
+    /** AGF-S2-08A: save a new order for one category's items (drag and drop) */
+    onReorderItems?: (categoryId: string, orderedIds: string[]) => Promise<void>;
     onCreate: (payload: CreateItemPayload) => Promise<MenuItem>;
     onUpdate: (itemId: string, patch: Partial<MenuItem>) => Promise<MenuItem>;
 
@@ -32,7 +32,7 @@ export default function ItemsPanel({
                                        toggleStatus,
                                        toggleSoldOut,
                                        deleteItem,
-                                       onMoveItem,
+                                       onReorderItems,
                                        onUpdate,
                                        onCreate,
                                        onConfirmImage,
@@ -48,7 +48,7 @@ export default function ItemsPanel({
                 toggleStatus={toggleStatus}
                 toggleSoldOut={toggleSoldOut}
                 deleteItem={deleteItem}
-                onMoveItem={onMoveItem}
+                onReorderItems={onReorderItems}
                 onUpdate={onUpdate}
                 onCreate={onCreate}
                 onConfirmImage={onConfirmImage}

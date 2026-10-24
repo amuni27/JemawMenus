@@ -27,7 +27,7 @@ export default function MenuDetailPage() {
     deleteItem,
     createItem,
     updateItem,
-    moveItem,
+    setItemOrder,
     presignItemImage,
     confirmItemImage,
   } = useItems(menuId);
@@ -142,7 +142,7 @@ export default function MenuDetailPage() {
                 toggleStatus={toggleStatus}
                 toggleSoldOut={toggleSoldOut}
                 deleteItem={deleteItem}
-                onMoveItem={moveItem}
+                onReorderItems={setItemOrder}
                 onUpdate={updateItem}
                 onCreate={createItem}
                 onPresignImage={presignItemImage}

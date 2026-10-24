@@ -175,33 +175,28 @@ export function useItems(menuId?: string) {
         [safeSetError, safeSetItems]
     );
 
-    // AGF-S2-08: move an item one place earlier (-1) or later (+1) within its category. Shown at once, then the
-    // category's full order is saved; if saving fails the previous order comes back and the error is rethrown.
-    const moveItem = useCallback(
-        async (itemId: string, direction: -1 | 1): Promise<void> => {
+    // AGF-S2-08: save a new order for one category's items. Shown at once, then the category's full order is
+    // saved; if saving fails the previous order comes back and the error is rethrown. An unchanged order is not
+    // sent (S2-08A).
+    const setItemOrder = useCallback(
+        async (categoryId: string, orderedIds: string[]): Promise<void> => {
             const previous = items;
-            const moving = previous.find((i) => i.id === itemId);
-            if (!moving) return;
-            const categoryId = moving.categoryId;
-
             // the category's items by saved position (stable: equal positions keep the list order)
             const inCategory = previous
                 .filter((i) => i.categoryId === categoryId)
                 .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-            const from = inCategory.findIndex((i) => i.id === itemId);
-            const to = from + direction;
-            if (to < 0 || to >= inCategory.length) return;
-
-            const reordered = [...inCategory];
-            [reordered[from], reordered[to]] = [reordered[to], reordered[from]];
-            const position = new Map(reordered.map((i, index) => [i.id, index]));
+            const byId = new Map(inCategory.map((i) => [i.id, i]));
+            const reordered = orderedIds.map((id) => byId.get(id)).filter((i): i is MenuItem => Boolean(i));
+            if (reordered.length !== inCategory.length || new Set(orderedIds).size !== orderedIds.length) return;
+            if (reordered.every((i, k) => i.id === inCategory[k].id)) return;
 
             // Put the category's items back into the slots they held in the full list, in the new order
             let next = 0;
             const updated = previous.map((i) => {
                 if (i.categoryId !== categoryId) return i;
-                const placed = reordered[next++];
-                return { ...placed, sortOrder: position.get(placed.id) };
+                const placed = { ...reordered[next], sortOrder: next };
+                next++;
+                return placed;
             });
             safeSetItems(() => updated);
             try {
@@ -212,6 +207,24 @@ export function useItems(menuId?: string) {
             }
         },
         [items, safeSetItems]
+    );
+
+    // AGF-S2-08: move an item one place earlier (-1) or later (+1) within its category
+    const moveItem = useCallback(
+        async (itemId: string, direction: -1 | 1): Promise<void> => {
+            const moving = items.find((i) => i.id === itemId);
+            if (!moving) return;
+            const ids = items
+                .filter((i) => i.categoryId === moving.categoryId)
+                .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                .map((i) => i.id);
+            const from = ids.indexOf(itemId);
+            const to = from + direction;
+            if (to < 0 || to >= ids.length) return;
+            [ids[from], ids[to]] = [ids[to], ids[from]];
+            await setItemOrder(moving.categoryId, ids);
+        },
+        [items, setItemOrder]
     );
 
     // --------- image upload helpers ----------
@@ -257,6 +270,7 @@ export function useItems(menuId?: string) {
         toggleSoldOut,
         deleteItem,
         moveItem,
+        setItemOrder,
         presignItemImage,
         confirmItemImage,
     };

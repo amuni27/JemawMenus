@@ -1,5 +1,17 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef, useState, type ReactNode } from "react";
+import {
+    DndContext,
+    KeyboardSensor,
+    MouseSensor,
+    TouchSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+    type Announcements,
+    type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { errorMessage } from "../../utils/errorMessage";
 import ItemCard from "./ItemCard.tsx";
 import ItemModal from "./ItemModal.tsx";
@@ -15,8 +27,8 @@ interface Props {
     toggleStatus: (itemId: string) => Promise<MenuItem | undefined>;
     toggleSoldOut?: (itemId: string) => Promise<MenuItem | undefined>;
     deleteItem: (itemId: string) => Promise<void>;
-    /** AGF-S2-08: move an item one place earlier (-1) or later (+1) within its category */
-    onMoveItem?: (itemId: string, direction: -1 | 1) => Promise<void>;
+    /** AGF-S2-08A: save a new order for one category's items (drag and drop) */
+    onReorderItems?: (categoryId: string, orderedIds: string[]) => Promise<void>;
     // ✅ create still returns MenuItem (matches updated ItemModal)
     onCreate: (payload: CreateItemPayload) => Promise<MenuItem>;
     onUpdate: (itemId: string, patch: Partial<MenuItem>) => Promise<MenuItem>;
@@ -29,6 +41,81 @@ interface Props {
     }>;
 }
 
+// AGF-S2-08A: the whole card is dragged, but never from its own controls (Hide/Show, Edit, Delete, stock), so
+// those keep working and a press on them cannot start a drag.
+const isControl = (target: EventTarget | null) =>
+    target instanceof Element && Boolean(target.closest("button, a, input, select, textarea, label"));
+
+class CardMouseSensor extends MouseSensor {
+    static activators = MouseSensor.activators.map((a) => ({
+        ...a,
+        handler: (...args: Parameters<typeof a.handler>) => !isControl(args[0].nativeEvent.target) && a.handler(...args),
+    }));
+}
+
+class CardTouchSensor extends TouchSensor {
+    static activators = TouchSensor.activators.map((a) => ({
+        ...a,
+        handler: (...args: Parameters<typeof a.handler>) => !isControl(args[0].nativeEvent.target) && a.handler(...args),
+    }));
+}
+
+// Space / Enter / arrows only pick a card up when the card itself has focus, not one of its buttons
+class CardKeyboardSensor extends KeyboardSensor {
+    static activators = KeyboardSensor.activators.map((a) => ({
+        ...a,
+        handler: (...args: Parameters<typeof a.handler>) => args[0].target === args[0].currentTarget && a.handler(...args),
+    }));
+}
+
+const ITEM_DRAG_INSTRUCTIONS =
+    "To reorder an item, focus the item card and press Space to pick it up. " +
+    "Use the arrow keys to move it, then press Space to drop it, or Escape to cancel.";
+
+/** AGF-S2-08A: an item card that can be dragged by pressing anywhere on it (no grip icon) */
+function SortableItemCard({ id, name, index, enabled, disabled, children }: {
+    id: string;
+    name: string;
+    index: number;
+    enabled: boolean;
+    disabled: boolean;
+    children: ReactNode;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id,
+        disabled: !enabled || disabled,
+        attributes: { role: "group", roleDescription: "sortable item" },
+    });
+
+    return (
+        <div
+            role="listitem"
+            ref={setNodeRef}
+            data-name={name}
+            data-item-index={index}
+            style={{ transform: CSS.Transform.toString(transform), transition }}
+            className={isDragging ? "relative z-10" : undefined}
+        >
+            {enabled ? (
+                <div
+                    {...attributes}
+                    {...listeners}
+                    aria-label={`Reorder ${name}`}
+                    className={`touch-manipulation select-none rounded-2xl outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-brand [-webkit-touch-callout:none] [&_img]:pointer-events-none ${
+                        isDragging
+                            ? "cursor-grabbing scale-[1.02] shadow-2xl ring-2 ring-brand/30"
+                            : disabled ? "cursor-progress" : "cursor-grab"
+                    }`}
+                >
+                    {children}
+                </div>
+            ) : (
+                children
+            )}
+        </div>
+    );
+}
+
 export default function ItemGrid({
                                      menuId,
                                      categories,
@@ -36,7 +123,7 @@ export default function ItemGrid({
                                      toggleStatus,
                                      toggleSoldOut,
                                      deleteItem,
-                                     onMoveItem,
+                                     onReorderItems,
                                      onUpdate,
                                      onCreate,
                                      onConfirmImage,
@@ -62,14 +149,49 @@ export default function ItemGrid({
         ? items.filter((i) => i.categoryId === categoryId).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
         : items;
     const filtered = inCategory.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
-    const canReorder = Boolean(onMoveItem && categoryId && !search.trim());
+    const canReorder = Boolean(onReorderItems && categoryId && !search.trim());
 
-    const move = async (itemId: string, direction: -1 | 1) => {
-        if (!onMoveItem || moving) return;
+    // AGF-S2-08A: drag a card with the mouse, a press-and-hold on touch screens (a quick swipe still scrolls)
+    // or the keyboard; one reorder at a time
+    const sensors = useSensors(
+        useSensor(CardMouseSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(CardTouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+        useSensor(CardKeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const nameOf = (id: unknown) => filtered.find((i) => i.id === id)?.name ?? "Item";
+    const positionOf = (id: unknown) => filtered.findIndex((i) => i.id === id) + 1;
+    const total = filtered.length;
+    // Announce a move only when the target position changes (dnd-kit reports "over itself" right after pick-up)
+    const lastOver = useRef<unknown>(null);
+    const announcements: Announcements = {
+        onDragStart: ({ active }) => {
+            lastOver.current = active.id;
+            return `Picked up ${nameOf(active.id)}. It is in position ${positionOf(active.id)} of ${total}.`;
+        },
+        onDragOver: ({ active, over }) => {
+            if ((over?.id ?? null) === lastOver.current) return undefined;
+            lastOver.current = over?.id ?? null;
+            return over
+                ? `${nameOf(active.id)} was moved to position ${positionOf(over.id)} of ${total}.`
+                : `${nameOf(active.id)} is no longer over a position in the grid.`;
+        },
+        onDragEnd: ({ active, over }) =>
+            over
+                ? `${nameOf(active.id)} was dropped at position ${positionOf(over.id)} of ${total}.`
+                : `${nameOf(active.id)} was dropped. Its position did not change.`,
+        onDragCancel: ({ active }) =>
+            `Dragging was cancelled. ${nameOf(active.id)} was returned to position ${positionOf(active.id)} of ${total}.`,
+    };
+
+    const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+        if (!onReorderItems || !canReorder || moving || !over || active.id === over.id) return; // dropped in place
+        const ids = filtered.map((i) => i.id);
+        const orderedIds = arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
         setMoving(true);
         setMoveError("");
         try {
-            await onMoveItem(itemId, direction);
+            await onReorderItems(categoryId, orderedIds);
         } catch (err) {
             setMoveError(`Couldn't save the new order: ${errorMessage(err, "Please try again.")}`);
         } finally {
@@ -131,13 +253,13 @@ export default function ItemGrid({
                 </select>
             </div>
 
-            {onMoveItem && (
+            {onReorderItems && (
                 <p className="text-xs text-gray-500">
                     {!categoryId
                         ? "Choose a category to change the order of its items."
                         : search.trim()
                             ? "Clear the search to change the order."
-                            : "Use the arrows to move an item earlier or later. Guests see the same order."}
+                            : "Drag a card to change the order. Guests see the same order."}
                 </p>
             )}
             {moving && <p role="status" className="text-xs text-gray-500">Saving order…</p>}
@@ -146,42 +268,36 @@ export default function ItemGrid({
             {filtered.length === 0 ? (
                 <p className="text-sm text-gray-500">No items found.</p>
             ) : (
-                <div role="list" aria-label="Items" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filtered.map((item, index) => (
-                        <div role="listitem" key={item.id} data-name={item.name} className="flex flex-col gap-2">
-                            <ItemCard
-                                currency={currency}
-                                item={item}
-                                onEdit={() => openEdit(item)}
-                                onToggle={() => toggleStatus(item.id)}
-                                onSoldOutToggle={toggleSoldOut ? () => toggleSoldOut(item.id) : undefined}
-                                onDelete={() => openDelete(item)}
-                            />
-                            {canReorder && (
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => move(item.id, -1)}
-                                        disabled={moving || index === 0}
-                                        aria-label={`Move ${item.name} earlier`}
-                                        className="inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-                                    >
-                                        <ChevronLeft size={16} /> Earlier
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => move(item.id, 1)}
-                                        disabled={moving || index === filtered.length - 1}
-                                        aria-label={`Move ${item.name} later`}
-                                        className="inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-                                    >
-                                        Later <ChevronRight size={16} />
-                                    </button>
-                                </div>
-                            )}
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                    accessibility={{ announcements, screenReaderInstructions: { draggable: ITEM_DRAG_INSTRUCTIONS } }}
+                >
+                    <SortableContext items={filtered.map((i) => i.id)} strategy={rectSortingStrategy}>
+                        <div role="list" aria-label="Items" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {filtered.map((item, index) => (
+                                <SortableItemCard
+                                    key={item.id}
+                                    id={item.id}
+                                    name={item.name}
+                                    index={index}
+                                    enabled={canReorder}
+                                    disabled={moving}
+                                >
+                                    <ItemCard
+                                        currency={currency}
+                                        item={item}
+                                        onEdit={() => openEdit(item)}
+                                        onToggle={() => toggleStatus(item.id)}
+                                        onSoldOutToggle={toggleSoldOut ? () => toggleSoldOut(item.id) : undefined}
+                                        onDelete={() => openDelete(item)}
+                                    />
+                                </SortableItemCard>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </SortableContext>
+                </DndContext>
             )}
 
             <ItemModal
