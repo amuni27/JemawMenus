@@ -13,11 +13,10 @@ export interface CategoryPanelProps {
   onUpdate: (categoryId: string, name: string) => Promise<Category>;
   onDelete: (categoryId: string) => Promise<void>;
   onToggleActive?: (categoryId: string, active: boolean) => Promise<Category>;
-  onMove?: (categoryId: string, direction: -1 | 1) => Promise<void>;
   onReorder?: (orderedIds: string[]) => Promise<void>;
 }
 
-export default function CategoryPanel({ menuId, categories, loading, error, onCreate, onUpdate, onDelete, onToggleActive, onMove, onReorder }: CategoryPanelProps) {
+export default function CategoryPanel({ menuId, categories, loading, error, onCreate, onUpdate, onDelete, onToggleActive, onReorder }: CategoryPanelProps) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 h-fit">
@@ -30,7 +29,6 @@ export default function CategoryPanel({ menuId, categories, loading, error, onCr
           onUpdate={onUpdate}
           onDelete={onDelete}
           onToggleActive={onToggleActive}
-          onMove={onMove}
           onReorder={onReorder}
       />
     </div>

@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "../../components/ui/ToastContext";
 
-// AGF-S2-07: owners move categories up and down; the full new order is saved, and restored if saving fails.
+// AGF-S2-07: owners reorder categories; the full new order is saved, and restored if saving fails.
+// Since the S2-07A correction the drag handle is the only control, so these cases use keyboard dragging
+// (Space to pick up, arrows to move, Space to drop); the mouse and touch paths are in categoryDragDrop.test.tsx.
 
 const getMenu = vi.fn();
 vi.mock("../../api/menuApi", () => ({ default: { getMenu, listMenuTypes: vi.fn(), updateMenu: vi.fn() } }));
@@ -22,6 +24,18 @@ vi.mock("../../api/categoriesApi.ts", () => ({
 }));
 
 const { default: MenuDetailPage } = await import("./MenuDetailPage.tsx");
+
+// jsdom has no layout: give each category row a box so keyboard moves can find the next position
+const originalRect = Element.prototype.getBoundingClientRect;
+beforeAll(() => {
+    Element.prototype.getBoundingClientRect = function () {
+        const index = (this as HTMLElement).closest?.("[data-index]")?.getAttribute("data-index");
+        if (index == null) return originalRect.call(this);
+        const top = Number(index) * 50;
+        return { x: 0, y: top, top, left: 0, right: 300, bottom: top + 40, width: 300, height: 40, toJSON: () => ({}) } as DOMRect;
+    };
+});
+afterAll(() => { Element.prototype.getBoundingClientRect = originalRect; });
 
 const cat = (id: string, name: string, sortOrder: number, active = true) =>
     ({ id, menuId: "m1", name, sortOrder, active, isActive: active, createdAt: "", updatedAt: "" });
@@ -48,25 +62,41 @@ async function renderPage(categories: unknown[]) {
 
 const list = () => screen.getByRole("list", { name: "Categories" });
 const order = () => within(list()).getAllByRole("listitem").map((li) => li.getAttribute("data-name"));
-const button = (name: string) => screen.getByRole("button", { name }) as HTMLButtonElement;
+const handle = (name: string) => screen.getByRole("button", { name: `Drag ${name} to reorder` });
+
+async function press(el: Element, code: string) {
+    await act(async () => { fireEvent.keyDown(el, { code, key: code === "Space" ? " " : code }); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); }); // dnd-kit measures after pick-up
+}
+
+/** Keyboard drag: focus the handle, Space, the arrow keys, Space. */
+async function keyboardMove(name: string, ...arrows: ("ArrowUp" | "ArrowDown")[]) {
+    const h = handle(name);
+    h.focus();
+    await press(h, "Space");
+    for (const a of arrows) await press(h, a);
+    await press(h, "Space");
+}
 
 const ABC = [cat("a", "Starters", 0), cat("b", "Mains", 1), cat("c", "Drinks", 2)];
 
 describe("category reordering", () => {
+    it("has no up/down arrow buttons; the drag handle is the control", async () => {
+        await renderPage(ABC);
+        expect(screen.queryByRole("button", { name: /^Move .* (up|down)$/ })).toBeNull();
+        expect(handle("Starters")).toBeTruthy();
+    });
+
     it("moves Drinks to the top and saves the full order each time (AC1)", async () => {
         await renderPage(ABC);
         expect(order()).toEqual(["Starters", "Mains", "Drinks"]);
 
-        fireEvent.click(button("Move Drinks up"));
-        expect(order()).toEqual(["Starters", "Drinks", "Mains"]); // shown at once
-        await waitFor(() => expect(reorderCategories).toHaveBeenLastCalledWith("m1", ["a", "c", "b"]));
-        await waitFor(() => expect(button("Move Drinks up").disabled).toBe(false));
-
-        fireEvent.click(button("Move Drinks up"));
+        await keyboardMove("Drinks", "ArrowUp", "ArrowUp");
         await waitFor(() => expect(reorderCategories).toHaveBeenLastCalledWith("m1", ["c", "a", "b"]));
+        expect(reorderCategories).toHaveBeenCalledTimes(1);
         expect(order()).toEqual(["Drinks", "Starters", "Mains"]);
 
-        fireEvent.click(button("Move Starters down"));
+        await keyboardMove("Starters", "ArrowDown");
         await waitFor(() => expect(reorderCategories).toHaveBeenLastCalledWith("m1", ["c", "b", "a"]));
     });
 
@@ -74,43 +104,48 @@ describe("category reordering", () => {
         reorderCategories.mockRejectedValue({ response: { status: 400, data: { message: "orderedIds must list every category of this menu exactly once" } } });
         await renderPage(ABC);
 
-        fireEvent.click(button("Move Drinks up"));
+        await keyboardMove("Drinks", "ArrowUp");
         expect(await screen.findByRole("alert")).toHaveProperty("textContent",
             "Couldn't save the new order: orderedIds must list every category of this menu exactly once");
         expect(order()).toEqual(["Starters", "Mains", "Drinks"]);
     });
 
-    it("disables moves past the ends and while a move is saving", async () => {
+    it("saves nothing when moving past the ends", async () => {
+        await renderPage(ABC);
+        await keyboardMove("Starters", "ArrowUp");
+        await keyboardMove("Drinks", "ArrowDown");
+        expect(order()).toEqual(["Starters", "Mains", "Drinks"]);
+        expect(reorderCategories).not.toHaveBeenCalled();
+    });
+
+    it("blocks another reorder while one is saving", async () => {
         let finish: (v: unknown) => void = () => {};
         reorderCategories.mockImplementation(() => new Promise((r) => { finish = r; }));
         await renderPage(ABC);
 
-        expect(button("Move Starters up").disabled).toBe(true);
-        expect(button("Move Drinks down").disabled).toBe(true);
-        expect(button("Move Mains up").disabled).toBe(false);
-
-        fireEvent.click(button("Move Mains up"));
-        expect(button("Move Drinks up").disabled).toBe(true); // saving
-        fireEvent.click(button("Move Drinks up"));
+        await keyboardMove("Mains", "ArrowUp");
+        expect(handle("Drinks").getAttribute("aria-disabled")).toBe("true");
+        await keyboardMove("Drinks", "ArrowUp");
         expect(reorderCategories).toHaveBeenCalledTimes(1);
-        finish({ data: { success: true } });
-        await waitFor(() => expect(button("Move Drinks up").disabled).toBe(false));
+
+        await act(async () => finish({ data: { success: true } }));
+        await waitFor(() => expect(handle("Drinks").getAttribute("aria-disabled")).toBe("false"));
     });
 
     it("keeps a single category in place and shows no list for an empty menu", async () => {
         await renderPage([cat("a", "Only", 0)]);
-        expect(button("Move Only up").disabled).toBe(true);
-        expect(button("Move Only down").disabled).toBe(true);
+        await keyboardMove("Only", "ArrowUp", "ArrowDown");
+        expect(reorderCategories).not.toHaveBeenCalled();
         cleanup();
 
         await renderPage([]);
         expect(await screen.findByText("No categories yet.")).toBeTruthy();
-        expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
+        expect(screen.queryByRole("button", { name: /^Drag / })).toBeNull();
     });
 
     it("lets hidden categories be reordered and keeps them marked Hidden (AC3)", async () => {
         await renderPage([cat("a", "Starters", 0), cat("b", "Secret", 1, false), cat("c", "Drinks", 2)]);
-        fireEvent.click(button("Move Secret up"));
+        await keyboardMove("Secret", "ArrowUp");
         await waitFor(() => expect(reorderCategories).toHaveBeenLastCalledWith("m1", ["b", "a", "c"]));
         const first = within(list()).getAllByRole("listitem")[0];
         expect(within(first).getByText("Hidden")).toBeTruthy();
@@ -128,7 +163,7 @@ describe("category reordering", () => {
         fireEvent.click(screen.getAllByRole("button", { name: "+ Add Category" })[0]);
         await screen.findByText("Create category");
         fireEvent.change(screen.getByRole("textbox"), { target: { value: "Desserts" } });
-        fireEvent.click(button("Create"));
+        fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
         await waitFor(() => expect(order()).toEqual(["Starters", "Mains", "Drinks", "Desserts"]));
     });

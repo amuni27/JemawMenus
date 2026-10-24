@@ -93,13 +93,18 @@ async function key(el: Element, code: string) {
 }
 
 describe("category drag and drop", () => {
-    it("shows a visible drag handle on every row, next to the up/down buttons", async () => {
+    it("shows a visible drag handle on every row as the only reorder control", async () => {
         await renderPage();
         for (const name of ["Starters", "Mains", "Drinks"]) {
             expect(handle(name)).toBeTruthy();
-            expect(screen.getByRole("button", { name: `Move ${name} up` })).toBeTruthy();
-            expect(screen.getByRole("button", { name: `Move ${name} down` })).toBeTruthy();
         }
+        // S2-07A correction: the old up/down arrows are gone
+        expect(screen.queryByRole("button", { name: /^Move .* (up|down)$/ })).toBeNull();
+        // keyboard users are told how to use the handle (dnd-kit renders the text just after mounting)
+        const describedBy = handle("Starters").getAttribute("aria-describedby")!;
+        await waitFor(() => expect(document.getElementById(describedBy)?.textContent)
+            .toBe("To reorder a category, focus its drag handle and press Space to pick it up. " +
+                "Use the up and down arrow keys to move it, then press Space to drop it, or Escape to cancel."));
     });
 
     it("drags Drinks to the top with the mouse and saves the full order once", async () => {
@@ -162,7 +167,7 @@ describe("category drag and drop", () => {
         expect(order()).toEqual(["Starters", "Mains", "Drinks"]);
     });
 
-    it("allows no second reorder, by drag or button, while one is saving", async () => {
+    it("allows no second reorder, by mouse or keyboard, while one is saving", async () => {
         let finish: (v: unknown) => void = () => {};
         reorderCategories.mockImplementation(() => new Promise((r) => { finish = r; }));
         await renderPage();
@@ -171,7 +176,11 @@ describe("category drag and drop", () => {
 
         expect(handle("Starters").getAttribute("aria-disabled")).toBe("true");
         await mouseDrag("Starters", 2);
-        fireEvent.click(screen.getByRole("button", { name: "Move Mains down" }));
+        const h = handle("Mains");
+        h.focus();
+        await key(h, "Space");
+        await key(h, "ArrowDown");
+        await key(h, "Space");
         expect(reorderCategories).toHaveBeenCalledTimes(1);
 
         await act(async () => finish({ data: { success: true } }));

@@ -20,7 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import CategoryModal from "./CategoryModal.tsx";
 import type {Category} from "../../types/menu.ts";
-import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { errorMessage } from "../../utils/errorMessage";
 import DeleteCategoryModal from "./DeleteCategoryModal.tsx";
 
@@ -36,9 +36,7 @@ interface Props {
     onUpdate: (categoryId: string, name: string) => Promise<Category>;
     onDelete: (categoryId: string) => Promise<void>;
     onToggleActive?: (categoryId: string, active: boolean) => Promise<Category>;
-    /** AGF-S2-07: move a category one place up (-1) or down (+1) */
-    onMove?: (categoryId: string, direction: -1 | 1) => Promise<void>;
-    /** AGF-S2-07A: save a new order of all categories (drag and drop) */
+    /** AGF-S2-07A: save a new order of all categories (drag and drop; the only reorder control) */
     onReorder?: (orderedIds: string[]) => Promise<void>;
 }
 
@@ -64,7 +62,7 @@ function SortableCategoryRow({ id, name, index, draggable, disabled, children }:
             data-name={name}
             data-index={index}
             style={{ transform: CSS.Transform.toString(transform), transition }}
-            className={`flex items-center justify-between gap-2 rounded border bg-white px-2 py-1 text-sm ${
+            className={`flex items-center gap-2 rounded border bg-white py-1.5 pl-1.5 pr-2 text-sm ${
                 isDragging ? "relative z-10 border-brand shadow-lg ring-2 ring-brand/30" : ""
             }`}
         >
@@ -75,7 +73,7 @@ function SortableCategoryRow({ id, name, index, draggable, disabled, children }:
                     {...attributes}
                     {...listeners}
                     aria-label={`Drag ${name} to reorder`}
-                    className={`flex h-9 w-7 shrink-0 touch-manipulation items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 ${
+                    className={`flex h-9 w-8 shrink-0 touch-manipulation items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                         disabled ? "cursor-not-allowed opacity-40" : isDragging ? "cursor-grabbing" : "cursor-grab"
                     }`}
                 >
@@ -87,13 +85,13 @@ function SortableCategoryRow({ id, name, index, draggable, disabled, children }:
     );
 }
 
-export default function CategoryList({ menuId, categories, loading, error, onCreate, onUpdate, onDelete, onToggleActive, onMove, onReorder }: Props) {
+export default function CategoryList({ menuId, categories, loading, error, onCreate, onUpdate, onDelete, onToggleActive, onReorder }: Props) {
 
     // AGF-S2-07: one move at a time; a failed save restores the order and explains why
     const [moving, setMoving] = useState(false);
     const [moveError, setMoveError] = useState("");
 
-    // One reorder at a time, whether from the buttons or a drop (S2-07A)
+    // One reorder at a time (S2-07A)
     const saveOrder = async (action: () => Promise<void>) => {
         if (moving) return;
         setMoving(true);
@@ -105,10 +103,6 @@ export default function CategoryList({ menuId, categories, loading, error, onCre
         } finally {
             setMoving(false);
         }
-    };
-
-    const move = (categoryId: string, direction: -1 | 1) => {
-        if (onMove) void saveOrder(() => onMove(categoryId, direction));
     };
 
     // AGF-S2-07A: drag by the handle with a mouse, a press-and-hold on touch screens (a quick swipe still
@@ -226,28 +220,6 @@ export default function CategoryList({ menuId, categories, loading, error, onCre
                             draggable={Boolean(onReorder)}
                             disabled={moving}
                         >
-                            {onMove && (
-                                <span className="flex shrink-0 flex-col">
-                                    <button
-                                        type="button"
-                                        onClick={() => move(c.id, -1)}
-                                        disabled={moving || index === 0}
-                                        aria-label={`Move ${c.name} up`}
-                                        className="flex h-7 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30"
-                                    >
-                                        <ChevronUp size={16} />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => move(c.id, 1)}
-                                        disabled={moving || index === categories.length - 1}
-                                        aria-label={`Move ${c.name} down`}
-                                        className="flex h-7 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30"
-                                    >
-                                        <ChevronDown size={16} />
-                                    </button>
-                                </span>
-                            )}
                             <span className="flex min-w-0 flex-1 items-center gap-2">
                                 {c.name}
                                 {(c.active ?? c.isActive ?? true) === false && (
