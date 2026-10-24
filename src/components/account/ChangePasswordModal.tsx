@@ -5,6 +5,7 @@ import { FormInput } from "../form/FormInput";
 import Button from "../ui/Button";
 import { profileApi } from "../../api/profileApi";
 import { useToast } from "../ui/ToastContext";
+import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from "../../utils/passwordPolicy";
 
 interface Props {
   open: boolean;
@@ -29,7 +30,8 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
 
   const handleSave = async () => {
     if (!current) { setError("Current password is required"); return; }
-    if (next.length < 8) { setError("New password must be at least 8 characters"); return; }
+    // Same complexity rules as registration (AGF-S1-17)
+    if (!isStrongPassword(next)) { setError(PASSWORD_POLICY_MESSAGE); return; }
     if (next !== confirm) { setError("Passwords do not match"); return; }
 
     setSaving(true);
@@ -39,7 +41,8 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
       toast("Password changed");
       onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to change password");
+      // Prefer the backend's field error (e.g. the password policy) over the generic "Validation failed"
+      setError(err?.response?.data?.fieldErrors?.[0]?.message || err?.response?.data?.message || err?.message || "Failed to change password");
     } finally {
       setSaving(false);
     }

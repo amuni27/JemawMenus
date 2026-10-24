@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { useFieldErrors } from "../../utils/fieldErrors";
+import { FormSelect } from "../form/FormSelect";
+import { DEFAULT_CURRENCY, SUPPORTED_CURRENCIES, displayCurrency } from "../../utils/currency";
 import Modal from "../ui/Modal";
 import ModalHeader from "../ui/ModalHeader";
 import { FormInput } from "../form/FormInput";
@@ -31,8 +34,11 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
   const [city, setCity] = useState("");
   const [region, setRegion] = useState("");
   const [zipcode, setZipcode] = useState("");
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const serverErrors = useFieldErrors(); // AGF-S2-11
+  const clearServerErrors = serverErrors.clear;
 
   useEffect(() => {
     if (!open) return;
@@ -42,8 +48,10 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
     setCity(business.city ?? "");
     setRegion(business.state ?? "");
     setZipcode(business.zipcode ?? "");
+    setCurrency(displayCurrency(business.currency));
     setError("");
-  }, [open, business]);
+    clearServerErrors();
+  }, [open, business, clearServerErrors]);
 
   const handleSave = async () => {
     if (!name.trim()) { setError("Business name is required"); return; }
@@ -59,12 +67,18 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
         city: city.trim() || undefined,
         state: region.trim() || undefined,
         zipcode: zipcode.trim() || undefined,
+        // Only when changed, so a legacy stored value never blocks other profile edits
+        currency: currency !== displayCurrency(business.currency) ? currency : undefined,
       });
       toast("Business profile updated");
       onSaved();
       onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to update business profile");
+      // AGF-S2-11: field errors under their fields; otherwise the server message
+      setError(serverErrors.apply(err, {
+        name: name.trim(), businessPhone: phone, streetAddress: address.trim(), city: city.trim(),
+        state: region.trim(), zipcode: zipcode.trim(), currency,
+      }, "Failed to update business profile") ?? "");
     } finally {
       setSaving(false);
     }
@@ -80,6 +94,7 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
         <FormInput
           label="Business Name"
           value={name}
+          error={serverErrors.errorFor("name", name.trim())}
           onChange={(e) => setName(e.target.value)}
         />
         <div>
@@ -96,21 +111,27 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
           {phone && !isValidEthiopianPhone(phone) && (
             <p className="mt-1 text-sm text-red-600">Enter a valid Ethiopian phone number.</p>
           )}
+          {serverErrors.errorFor("businessPhone", phone) && (
+            <p className="mt-1 text-sm text-red-600">{serverErrors.errorFor("businessPhone", phone)}</p>
+          )}
         </div>
         <FormInput
           label="Street Address"
           value={address}
+          error={serverErrors.errorFor("streetAddress", address.trim())}
           onChange={(e) => setAddress(e.target.value)}
         />
         <div className="grid grid-cols-2 gap-3">
           <FormInput
             label="City"
             value={city}
+            error={serverErrors.errorFor("city", city.trim())}
             onChange={(e) => setCity(e.target.value)}
           />
           <FormInput
             label="Region"
             value={region}
+            error={serverErrors.errorFor("state", region.trim())}
             placeholder="Addis Ababa, Oromia..."
             onChange={(e) => setRegion(e.target.value)}
           />
@@ -118,8 +139,19 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
         <FormInput
           label="Postal Code"
           value={zipcode}
+          error={serverErrors.errorFor("zipcode", zipcode.trim())}
           onChange={(e) => setZipcode(e.target.value)}
         />
+
+        {/* AGF-S2-02: one currency for all prices on this restaurant's menus */}
+        <FormSelect label="Currency" value={currency} error={serverErrors.errorFor("currency", currency)} onChange={(e) => setCurrency(e.target.value)}>
+          {SUPPORTED_CURRENCIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+          {!(SUPPORTED_CURRENCIES as readonly string[]).includes(displayCurrency(business.currency)) && (
+            <option value={displayCurrency(business.currency)}>{displayCurrency(business.currency)} (current)</option>
+          )}
+        </FormSelect>
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} isLoading={saving}>Save Changes</Button>

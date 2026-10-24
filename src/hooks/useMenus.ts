@@ -14,7 +14,6 @@ export function useMenus(businessId?: string) {
     menuApi
         .listMenus()
         .then((res: any) => {
-          console.log(res.data);
           setMenus(res.data);
         })
         .finally(() => setLoading(false));

@@ -7,7 +7,9 @@ type Props = {
     activeMenuId: string | null;
     onSelectMenu: (menuId: string) => void;
     loading?: boolean;
-    onSearch?: (q: string) => void; // optional hook
+    /** AGF-S2-05: item search for the active menu (controlled by the page) */
+    searchQuery?: string;
+    onSearchChange?: (q: string) => void;
 };
 
 export function MenuPicker({
@@ -15,37 +17,30 @@ export function MenuPicker({
                                activeMenuId,
                                onSelectMenu,
                                loading,
-                               onSearch,
+                               searchQuery = "",
+                               onSearchChange,
                            }: Props) {
     const [open, setOpen] = useState(false);
-    const [q, setQ] = useState("");
+    // Small screens show the search box only after the search icon is tapped
+    const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement | null>(null);
 
     const activeMenu = useMemo(() => {
         return menus?.find((m) => m.id === activeMenuId) ?? menus?.[0] ?? null;
     }, [menus, activeMenuId]);
 
-    const filtered = useMemo(() => {
-        const term = q.trim().toLowerCase();
-        if (!term) return menus;
-        return menus.filter((m) => m.name.toLowerCase().includes(term));
-    }, [menus, q]);
-
     useEffect(() => {
-        if (!open) return;
-        // focus search input when sheet opens (mobile)
-        setTimeout(() => searchRef.current?.focus(), 0);
-    }, [open]);
+        if (mobileSearchOpen) searchRef.current?.focus();
+    }, [mobileSearchOpen]);
 
     const handlePick = (id: string) => {
         onSelectMenu(id);
         setOpen(false);
-        setQ("");
     };
 
-    const handleSearchChange = (val: string) => {
-        setQ(val);
-        onSearch?.(val);
+    const clearSearch = () => {
+        onSearchChange?.("");
+        searchRef.current?.focus();
     };
 
     return (
@@ -53,13 +48,14 @@ export function MenuPicker({
             {/* Top bar container */}
             <div className="w-full">
                 <div
-                    className="mx-auto flex max-w-7xl items-center gap-1  pb-1 sm:justify-between sm:gap-3 sm:px-6">
+                    className="mx-auto flex max-w-7xl flex-wrap items-center gap-1  pb-1 sm:flex-nowrap sm:justify-between sm:gap-3 sm:px-6">
                     {/* Mobile Search icon (visible on < sm) - FIRST on mobile */}
                     <button
                         type="button"
-                        onClick={() => setOpen(true)} // open sheet and search inside rounded-full border border-gray-200 bg-white shadow-sm
+                        onClick={() => setMobileSearchOpen(true)}
                         className="order-1 sm:hidden inline-flex h-10 w-10 items-center transition hover:bg-gray-50 active:scale-[0.99]"
                         aria-label="Search menu"
+                        aria-expanded={mobileSearchOpen}
                     >
                         <SearchIcon className="h-6 w-6 text-gray-700"/>
                     </button>
@@ -80,16 +76,35 @@ export function MenuPicker({
                             className="h-4 w-4 shrink-0 text-gray-500 transition group-hover:text-gray-700"/>
                     </button>
 
-                    {/* Desktop search input (visible on >= sm) */}
-                    <div className="order-2 hidden flex-1 sm:block">
+                    {/* Item search (AGF-S2-05): inline on >= sm; on small screens below, after tapping the icon */}
+                    <div className={`order-3 w-full pb-1 sm:order-2 sm:block sm:w-auto sm:flex-1 sm:pb-0 ${mobileSearchOpen ? "block" : "hidden"}`}>
                         <div className="relative">
                             <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"/>
                             <input
-                                value={q}
-                                onChange={(e) => handleSearchChange(e.target.value)}
+                                ref={searchRef}
+                                type="search"
+                                aria-label="Search menu items"
+                                value={searchQuery}
+                                onChange={(e) => onSearchChange?.(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Escape") {
+                                        onSearchChange?.("");
+                                        setMobileSearchOpen(false);
+                                    }
+                                }}
                                 placeholder="Search menu items…"
-                                className="w-full rounded-full border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-2 focus:ring-emerald-100"
+                                className="w-full rounded-full border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 shadow-sm outline-none transition focus:border-gray-300 focus:ring-2 focus:ring-emerald-100 [&::-webkit-search-cancel-button]:appearance-none"
                             />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={clearSearch}
+                                    aria-label="Clear search text"
+                                    className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                                >
+                                    <XIcon className="h-4 w-4"/>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -137,7 +152,7 @@ export function MenuPicker({
                                     </div>
                                 ) : null}
 
-                                {filtered?.map((m) => {
+                                {menus?.map((m) => {
                                     const active = m.id === (activeMenuId ?? activeMenu?.id);
                                     return (
                                         <button

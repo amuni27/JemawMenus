@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useFieldErrors } from "../../utils/fieldErrors";
 import Modal from "../ui/Modal.tsx";
 import ModalHeader from "../ui/ModalHeader.tsx";
 import { Input } from "../ui/Input.tsx";
@@ -22,6 +23,8 @@ export default function CategoryModal({ open, onClose, menuId, category, onCreat
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
+  const serverErrors = useFieldErrors(); // AGF-S2-11
+  const clearServerErrors = serverErrors.clear;
 
   // ✅ preload on open / when category changes
   useEffect(() => {
@@ -29,7 +32,8 @@ export default function CategoryModal({ open, onClose, menuId, category, onCreat
     setName(category?.name ?? "");
     setTouched(false);
     setSubmitting(false);
-  }, [open, category]);
+    clearServerErrors();
+  }, [open, category, clearServerErrors]);
 
   const isValid = name.trim().length > 0;
 
@@ -52,8 +56,10 @@ export default function CategoryModal({ open, onClose, menuId, category, onCreat
       }
 
       onClose();
-    } catch (e: any) {
-      toast(e?.message || "Failed to save category");
+    } catch (e) {
+      // AGF-S2-11: name errors under the field; anything else keeps the server message (was Axios' generic text)
+      const banner = serverErrors.apply(e, { name: name.trim() }, "Failed to save category");
+      if (banner) toast(banner);
     } finally {
       setSubmitting(false);
     }
@@ -68,7 +74,7 @@ export default function CategoryModal({ open, onClose, menuId, category, onCreat
               label="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              error={touched && !isValid ? "Name is required" : undefined}
+              error={(touched && !isValid ? "Name is required" : undefined) ?? serverErrors.errorFor("name", name.trim())}
           />
 
           <div className="flex justify-end gap-3 pt-2">

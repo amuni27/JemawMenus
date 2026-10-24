@@ -13,14 +13,17 @@ export const fetchRequestById = (endpoint: string, id: string | number) => {
 
 // POST: Create new item
 export const postRequest = (endpoint: string, data: any) => {
-    console.log("data: ", data)
-    console.log("endpoint: ", endpoint)
     return apiAuth.post(endpoint, data);
 };
 
-// PUT: Update item
+// PATCH: Partial update
 export const updateRequest = (endpoint: string, data: any) => {
     return apiAuth.patch(`${endpoint}`, data);
+};
+
+// PUT: For endpoints the backend maps with PUT only (e.g. /items/{id}/status)
+export const putRequest = (endpoint: string, data: unknown) => {
+    return apiAuth.put(endpoint, data);
 };
 
 // DELETE: Remove item

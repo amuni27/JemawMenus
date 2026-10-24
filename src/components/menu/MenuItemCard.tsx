@@ -1,4 +1,7 @@
 import {useNavigate} from "react-router-dom";
+import { displayCurrency } from "../../utils/currency";
+import {isSoldOut} from "../../utils/itemAvailability.ts";
+import { declaredDiets, dietLabel } from "../../utils/dietary.ts";
 
 type Props = {
     item: any;
@@ -6,7 +9,7 @@ type Props = {
     onAddItem?: (item: any) => void;
 };
 
-export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
+export function MenuItemCard({ item, currency, onAddItem  }: Props) {
     const navigate = useNavigate();
 
     const openDetail = () => {
@@ -16,6 +19,8 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
         typeof item.price === "number" || typeof item.price === "string"
             ? Number(item.price)
             : null;
+    const soldOut = isSoldOut(item.status);
+    const diets = declaredDiets(item); // AGF-S2-14: badges for the dietary vocabulary only
 
     return (
         <article
@@ -29,7 +34,7 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
             <div className="relative rounded-2xl border bg-white">
                 <div
                     onClick={openDetail}
-                    className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
+                    className={`relative h-32 sm:h-36 overflow-hidden bg-gray-100 ${soldOut ? "opacity-60 grayscale" : ""}`}>
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
@@ -44,22 +49,30 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
                 )}
                 </div>
 
+                {/* SOLD OUT badge (text, not colour only) */}
+                {soldOut ? (
+                    <span className="absolute left-2 top-2 rounded-full bg-gray-900/85 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                        Sold Out
+                    </span>
+                ) : null}
+
                 {/* ADD BUTTON (Airbnb / DoorDash style) */}
                 <div className="absolute inset-y-0 right-3 flex items-center">
                     {/* ADD BUTTON (top-right like DoorDash/Airbnb) */}
                     <button
                         type="button"
-                        onClick={() => onAddItem?.(item)}
-                        aria-label={`Add ${item.name}`}
-                        className="
+                        onClick={() => { if (!soldOut) onAddItem?.(item); }}
+                        disabled={soldOut}
+                        aria-label={soldOut ? `${item.name} is sold out` : `Add ${item.name}`}
+                        className={`
     absolute right-1 top-28 lg:top-32 lg:right-3
     inline-flex h-9 w-9 items-center justify-center
-    rounded-full bg-emerald-600 text-white
+    rounded-full text-white
     shadow-lg ring-[3px] ring-white
     transition
-    hover:bg-emerald-700 active:scale-95
     focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500
-  "
+    ${soldOut ? "cursor-not-allowed bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700 active:scale-95"}
+  `}
                     >
                         <PlusIcon className="h-6 w-6" />
                     </button>
@@ -70,10 +83,20 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
             {/* Content */}
             <div
                 onClick={openDetail}
-                className="flex flex-1 flex-col p-3 sm:p-4">
+                className={`flex flex-1 flex-col p-3 sm:p-4 ${soldOut ? "opacity-60" : ""}`}>
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-1">
                     {item.name}
                 </h3>
+
+                {diets.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                        {diets.map((d) => (
+                            <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-800">
+                                {dietLabel(d)}
+                            </span>
+                        ))}
+                    </div>
+                ) : null}
 
                 {item.description ? (
                     <p className="mt-1 text-sm text-gray-500 line-clamp-2">
@@ -87,7 +110,7 @@ export function MenuItemCard({ item, currency = "ETB", onAddItem  }: Props) {
                     <div className="text-base font-bold text-gray-900">
                         {price !== null && Number.isFinite(price) ? (
                             <>
-                                <span className="text-sm font-semibold text-gray-500">{currency}</span>{" "}
+                                <span className="text-sm font-semibold text-gray-500">{displayCurrency(currency)}</span>{" "}
                                 {price.toFixed(2)}
                             </>
                         ) : (

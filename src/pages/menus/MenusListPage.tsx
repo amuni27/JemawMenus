@@ -1,14 +1,16 @@
 import {useEffect, useState} from "react";
-import {Link, useNavigate, useParams} from "react-router-dom";
+import {Link, useParams} from "react-router-dom";
 import {Menu} from "../../types/menu";
 import menuApi from "../../api/menuApi";
 import MenuQrModal from "../../components/menu/MenuQrModal";
 import {useAuth} from "../../app/context/AuthContext";
 import DeleteCategoryModal from "../../components/menu/DeleteCategoryModal.tsx";
 import {useMenus} from "../../hooks/useMenus";
+import LoadError from "../../components/ui/LoadError";
+import MenuStatusBadge from "../../components/menu/MenuStatusBadge";
+import {errorMessage} from "../../utils/errorMessage";
 
 export default function MenusListPage() {
-    const nav = useNavigate();
     const auth = useAuth();
     const {tenantSlug} = useParams();
     const {deleteMenu} = useMenus();
@@ -16,6 +18,7 @@ export default function MenusListPage() {
     const [menus, setMenus] = useState<Menu[]>([]);
     const [qrMenu, setQrMenu] = useState<Menu | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
 
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState<Menu>();
@@ -34,20 +37,23 @@ export default function MenusListPage() {
         setDeleteError("");
     };
 
+    // Failures show an error with Retry instead of loading forever (AGF-S1-11);
+    // an expired session is handled by the route guard
     const load = async () => {
         setLoading(true);
-        const response = await menuApi.listMenus();
-        if (response.status === 401) {
-            nav("/auth/login");
-            return;
+        setLoadError("");
+        try {
+            const response = await menuApi.listMenus();
+            setMenus(response.data);
+        } catch (err) {
+            setLoadError(errorMessage(err, "Failed to load menus"));
+        } finally {
+            setLoading(false);
         }
-        setMenus(response.data);
-        setLoading(false);
     };
 
     useEffect(() => {
         load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tenantSlug]);
 
     const confirmDelete = async () => {
@@ -91,6 +97,8 @@ export default function MenusListPage() {
             {/* Content */}
             {loading ? (
                 <p className="text-gray-600">Loading...</p>
+            ) : loadError ? (
+                <LoadError message={loadError} onRetry={load}/>
             ) : menus.length === 0 ? (
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center">
                     <p className="mb-4 text-gray-700">No menus yet.</p>
@@ -108,6 +116,7 @@ export default function MenusListPage() {
                         {menus.map((menu) => (
                             <div
                                 key={menu.id}
+                                data-menu-row
                                 className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
                             >
                                 <div className="flex items-start justify-between gap-4">
@@ -120,8 +129,9 @@ export default function MenusListPage() {
                                             {menu.name}
                                         </Link>
                                         <p className="mt-1 text-sm text-gray-500">
-                                            {menu.menuType?.name}
+                                            {menu.menuTypeName ?? menu.menuType?.name}
                                         </p>
+                                        <div className="mt-2"><MenuStatusBadge menu={menu}/></div>
                                     </div>
 
                                     <div className="flex shrink-0 items-center gap-3">
@@ -161,6 +171,9 @@ export default function MenusListPage() {
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                     Type
                                 </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    Status
+                                </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                                     Actions
                                 </th>
@@ -169,7 +182,7 @@ export default function MenusListPage() {
 
                             <tbody className="divide-y divide-gray-200 bg-white">
                             {menus.map((menu) => (
-                                <tr key={menu.id} className="hover:bg-gray-50/60">
+                                <tr key={menu.id} data-menu-row className="hover:bg-gray-50/60">
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                                         <Link
                                             to={`/${auth.business?.id}/admin/menus/${menu.id}`}
@@ -180,7 +193,11 @@ export default function MenusListPage() {
                                     </td>
 
                                     <td className="px-6 py-4 text-sm text-gray-500">
-                                        {menu.menuType?.name}
+                                        {menu.menuTypeName ?? menu.menuType?.name}
+                                    </td>
+
+                                    <td className="px-6 py-4 text-sm">
+                                        <MenuStatusBadge menu={menu}/>
                                     </td>
 
                                     <td className="px-6 py-4 text-right text-sm font-medium">

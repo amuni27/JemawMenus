@@ -1,4 +1,6 @@
 import {useState} from "react";
+import { apiFieldNames, useFieldErrors } from "../../utils/fieldErrors";
+import { isStrongPassword, passwordChecks } from "../../utils/passwordPolicy";
 import AuthLayout from "../../components/auth/AuthLayout";
 import {Input} from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -52,21 +54,8 @@ interface WizardState {
     subdomain: string;
 }
 
-// ----- Password Validation ------------------------------------------------
-const validatePasswordStrength = (password: string) => {
-    return {
-        minLength: password.length >= 8,
-        lowercase: /[a-z]/.test(password),
-        uppercase: /[A-Z]/.test(password),
-        number: /[0-9]/.test(password),
-        symbol: /[^A-Za-z0-9]/.test(password),
-    };
-};
-
-const isStrongPassword = (password: string) => {
-    const checks = validatePasswordStrength(password);
-    return Object.values(checks).every(Boolean);
-};
+// ----- Password Validation (shared policy, AGF-S1-17) ----------------------
+const validatePasswordStrength = passwordChecks;
 
 function PasswordStrength({password}: { password: string }) {
     const checks = validatePasswordStrength(password);
@@ -160,11 +149,19 @@ const defaultState: WizardState = {
 
 const steps = [{label: "Personal"}, {label: "Business"}, {label: "Hours"}];
 
+// Wizard step holding each backend registration field (AGF-S2-11)
+const FIELD_STEP: Record<string, number> = {
+    fullName: 0, email: 0, phoneNumber: 0, password: 0,
+    businessName: 1, businessPhone: 1, streetAddress: 1, city: 1, state: 1, zipcode: 1,
+    customSubdomain: 2,
+};
+
 export default function RegisterWizard() {
     const [step, setStep] = useState(0);
     const [data, setData] = useState<WizardState>(defaultState);
     const [error, setError] = useState<string>();
     const [submitting, setSubmitting] = useState(false);
+    const serverErrors = useFieldErrors(); // AGF-S2-11
 
     const {register, loading} = useAuth();
     const toast = useToast();
@@ -268,10 +265,21 @@ export default function RegisterWizard() {
             await register(payload);
             toast("Registration successful!");
             nav('/auth/login');
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Registration failed";
-            toast(msg);
-            setError(msg);
+        } catch (err) {
+            // AGF-S2-11: show field errors under their fields and open the first step that has one;
+            // anything else (e.g. "This email is already registered.") keeps the server message
+            const p = data.personal;
+            const b = data.business;
+            const banner = serverErrors.apply(err, {
+                fullName: p.fullName.trim(), email: p.email.trim().toLowerCase(), phoneNumber: p.phone.trim(), password: p.password,
+                businessName: b.businessName.trim(), businessPhone: b.businessPhone.trim(), streetAddress: b.address.trim(),
+                city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim(),
+                customSubdomain: data.subdomain.trim().toLowerCase(),
+            }, "Registration failed");
+            const steps = apiFieldNames(err).map((f) => FIELD_STEP[f]).filter((s) => s !== undefined);
+            if (steps.length > 0) setStep(Math.min(...steps));
+            if (banner) toast(banner);
+            setError(banner ?? undefined);
         } finally {
             setSubmitting(false);
         }
@@ -291,6 +299,7 @@ export default function RegisterWizard() {
                     <Input
                         label="Full Name *"
                         value={p.fullName}
+                        error={serverErrors.errorFor("fullName", p.fullName.trim())}
                         onChange={(e) => update("personal", {...p, fullName: e.target.value})}
                     />
 
@@ -298,6 +307,7 @@ export default function RegisterWizard() {
                         label="Email *"
                         type="email"
                         value={p.email}
+                        error={serverErrors.errorFor("email", p.email.trim().toLowerCase())}
                         onChange={(e) => update("personal", {...p, email: e.target.value})}
                     />
 
@@ -322,12 +332,16 @@ export default function RegisterWizard() {
                                 Enter a valid Ethiopian phone number.
                             </p>
                         )}
+                        {serverErrors.errorFor("phoneNumber", p.phone.trim()) && (
+                            <p className="text-sm text-red-600 mt-1">{serverErrors.errorFor("phoneNumber", p.phone.trim())}</p>
+                        )}
                     </div>
 
                     <Input
                         label="Password *"
                         type="password"
                         value={p.password}
+                        error={serverErrors.errorFor("password", p.password)}
                         onChange={(e) => update("personal", {...p, password: e.target.value})}
                     />
 
@@ -357,6 +371,7 @@ export default function RegisterWizard() {
                     <Input
                         label="Business Name *"
                         value={b.businessName}
+                        error={serverErrors.errorFor("businessName", b.businessName.trim())}
                         onChange={(e) => update("business", {...b, businessName: e.target.value})}
                     />
 
@@ -381,10 +396,14 @@ export default function RegisterWizard() {
                                 Enter a valid Ethiopian business phone number.
                             </p>
                         )}
+                        {serverErrors.errorFor("businessPhone", b.businessPhone.trim()) && (
+                            <p className="text-sm text-red-600 mt-1">{serverErrors.errorFor("businessPhone", b.businessPhone.trim())}</p>
+                        )}
                     </div>
 
                     <Input
                         label="Street Address *"
+                        error={serverErrors.errorFor("streetAddress", b.address.trim())}
                         value={b.address}
                         onChange={(e) => update("business", {...b, address: e.target.value})}
                     />
@@ -392,12 +411,14 @@ export default function RegisterWizard() {
                     <div className="grid grid-cols-2 gap-3">
                         <Input
                             label="City *"
+                            error={serverErrors.errorFor("city", b.city.trim())}
                             value={b.city}
                             onChange={(e) => update("business", {...b, city: e.target.value})}
                         />
 
                         <Input
                             label="Region *"
+                            error={serverErrors.errorFor("state", b.region.trim())}
                             value={b.region}
                             placeholder="Addis Ababa, Oromia, Amhara..."
                             onChange={(e) => update("business", {...b, region: e.target.value})}
@@ -406,6 +427,7 @@ export default function RegisterWizard() {
 
                     <Input
                         label="Postal Code "
+                        error={serverErrors.errorFor("zipcode", b.postalCode.trim())}
                         value={b.postalCode}
                         onChange={(e) => update("business", {...b, postalCode: e.target.value})}
                     />
@@ -511,6 +533,7 @@ export default function RegisterWizard() {
                     <Input
                         label="Choose your subdomain *"
                         value={data.subdomain}
+                        error={serverErrors.errorFor("customSubdomain", data.subdomain.trim().toLowerCase())}
                         placeholder="your-restaurant"
                         onChange={(e) => update("subdomain", e.target.value.toLowerCase())}
                     />

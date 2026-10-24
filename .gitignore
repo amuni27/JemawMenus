@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets (AGF-S1-02). `.env` is tracked and holds public VITE_* values only;
+# put anything private in `.env.local` / `.env.*.local`, which `*.local` above already ignores.
+*.pem
+*.key

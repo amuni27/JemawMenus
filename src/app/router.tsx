@@ -3,7 +3,10 @@ import Landing from '../pages/public/Landing';
 import Pricing from '../pages/public/Pricing';
 import Login from '../pages/public/Login';
 import RegisterWizard from '../pages/public/RegisterWizard';
+import ForgotPassword from '../pages/public/ForgotPassword';
+import ResetPassword from '../pages/public/ResetPassword';
 import AdminLayout from '../components/layout/AdminLayout.tsx';
+import RequireAuth from '../components/auth/RequireAuth.tsx';
 import CustomerMenu from '../pages/customer/CustomerMenu.tsx';
 import Dashboard from '../pages/admin/Dashboard';
 import DealsPage from '../pages/admin/DealsPage';
@@ -30,6 +33,14 @@ const router = createBrowserRouter([
         element: <Login/>,
     },
     {
+        path: '/auth/forgot-password', // AGF-S2-13A
+        element: <ForgotPassword/>,
+    },
+    {
+        path: '/auth/reset-password',
+        element: <ResetPassword/>,
+    },
+    {
         path: '/auth/register',
         element: <RegisterWizard/>,
     },
@@ -47,7 +58,7 @@ const router = createBrowserRouter([
             },
             {
                 path: 'admin',
-                element: <AdminLayout/>,
+                element: <RequireAuth><AdminLayout/></RequireAuth>,
                 children: [
                     {index: true, element: <Dashboard/>},
                     {path: 'qrcode', element: <QRPage/>},

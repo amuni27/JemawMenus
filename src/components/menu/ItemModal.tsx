@@ -1,17 +1,32 @@
 import React, {useCallback, useEffect, useMemo, useState} from "react";
+import { useFieldErrors } from "../../utils/fieldErrors";
+import { displayCurrency } from "../../utils/currency";
+import { ALLOWED_IMAGE_TYPES, imageFileProblem } from "../../utils/imagePolicy";
 import Modal from "../ui/Modal.tsx";
 import ModalHeader from "../ui/ModalHeader.tsx";
 import Button from "../ui/Button.tsx";
 import {Input} from "../ui/Input.tsx";
 import {FormSelect} from "../form/FormSelect.tsx";
-import type {MenuItem, Category, CreateItemPayload} from "../../types/menu.ts";
+import type {MenuItem, Category, CreateItemPayload, ItemStatus} from "../../types/menu.ts";
 import {useToast} from "../ui/ToastContext.tsx";
 import {uploadToR2} from "../../utils/r2Service.ts";
+import PillInput from "./PillInput.tsx";
+import {SPICE_LEVELS} from "../../utils/spiceLevel.ts";
+import {DIETARY_TAG_SUGGESTIONS} from "../../utils/dietary.ts";
+
+// What each status means for guests (AGF-S1-12)
+const STATUS_HELP: Record<ItemStatus, string> = {
+    AVAILABLE: "Guests can see and add this item.",
+    OUT_OF_STOCK: "Guests see this item marked Sold Out and cannot add it.",
+    UNAVAILABLE: "Hidden from guests.",
+};
 
 type UploadInfo = { uploadUrl: string; objectKey: string; expiresInSeconds?: number };
 type PresignResponse = { item: MenuItem; upload?: UploadInfo | null };
 
 interface Props {
+    /** The restaurant's currency, shown in the price label (AGF-S2-02) */
+    currency?: string;
     open: boolean;
     onClose: () => void;
     menuId?: string;
@@ -27,7 +42,7 @@ interface Props {
     onConfirmImage: (itemId: string, objectKey: string) => Promise<MenuItem>;
 
     // Presign PUT upload URL for the item
-    onPresignImage?: (itemId: string) => Promise<PresignResponse>;
+    onPresignImage?: (itemId: string, contentType: string) => Promise<PresignResponse>;
 }
 
 
@@ -38,12 +53,36 @@ type Draft = {
     price: string;
     calories: string;
     categoryId: string;
-    status: "AVAILABLE" | "UNAVAILABLE";
+    status: ItemStatus;
     imageFile: File | null;
     imagePreview: string; // blob or public url
     ingredients: string[];
     ingredientInput: string;
+    // AGF-S2-06: details guests see on the item page
+    allergens: string[];
+    tags: string[];
+    spiceLevel: string; // "" = not set
+    isFeatured: boolean;
+    prepTime: string;   // whole minutes; "" = not set
 };
+
+const COMMON_ALLERGENS = ["gluten", "dairy", "eggs", "nuts", "peanuts", "soy", "fish", "shellfish", "sesame"] as const;
+
+/** Stored list values as a clean array; older data may hold a comma-separated string (same reading as the guest page). */
+function toStringList(raw: unknown): string[] {
+    if (Array.isArray(raw)) return raw.map((x) => (x == null ? "" : String(x).trim())).filter(Boolean);
+    if (typeof raw === "string") return raw.split(",").map((x) => x.trim()).filter(Boolean);
+    return [];
+}
+
+/** Why a prep time can't be saved, or null (backend: whole minutes, @Min(0)) */
+function prepTimeProblem(value: string): string | null {
+    if (value.trim() === "") return null;
+    const n = Number(value);
+    if (Number.isNaN(n) || n < 0) return "Prep time must be 0 or more minutes";
+    if (!Number.isInteger(n)) return "Use whole minutes";
+    return null;
+}
 
 function normalizeIngredients(raw: unknown): string[] {
     if (Array.isArray(raw)) {
@@ -69,6 +108,12 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
             imagePreview: item.imageUrl ?? "",
             ingredients: normalizeIngredients((item as any).ingredients),
             ingredientInput: "",
+            allergens: toStringList(item.allergens),
+            tags: toStringList(item.tags),
+            spiceLevel: item.spiceLevel ?? "",
+            // owner responses call the flag "featured"
+            isFeatured: Boolean(item.featured ?? item.isFeatured),
+            prepTime: item.prepTimeMinutes != null ? String(item.prepTimeMinutes) : "",
         };
     }
 
@@ -83,6 +128,11 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
         imagePreview: "",
         ingredients: [],
         ingredientInput: "",
+        allergens: [],
+        tags: [],
+        spiceLevel: "",
+        isFeatured: false,
+        prepTime: "",
     };
 }
 
@@ -107,8 +157,12 @@ export default function ItemModal({
                                       onUpdate,
                                       onConfirmImage,
                                       onPresignImage,
+                                      currency,
                                   }: Props) {
     const toast = useToast();
+    const serverErrors = useFieldErrors(); // AGF-S2-11
+    const clearServerErrors = serverErrors.clear;
+    const applyServerErrors = serverErrors.apply;
 
     const [draft, setDraft] = useState<Draft>(() => buildDraft(item, categories));
     const [touched, setTouched] = useState(false);
@@ -128,9 +182,10 @@ export default function ItemModal({
         if (!open) return;
         setDraft(buildDraft(item, categories));
         setTouched(false);
+        clearServerErrors();
         setStep("idle");
         setImgOk(true);
-    }, [open, item, categories]);
+    }, [open, item, categories, clearServerErrors]);
 
     // Ensure category on create
     useEffect(() => {
@@ -189,6 +244,8 @@ export default function ItemModal({
 
         if ((draft.ingredients ?? []).length === 0) return false;
 
+        if (prepTimeProblem(draft.prepTime)) return false;
+
         // If user selected image, require presign hook
         if (draft.imageFile && !onPresignImage) return false;
 
@@ -198,6 +255,19 @@ export default function ItemModal({
     const buildBasePayload = useCallback((): CreateItemPayload => {
         const priceNum = Number(draft.price);
 
+        // AGF-S2-06: on edit, send a detail field only when the owner changed it, so existing values stay as stored
+        const loaded = item ? buildDraft(item, categories) : null;
+        const details: Partial<CreateItemPayload> = {};
+        const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+        if (!loaded || !sameList(draft.allergens, loaded.allergens)) details.allergens = draft.allergens;
+        if (!loaded || !sameList(draft.tags, loaded.tags)) details.tags = draft.tags;
+        if (!loaded || draft.spiceLevel !== loaded.spiceLevel) details.spiceLevel = draft.spiceLevel || null;
+        if (!loaded || draft.isFeatured !== loaded.isFeatured) details.isFeatured = draft.isFeatured;
+        // An empty prep time can't clear a stored one (the API ignores null), so it is only sent when set
+        if (draft.prepTime !== "" && (!loaded || draft.prepTime !== loaded.prepTime)) {
+            details.prepTimeMinutes = Number(draft.prepTime);
+        }
+
         return {
             name: draft.name.trim(),
             price: priceNum,
@@ -206,8 +276,9 @@ export default function ItemModal({
             description: draft.description.trim() ? draft.description.trim() : null,
             calories: draft.calories ? Number(draft.calories) : null,
             status: draft.status,
+            ...details,
         };
-    }, [draft]);
+    }, [draft, item, categories]);
 
     /**
      * Senior-grade: isolated image flow returns confirmed item (fresh backend state)
@@ -218,7 +289,7 @@ export default function ItemModal({
             if (!onPresignImage) throw new Error("Missing onPresignImage prop");
 
             setStep("presigning");
-            const presigned = await onPresignImage(itemId);
+            const presigned = await onPresignImage(itemId, draft.imageFile.type);
             const upload = presigned?.upload;
 
             if (!upload?.uploadUrl || !upload?.objectKey) {
@@ -268,9 +339,6 @@ export default function ItemModal({
             // CREATE
             const created = await onCreate(basePayload);
 
-            // ✅ keep your log EXACTLY as you want
-            console.log("create response:", created);
-
             if (!created?.id) {
                 throw new Error("Create did not return a valid item id");
             }
@@ -280,14 +348,22 @@ export default function ItemModal({
             toast(draft.imageFile ? "Item created with image" : "Item created");
             onClose();
         } catch (e: any) {
-            toast(e?.response?.data?.message || e?.message || "Failed to save item");
+            // AGF-S2-11: field errors go under their fields; anything else keeps the server message
+            const banner = applyServerErrors(e, {
+                name: draft.name, categoryId: draft.categoryId, price: draft.price, calories: draft.calories,
+                description: draft.description, ingredients: draft.ingredients,
+                allergens: draft.allergens, tags: draft.tags, spiceLevel: draft.spiceLevel,
+                isFeatured: draft.isFeatured, prepTimeMinutes: draft.prepTime,
+            }, "Failed to save item");
+            if (banner) toast(banner);
         } finally {
             setStep("idle");
         }
     }, [
+        applyServerErrors,
         buildBasePayload,
         doImageFlow,
-        draft.imageFile,
+        draft,
         isValid,
         item,
         menuId,
@@ -328,14 +404,14 @@ export default function ItemModal({
                         label="Name"
                         value={draft.name}
                         onChange={(e) => setDraft({...draft, name: e.target.value})}
-                        error={touched && !draft.name.trim() ? "Required" : undefined}
+                        error={(touched && !draft.name.trim() ? "Required" : undefined) ?? serverErrors.errorFor("name", draft.name)}
                     />
 
                     <FormSelect
                         label="Category"
                         value={draft.categoryId}
                         onChange={(e) => setDraft({...draft, categoryId: e.target.value})}
-                        error={touched && !draft.categoryId ? "Required" : undefined}
+                        error={(touched && !draft.categoryId ? "Required" : undefined) ?? serverErrors.errorFor("categoryId", draft.categoryId)}
                     >
                         {categories.length === 0 ? (
                             <option value="">No categories found</option>
@@ -349,16 +425,16 @@ export default function ItemModal({
                     </FormSelect>
 
                     <Input
-                        label="Price ($)"
+                        label={`Price (${displayCurrency(currency)})`}
                         value={draft.price}
                         onChange={(e) => {
                             const next = formatMoneyInput(e.target.value);
                             if (next !== null) setDraft({...draft, price: next});
                         }}
                         error={
-                            touched && (!draft.price || Number.isNaN(Number(draft.price)) || Number(draft.price) < 0)
+                            (touched && (!draft.price || Number.isNaN(Number(draft.price)) || Number(draft.price) < 0)
                                 ? "Invalid"
-                                : undefined
+                                : undefined) ?? serverErrors.errorFor("price", draft.price)
                         }
                     />
 
@@ -370,11 +446,11 @@ export default function ItemModal({
                             if (/^\d*$/.test(v)) setDraft({...draft, calories: v});
                         }}
                         error={
-                            touched &&
+                            (touched &&
                             draft.calories &&
                             (Number.isNaN(Number(draft.calories)) || Number(draft.calories) < 0)
                                 ? "Invalid"
-                                : undefined
+                                : undefined) ?? serverErrors.errorFor("calories", draft.calories)
                         }
                     />
                 </div>
@@ -384,9 +460,11 @@ export default function ItemModal({
                     value={draft.status}
                     onChange={(e) => setDraft({...draft, status: e.target.value as Draft["status"]})}
                 >
-                    <option value="AVAILABLE">AVAILABLE</option>
-                    <option value="UNAVAILABLE">UNAVAILABLE</option>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="OUT_OF_STOCK">Out of stock — shown to guests as Sold Out</option>
+                    <option value="UNAVAILABLE">Unavailable — hidden from guests</option>
                 </FormSelect>
+                <p className="-mt-2 text-xs text-gray-500">{STATUS_HELP[draft.status]}</p>
 
                 <textarea
                     className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-brand focus:border-brand-dark"
@@ -395,6 +473,9 @@ export default function ItemModal({
                     value={draft.description}
                     onChange={(e) => setDraft({...draft, description: e.target.value})}
                 />
+                {serverErrors.errorFor("description", draft.description) && (
+                    <p className="-mt-2 text-xs text-red-600">{serverErrors.errorFor("description", draft.description)}</p>
+                )}
 
                 {/* Image Upload */}
                 <div className="space-y-2">
@@ -402,17 +483,16 @@ export default function ItemModal({
 
                     <input
                         type="file"
-                        accept="image/*"
+                        accept={ALLOWED_IMAGE_TYPES.join(",")}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
                         onChange={(e) => {
                             const file = e.target.files?.[0] || null;
 
-                            if (file && !file.type.startsWith("image/")) {
-                                toast("Please select an image file");
-                                return;
-                            }
-                            if (file && file.size > 8 * 1024 * 1024) {
-                                toast("Image too large (max 8MB)");
+                            // Same rules as the backend (AGF-S1-17): JPEG, PNG or WebP, max 8 MB
+                            const problem = file ? imageFileProblem(file) : null;
+                            if (problem) {
+                                toast(problem);
+                                e.target.value = "";
                                 return;
                             }
 
@@ -474,6 +554,9 @@ export default function ItemModal({
                     {touched && (draft.ingredients ?? []).length === 0 && (
                         <p className="text-xs text-red-600">At least 1 ingredient required</p>
                     )}
+                    {serverErrors.errorFor("ingredients", draft.ingredients) && (
+                        <p className="text-xs text-red-600">{serverErrors.errorFor("ingredients", draft.ingredients)}</p>
+                    )}
 
                     {(draft.ingredients ?? []).length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-2">
@@ -496,6 +579,92 @@ export default function ItemModal({
                         </div>
                     )}
                 </div>
+
+                {/* AGF-S2-06: details shown to guests on the item page */}
+                <PillInput
+                    label="Allergens"
+                    values={draft.allergens}
+                    onChange={(allergens) => setDraft((d) => ({...d, allergens}))}
+                    placeholder="Add allergen"
+                    suggestions={COMMON_ALLERGENS}
+                    hint="Guests can exclude dishes by declared allergen, so list every allergen the dish contains."
+                />
+                {serverErrors.errorFor("allergens", draft.allergens) && (
+                    <p className="text-xs text-red-600">{serverErrors.errorFor("allergens", draft.allergens)}</p>
+                )}
+
+                <PillInput
+                    label="Tags"
+                    values={draft.tags}
+                    onChange={(tags) => setDraft((d) => ({...d, tags}))}
+                    placeholder="e.g. vegetarian, fasting, chef's pick"
+                    suggestions={DIETARY_TAG_SUGGESTIONS}
+                    hint="Guests can filter by vegetarian, vegan, fasting and gluten-free. Add each tag that applies; fasting doesn't add vegan or vegetarian."
+                />
+                {serverErrors.errorFor("tags", draft.tags) && (
+                    <p className="text-xs text-red-600">{serverErrors.errorFor("tags", draft.tags)}</p>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                        <label htmlFor="item-spice-level" className="text-sm font-medium text-gray-700">Spice level</label>
+                        <select
+                            id="item-spice-level"
+                            value={draft.spiceLevel}
+                            onChange={(e) => setDraft((d) => ({...d, spiceLevel: e.target.value}))}
+                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:ring-brand focus:border-brand-dark"
+                        >
+                            {/* A saved level can't be cleared through the API; "None" hides it from guests */}
+                            <option value="" disabled={!!item?.spiceLevel}>Not set</option>
+                            {SPICE_LEVELS.map((s) => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                            ))}
+                            {draft.spiceLevel && !SPICE_LEVELS.some((s) => s.value === draft.spiceLevel) && (
+                                <option value={draft.spiceLevel}>{draft.spiceLevel}</option>
+                            )}
+                        </select>
+                        {serverErrors.errorFor("spiceLevel", draft.spiceLevel) && (
+                            <p className="text-xs text-red-600">{serverErrors.errorFor("spiceLevel", draft.spiceLevel)}</p>
+                        )}
+                    </div>
+
+                    <div className="space-y-1">
+                        <label htmlFor="item-prep-time" className="text-sm font-medium text-gray-700">Prep time (minutes)</label>
+                        <input
+                            id="item-prep-time"
+                            type="number"
+                            min={0}
+                            step={1}
+                            inputMode="numeric"
+                            value={draft.prepTime}
+                            onChange={(e) => setDraft((d) => ({...d, prepTime: e.target.value}))}
+                            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-brand focus:border-brand-dark"
+                        />
+                        {(prepTimeProblem(draft.prepTime) ?? serverErrors.errorFor("prepTimeMinutes", draft.prepTime)) && (
+                            <p className="text-xs text-red-600">
+                                {prepTimeProblem(draft.prepTime) ?? serverErrors.errorFor("prepTimeMinutes", draft.prepTime)}
+                            </p>
+                        )}
+                        {draft.prepTime === "" && item?.prepTimeMinutes != null && (
+                            <p className="text-xs text-gray-500">
+                                A saved prep time can't be removed yet; the current value ({item.prepTimeMinutes} min) is kept.
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                <label className="flex items-start gap-2 text-sm text-gray-700">
+                    <input
+                        type="checkbox"
+                        checked={draft.isFeatured}
+                        onChange={(e) => setDraft((d) => ({...d, isFeatured: e.target.checked}))}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                    />
+                    <span>
+                        <span className="font-medium">Featured item</span>
+                        <span className="block text-xs text-gray-500">Mark this as one of your highlights.</span>
+                    </span>
+                </label>
 
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-4">

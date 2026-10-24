@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
+import { displayCurrency } from "../../utils/currency";
+import { formatSubdomain } from "../../utils/subdomain";
+import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import CopyLinkButton from "../../components/ui/CopyLinkButton";
 import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
 import BusinessProfileModal from "../../components/account/BusinessProfileModal";
 import BusinessLogoModal from "../../components/account/BusinessLogoModal";
+import BusinessLogo from "../../components/ui/BusinessLogo";
 import BusinessHoursModal from "../../components/account/BusinessHoursModal";
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
@@ -94,23 +99,36 @@ export default function AccountPage() {
           <InfoRow label="Address" value={business.streetAddress} />
           <InfoRow label="City" value={business.city} />
           <InfoRow label="Region" value={business.state} />
-          <InfoRow label="Subdomain" value={business.customSubdomain ? `${business.customSubdomain}.menuqrs.com` : undefined} />
+          {/* AGF-S2-10: the stored host as-is (no second domain); the guest link is built exactly like the QR code */}
+          <InfoRow label="Subdomain" value={formatSubdomain(business.customSubdomain)} />
+          {business.id && (
+            <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+              <span className="text-sm text-gray-500 shrink-0">Guest menu link</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <a
+                  href={buildMenuUrl(business.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-sm font-medium text-blue-600 hover:underline"
+                >
+                  {buildMenuUrl(business.id)}
+                </a>
+                <CopyLinkButton url={buildMenuUrl(business.id)} successMessage="Guest menu link copied" />
+              </span>
+            </div>
+          )}
+          <InfoRow label="Currency" value={displayCurrency(business.currency)} />
         </Card>
 
         {/* Business Logo */}
         <Card title="Business Logo" onEdit={() => setLogoModal(true)}>
           <div className="flex items-center justify-center py-4">
-            {(business as any).logoUrl ? (
-              <img
-                src={(business as any).logoUrl}
-                alt="Business logo"
-                className="h-24 w-24 rounded-2xl object-cover border border-gray-200 shadow-sm"
-              />
-            ) : (
-              <div className="h-24 w-24 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-                <span className="text-xs text-gray-400">No logo</span>
-              </div>
-            )}
+            {/* AGF-S2-01: the same logo guests see, or the initials when there is none */}
+            <BusinessLogo
+              name={business.name}
+              logoUrl={business.logoUrl}
+              className="h-24 w-24 rounded-2xl border border-gray-200 text-2xl shadow-sm"
+            />
           </div>
         </Card>
 

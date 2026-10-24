@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "../ui/Modal";
 import ModalHeader from "../ui/ModalHeader";
 import Button from "../ui/Button";
+import BusinessLogo from "../ui/BusinessLogo";
 import { profileApi } from "../../api/profileApi";
 import { useToast } from "../ui/ToastContext";
 import { BusinessDTO } from "../../services/authService";
+import { ALLOWED_IMAGE_TYPES, imageFileProblem } from "../../utils/imagePolicy";
+import { uploadToR2 } from "../../utils/r2Service";
+import { errorMessage } from "../../utils/errorMessage";
 
 interface Props {
   open: boolean;
@@ -13,79 +17,137 @@ interface Props {
   onSaved: () => void;
 }
 
+/**
+ * AGF-S2-01: the owner picks a logo file, which goes through the secure presign → upload → confirm flow
+ * (same type, size and HEIC rules as item images, AGF-S1-17), or removes the current logo.
+ */
 export default function BusinessLogoModal({ open, onClose, business, onSaved }: Props) {
   const toast = useToast();
-  const [logoUrl, setLogoUrl] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState<"" | "uploading" | "removing">("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    const current = (business as any).logoUrl ?? "";
-    setLogoUrl(current);
-    setPreview(current);
+    setFile(null);
+    setPreview("");
     setError("");
+    setBusy("");
+    if (inputRef.current) inputRef.current.value = "";
   }, [open, business]);
 
+  // Release the local preview of the chosen file
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  const handleFile = (chosen: File | null) => {
+    setError("");
+    if (!chosen) {
+      setFile(null);
+      setPreview("");
+      return;
+    }
+    const problem = imageFileProblem(chosen);
+    if (problem) {
+      setFile(null);
+      setPreview("");
+      setError(problem);
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+    setFile(chosen);
+    setPreview(URL.createObjectURL(chosen));
+  };
+
   const handleSave = async () => {
-    setSaving(true);
+    if (!file) return;
+    setBusy("uploading");
     setError("");
     try {
-      await profileApi.updateBusiness(business.id, { logoUrl: logoUrl.trim() || undefined });
+      const presigned = await profileApi.presignLogo(business.id, { fileName: file.name, contentType: file.type });
+      const { uploadUrl, objectKey } = presigned.data;
+      try {
+        await uploadToR2(uploadUrl, file);
+      } catch {
+        setError("Couldn't upload the logo. Check your connection and try again.");
+        return;
+      }
+      await profileApi.confirmLogo(business.id, objectKey);
       toast("Logo updated");
       onSaved();
       onClose();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to update logo");
+    } catch (err) {
+      setError(errorMessage(err, "Failed to update logo"));
     } finally {
-      setSaving(false);
+      setBusy("");
     }
   };
+
+  const handleRemove = async () => {
+    setBusy("removing");
+    setError("");
+    try {
+      await profileApi.removeLogo(business.id);
+      toast("Logo removed");
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(errorMessage(err, "Failed to remove logo"));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const currentLogo = business.logoUrl || "";
 
   return (
     <Modal open={open} onClose={onClose}>
       <ModalHeader title="Edit Business Logo" onClose={onClose} />
       <div className="space-y-4">
         {error && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
         )}
 
-        {/* Preview */}
+        {/* Preview: the chosen file, else the current logo, else the initials */}
         <div className="flex justify-center">
-          {preview ? (
-            <img
-              src={preview}
-              alt="Business logo"
-              className="h-24 w-24 rounded-2xl object-cover border border-gray-200 shadow-sm"
-              onError={() => setPreview("")}
-            />
-          ) : (
-            <div className="h-24 w-24 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-              <span className="text-xs text-gray-400">No logo</span>
-            </div>
-          )}
-        </div>
-
-        {/* URL input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
-          <input
-            type="url"
-            value={logoUrl}
-            placeholder="https://example.com/logo.png"
-            onChange={(e) => {
-              setLogoUrl(e.target.value);
-              setPreview(e.target.value);
-            }}
-            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand-dark"
+          <BusinessLogo
+            name={business.name}
+            logoUrl={preview || currentLogo}
+            className="h-24 w-24 rounded-2xl border border-gray-200 text-2xl shadow-sm"
           />
-          <p className="mt-1 text-xs text-gray-400">Paste a direct link to your logo image.</p>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={handleSave} isLoading={saving}>Save Logo</Button>
+        <div>
+          <label htmlFor="business-logo-file" className="block text-sm font-medium text-gray-700 mb-1">
+            Logo image
+          </label>
+          <input
+            id="business-logo-file"
+            ref={inputRef}
+            type="file"
+            accept={ALLOWED_IMAGE_TYPES.join(",")}
+            disabled={!!busy}
+            onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+            className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-gray-200"
+          />
+          <p className="mt-1 text-xs text-gray-400">JPEG, PNG or WebP, up to 8 MB. A square image works best.</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <div>
+            {currentLogo && !file && (
+              <Button variant="danger" onClick={handleRemove} isLoading={busy === "removing"} disabled={!!busy}>
+                Remove logo
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={onClose} disabled={!!busy}>Cancel</Button>
+            <Button onClick={handleSave} isLoading={busy === "uploading"} disabled={!file || !!busy}>
+              Save Logo
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>

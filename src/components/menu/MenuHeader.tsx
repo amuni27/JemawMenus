@@ -1,5 +1,6 @@
 import React from "react";
 import { MenuPicker } from "./MenuPicker.tsx";
+import BusinessLogo from "../ui/BusinessLogo";
 
 type Props = {
   businessName?: string;
@@ -13,6 +14,10 @@ type Props = {
   // NEW
   orderCount?: number;
   onOpenOrder?: () => void;
+
+  /** AGF-S2-05 */
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
 };
 
 export function MenuHeader({
@@ -25,6 +30,8 @@ export function MenuHeader({
   loading,
   orderCount = 0,
   onOpenOrder,
+  searchQuery,
+  onSearchChange,
 }: Props) {
   return (
     <header className="border-b bg-white lg:sticky lg:top-0 lg:z-40">
@@ -32,13 +39,8 @@ export function MenuHeader({
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 pt-2">
         {/* Brand */}
         <div className="inline-flex items-center px-2 py-1">
-          {logoUrl && (
-            <img
-              src={logoUrl}
-              alt={`${businessName ?? "Menu"} logo`}
-              className="h-10 w-10 rounded-lg object-contain"
-            />
-          )}
+          {/* AGF-S2-01: the restaurant's own logo, or its initials */}
+          <BusinessLogo name={businessName} logoUrl={logoUrl} className="h-10 w-10 text-sm" />
           <p className="pl-2 text-xl font-extrabold text-gray-900">
             {businessName ?? "Menu"}
           </p>
@@ -76,6 +78,8 @@ export function MenuHeader({
           activeMenuId={activeMenuId}
           onSelectMenu={handleSelectMenu}
           loading={loading}
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
         />
       </div>
     </header>

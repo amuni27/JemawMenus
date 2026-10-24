@@ -4,9 +4,11 @@ import {Settings, HelpCircle, User, LogOut} from "lucide-react";
 import {useAuth} from "../../app/context/AuthContext.tsx";
 
 
+// AGF-S2-09: Dashboard added; login still lands on Menus (D4)
 const NAV_ITEMS = [
-    {label: "Menus", path: "admin/menus"},
-    {label: "QR Code", path: "admin/qrcode"},
+    {label: "Dashboard", path: "admin", exact: true},
+    {label: "Menus", path: "admin/menus", exact: false},
+    {label: "QR Code", path: "admin/qrcode", exact: false},
 ];
 
 export default function AdminLayout() {
@@ -57,16 +59,22 @@ export default function AdminLayout() {
                 className={`flex flex-col fixed inset-y-0 left-0 z-40 w-64 transform bg-gray-50 border-r border-gray-200 px-6 py-8 transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
                 <h1 className="text-xl font-bold mb-6 mt-6 lg:mt-0">Venue</h1>
                 <nav className="space-y-2">
-                    {NAV_ITEMS.map((item) => (
-                        <Link
-                            key={item.path}
-                            to={`/${tenantSlug}/${item.path}`}
-                            onClick={() => setSidebarOpen(false)}
-                            className={`block px-3 py-2 rounded-lg hover:bg-gray-100 ${pathname.includes(item.path) ? "bg-gray-100 font-medium" : ""}`}
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
+                    {NAV_ITEMS.map((item) => {
+                        const active = item.exact
+                            ? pathname.replace(/\/+$/, "") === `/${tenantSlug}/${item.path}`
+                            : pathname.includes(item.path);
+                        return (
+                            <Link
+                                key={item.path}
+                                to={`/${tenantSlug}/${item.path}`}
+                                onClick={() => setSidebarOpen(false)}
+                                aria-current={active ? "page" : undefined}
+                                className={`block px-3 py-2 rounded-lg hover:bg-gray-100 ${active ? "bg-gray-100 font-medium" : ""}`}
+                            >
+                                {item.label}
+                            </Link>
+                        );
+                    })}
                 </nav>
                 {/* Bottom section */}
                 <div className="pt-4 mt-auto">

@@ -59,7 +59,6 @@ export default function BusinessHoursModal({ open, onClose, business, onSaved }:
 
     const is247 = business.open24_7 ?? false;
     setOpen247(is247);
-    console.log("Business hours 24/7:", is247);
     if (is247) {
       setDays(defaultDays());
       return;

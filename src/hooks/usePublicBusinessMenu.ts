@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import publicMenuApi from "../api/publicMenueApi.ts"; // adjust path
+import type { GuestBusinessInfo } from "../components/menu/GuestInfoPanel";
 
 type Business = {
     id: string;
     name: string;
     slug?: string;
     customDomain?: string | null;
-};
+    /** AGF-S2-01: null when the restaurant has no logo */
+    logoUrl?: string | null;
+} & GuestBusinessInfo; // AGF-S2-03: hours, 24/7, time zone and contact
 
 type Category = {
     id: string;
@@ -57,7 +60,6 @@ export function usePublicBusinessMenu(businessId?: string) {
         publicMenuApi
             .listMenuTypes(`/venue/${businessId}/menu`)
             .then((res) => {
-                console.log(res)
                 if (!alive) return;
                 setData(res.data);
             })

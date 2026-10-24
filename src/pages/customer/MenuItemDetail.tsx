@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { formatPrice } from "../../utils/currency";
+import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
-import { MenuItem } from "../../types/menu.ts";
+import { GuestMenuOutletContext, MenuItem } from "../../types/menu.ts";
+import { isSoldOut } from "../../utils/itemAvailability.ts";
+import { spiceLabel } from "../../utils/spiceLevel.ts";
 
 export default function MenuItemDetail() {
     const navigate = useNavigate();
     const { tenantSlug, itemId } = useParams();
+    // The guest menu's waiter list (session storage), shared with the menu cards (AGF-S2-04)
+    const outlet = useOutletContext<GuestMenuOutletContext | undefined>();
 
     const [item, setItem] = useState<MenuItem | null>(null);
     const [loading, setLoading] = useState(true);
@@ -15,7 +20,7 @@ export default function MenuItemDetail() {
 
         setLoading(true);
         publicMenueApi
-            .findItem(`/venue/items/${itemId}`)
+            .findItem(`/venue/${tenantSlug}/items/${itemId}`) // tenant-scoped (AGF-S1-05)
             .then((res) => setItem(res.data))
             .catch(() => setItem(null))
             .finally(() => setLoading(false));
@@ -98,7 +103,7 @@ export default function MenuItemDetail() {
                             <div className="text-right lg:hidden">
                                 {priceNumber !== null ? (
                                     <div className="text-sm font-semibold text-gray-900">
-                                        ETB {priceNumber.toFixed(2)}
+                                        {formatPrice(priceNumber, item.currency)}
                                     </div>
                                 ) : (
                                     <div className="text-sm text-gray-400">Price not set</div>
@@ -106,11 +111,17 @@ export default function MenuItemDetail() {
                             </div>
                         </div>
 
+                        {isSoldOut(item.status) ? (
+                            <span className="w-fit rounded-full bg-gray-900 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                                Sold Out
+                            </span>
+                        ) : null}
+
                         {/* Desktop price under title (slightly softer color) */}
                         <div className="hidden lg:block">
                             {priceNumber !== null ? (
                                 <div className="text-xl font-semibold text-gray-700">
-                                    ETB {priceNumber.toFixed(2)}
+                                    {formatPrice(priceNumber, item.currency)}
                                 </div>
                             ) : (
                                 <div className="text-sm text-gray-400">Price not set</div>
@@ -132,7 +143,8 @@ export default function MenuItemDetail() {
                         {typeof item.prepTimeMinutes === "number" && (
                             <span>⏱ {item.prepTimeMinutes} min</span>
                         )}
-                        {item.spiceLevel && <span>🌶 {item.spiceLevel}</span>}
+                        {/* AGF-S2-06: readable level; "None" is not shown */}
+                        {spiceLabel(item.spiceLevel) && <span>🌶 {spiceLabel(item.spiceLevel)}</span>}
                     </div>
 
                     {ingredients.length > 0 && (
@@ -184,8 +196,9 @@ export default function MenuItemDetail() {
 
                     <div className="mt-6">
                         <button
-                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-600"
-                            onClick={() => navigate(-1)}
+                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+                            onClick={() => outlet?.addToWaiterList(item)}
+                            disabled={isSoldOut(item.status) || !outlet}
                         >
                             <span className="text-white">Add to list</span>
                         </button>

@@ -10,6 +10,13 @@ import {
     register as registerService,
     type UserDTO,
 } from '../../services/authService';
+import {
+    ACCESS_DENIED_EVENT,
+    clearStoredSession,
+    SESSION_ENDED_EVENT,
+    type SessionEndReason,
+} from '../../services/session';
+import {useToast} from '../../components/ui/ToastContext';
 
 interface AuthContextValue {
     session: AuthSession | null;
@@ -17,6 +24,10 @@ interface AuthContextValue {
     business: BusinessDTO | null;
     isAuthenticated: boolean;
     loading: boolean;
+    /** Why the last session ended (expired token or inactive account), for the login redirect (AGF-S1-11) */
+    endReason: SessionEndReason | null;
+    /** True once the first session check on app start has finished (route guards wait for it) */
+    ready: boolean;
 
     login: (emailOrPhone: string, password: string) => Promise<AuthSession>;
     register: (payload: any) => Promise<void>;
@@ -35,6 +46,9 @@ export function AuthProvider({children}: { children: ReactNode }) {
     });
 
     const [loading, setLoading] = useState(true);
+    const [endReason, setEndReason] = useState<SessionEndReason | null>(null);
+    const [ready, setReady] = useState(false);
+    const toast = useToast();
 
     const user = session?.user ?? null;
     const business = session?.business ?? null;
@@ -56,6 +70,7 @@ export function AuthProvider({children}: { children: ReactNode }) {
         try {
             const sess = await loginService(emailOrPhone, password);
             persistSession(sess);
+            setEndReason(null);
             return sess;
         } finally {
             setLoading(false);
@@ -87,23 +102,28 @@ export function AuthProvider({children}: { children: ReactNode }) {
         if (!token) {
             persistSession(null);
             setLoading(false);
+            setReady(true);
             return;
         }
 
         setLoading(true);
         try {
-            const { user, business } = await meService();
-            persistSession({ token, user, business });
+            // /me returns a fresh token: store it so the session doesn't end 2 hours after login (AGF-S1-11)
+            const { token: freshToken, user, business } = await meService();
+            persistSession({ token: freshToken ?? token, user, business });
         } catch (err: any) {
-            // Only clear the session on 401 — the axios interceptor already
-            // redirects, but we also clear React state here.
-            // Network errors / 5xx should NOT log the user out.
-            if (err?.response?.status === 401) {
-                await logoutService();
+            // End the session on 401 or an inactive account. Route guards decide whether to show login;
+            // guest pages are not redirected. Network errors / 5xx should NOT log the user out.
+            const status = err?.response?.status;
+            const inactive = status === 403 && err?.response?.data?.code === 'ACCOUNT_INACTIVE';
+            if (status === 401 || inactive) {
+                clearStoredSession();
                 persistSession(null);
+                setEndReason(inactive ? 'inactive' : 'expired');
             }
         } finally {
             setLoading(false);
+            setReady(true);
         }
     }, []);
 
@@ -111,6 +131,24 @@ export function AuthProvider({children}: { children: ReactNode }) {
         refresh();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Signals from the axios interceptor (services/apiAuth.ts)
+    useEffect(() => {
+        const onSessionEnded = (e: Event) => {
+            const reason = (e as CustomEvent<{ reason: SessionEndReason }>).detail?.reason ?? 'expired';
+            setSession(null);
+            setEndReason(reason);
+        };
+        const onAccessDenied = (e: Event) => {
+            toast((e as CustomEvent<{ message: string }>).detail?.message ?? "You don't have access to this resource");
+        };
+        window.addEventListener(SESSION_ENDED_EVENT, onSessionEnded);
+        window.addEventListener(ACCESS_DENIED_EVENT, onAccessDenied);
+        return () => {
+            window.removeEventListener(SESSION_ENDED_EVENT, onSessionEnded);
+            window.removeEventListener(ACCESS_DENIED_EVENT, onAccessDenied);
+        };
+    }, [toast]);
 
 
     const value = useMemo(
@@ -120,12 +158,14 @@ export function AuthProvider({children}: { children: ReactNode }) {
             business,
             isAuthenticated: !!session?.token,
             loading,
+            endReason,
+            ready,
             login,
             register,
             logout,
             refresh,
         }),
-        [session, user, business, loading, login, register, logout, refresh]
+        [session, user, business, loading, endReason, ready, login, register, logout, refresh]
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
