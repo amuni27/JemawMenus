@@ -129,6 +129,7 @@ export default function MenuDetailPage() {
                 onUpdate={categories.updateCategory}
                 onDelete={categories.deleteCategory}
                 onToggleActive={categories.setCategoryActive}
+                onMove={categories.moveCategory}
             />
           </aside>
 

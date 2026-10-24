@@ -1,7 +1,8 @@
 import {useState} from "react";
 import CategoryModal from "./CategoryModal.tsx";
 import type {Category} from "../../types/menu.ts";
-import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import { errorMessage } from "../../utils/errorMessage";
 import DeleteCategoryModal from "./DeleteCategoryModal.tsx";
 
 interface Props {
@@ -16,9 +17,28 @@ interface Props {
     onUpdate: (categoryId: string, name: string) => Promise<Category>;
     onDelete: (categoryId: string) => Promise<void>;
     onToggleActive?: (categoryId: string, active: boolean) => Promise<Category>;
+    /** AGF-S2-07: move a category one place up (-1) or down (+1) */
+    onMove?: (categoryId: string, direction: -1 | 1) => Promise<void>;
 }
 
-export default function CategoryList({ menuId, categories, loading, error, onCreate, onUpdate, onDelete, onToggleActive }: Props) {
+export default function CategoryList({ menuId, categories, loading, error, onCreate, onUpdate, onDelete, onToggleActive, onMove }: Props) {
+
+    // AGF-S2-07: one move at a time; a failed save restores the order and explains why
+    const [moving, setMoving] = useState(false);
+    const [moveError, setMoveError] = useState("");
+
+    const move = async (categoryId: string, direction: -1 | 1) => {
+        if (!onMove || moving) return;
+        setMoving(true);
+        setMoveError("");
+        try {
+            await onMove(categoryId, direction);
+        } catch (err) {
+            setMoveError(`Couldn't save the new order: ${errorMessage(err, "Please try again.")}`);
+        } finally {
+            setMoving(false);
+        }
+    };
 
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Category | undefined>();
@@ -73,23 +93,47 @@ export default function CategoryList({ menuId, categories, loading, error, onCre
 
             {loading && <p className="text-sm text-gray-500">Loading...</p>}
             {!loading && error && <p className="text-sm text-red-600">{error}</p>}
+            {moveError && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{moveError}</p>}
 
             {!loading && !error && categories.length === 0 ? (
                 <p className="text-sm text-gray-500">No categories yet.</p>
             ) : (
-                <ul className="space-y-1">
-                    {categories.map((c) => (
+                <ul className="space-y-1" aria-label="Categories">
+                    {categories.map((c, index) => (
                         <li
                             key={c.id}
-                            className="flex items-center justify-between rounded border px-3 py-1 text-sm"
+                            data-name={c.name}
+                            className="flex items-center justify-between gap-2 rounded border px-2 py-1 text-sm"
                         >
-                            <span className="flex items-center gap-2">
+                            {onMove && (
+                                <span className="flex shrink-0 flex-col">
+                                    <button
+                                        type="button"
+                                        onClick={() => move(c.id, -1)}
+                                        disabled={moving || index === 0}
+                                        aria-label={`Move ${c.name} up`}
+                                        className="flex h-7 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30"
+                                    >
+                                        <ChevronUp size={16} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => move(c.id, 1)}
+                                        disabled={moving || index === categories.length - 1}
+                                        aria-label={`Move ${c.name} down`}
+                                        className="flex h-7 w-8 items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30"
+                                    >
+                                        <ChevronDown size={16} />
+                                    </button>
+                                </span>
+                            )}
+                            <span className="flex min-w-0 flex-1 items-center gap-2">
                                 {c.name}
                                 {(c.active ?? c.isActive ?? true) === false && (
                                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">Hidden</span>
                                 )}
                             </span>
-                            <div>
+                            <div className="shrink-0">
                                 {onToggleActive && (() => {
                                     const visible = (c.active ?? c.isActive ?? true) !== false;
                                     return (

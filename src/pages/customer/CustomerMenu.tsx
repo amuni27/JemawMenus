@@ -164,11 +164,9 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     const sortedCategories = useMemo(() => {
         if (!activeMenu) return [];
         const cats = activeMenu.categories ?? [];
-        return [...cats].sort((a: any, b: any) => {
-            const so = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-            if (so !== 0) return so;
-            return (a.name ?? "").localeCompare(b.name ?? "");
-        });
+        // The owner's saved order (AGF-S2-07). Equal positions keep the API's order (it breaks ties
+        // by creation time, like the owner list) instead of being re-sorted by name.
+        return [...cats].sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     }, [activeMenu]);
 
     const groups = useMemo(() => {

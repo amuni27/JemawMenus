@@ -20,7 +20,8 @@ export function useCategories(menuId?: string) {
           if (!alive) return;
           // if axios: res.data, if your service returns data directly: res
           const data = res?.data ?? res;
-          setCategories(data);
+          // Saved order (AGF-S2-07); the API already sorts, a stable sort keeps its tie-break
+          setCategories(Array.isArray(data) ? [...data].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)) : data);
         })
         .catch((err: any) => {
           if (!alive) return;
@@ -41,7 +42,8 @@ export function useCategories(menuId?: string) {
     if (!menuId) throw new Error("menuId is required");
     const created = await categoryApi.createCategory(menuId, { name });
     const cat = created?.data ?? created;
-    setCategories((prev) => [cat, ...prev]);
+    // The backend places a new category after the existing ones (AGF-S2-07)
+    setCategories((prev) => [...prev, cat]);
     return cat as Category;
   };
 
@@ -65,6 +67,26 @@ export function useCategories(menuId?: string) {
     setCategories((prev) => prev.filter((c) => (c.id !== categoryId )));
   };
 
+  // AGF-S2-07: move one place up (-1) or down (+1). Shown at once, then the full order is saved;
+  // if saving fails the previous order comes back and the error is rethrown for the caller to show.
+  const moveCategory = async (categoryId: string, direction: -1 | 1) => {
+    if (!menuId) throw new Error("menuId is required");
+    const previous = categories;
+    const from = previous.findIndex((c) => c.id === categoryId);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= previous.length) return;
+
+    const next = [...previous];
+    [next[from], next[to]] = [next[to], next[from]];
+    setCategories(next.map((c, i) => ({ ...c, sortOrder: i })));
+    try {
+      await categoryApi.reorderCategories(menuId, next.map((c) => c.id));
+    } catch (err) {
+      setCategories(previous);
+      throw err;
+    }
+  };
+
   return {
     categories,
     loading,
@@ -74,5 +96,6 @@ export function useCategories(menuId?: string) {
     updateCategory,
     deleteCategory,
     setCategoryActive,
+    moveCategory,
   };
 }
