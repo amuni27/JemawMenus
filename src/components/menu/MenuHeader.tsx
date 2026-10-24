@@ -14,6 +14,10 @@ type Props = {
   // NEW
   orderCount?: number;
   onOpenOrder?: () => void;
+
+  /** AGF-S2-05 */
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
 };
 
 export function MenuHeader({
@@ -26,6 +30,8 @@ export function MenuHeader({
   loading,
   orderCount = 0,
   onOpenOrder,
+  searchQuery,
+  onSearchChange,
 }: Props) {
   return (
     <header className="border-b bg-white lg:sticky lg:top-0 lg:z-40">
@@ -72,6 +78,8 @@ export function MenuHeader({
           activeMenuId={activeMenuId}
           onSelectMenu={handleSelectMenu}
           loading={loading}
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
         />
       </div>
     </header>

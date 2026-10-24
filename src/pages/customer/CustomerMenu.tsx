@@ -11,6 +11,7 @@ import {GuestMenuOutletContext, WaiterListEntry, WaiterListMap} from "../../type
 import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 import { useToast } from "../../components/ui/ToastContext.tsx";
 import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
+import { itemMatches, normalizeSearch, type Searchable } from "../../utils/menuSearch.ts";
 
 
 export default function CustomerMenu() {
@@ -20,6 +21,9 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     const toast = useToast();
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [activeCategoryId, setActiveCategoryId] = useState<string | "ALL">("ALL");
+    // AGF-S2-05: item search within the active menu
+    const [searchQuery, setSearchQuery] = useState("");
+    const searching = normalizeSearch(searchQuery) !== "";
 
     // refs for scroll-sync
     const tabsBarRef = useRef<HTMLDivElement | null>(null);
@@ -176,6 +180,21 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         });
     }, [activeMenu, sortedCategories]);
 
+    // While searching: only matching items, and only categories that still have some (AGF-S2-05)
+    const displayedGroups = useMemo(() => {
+        if (!searching) return groups;
+        return groups
+            .map((g) => ({ ...g, items: g.items.filter((i: Searchable) => itemMatches(i, searchQuery)) }))
+            .filter((g) => g.items.length > 0);
+    }, [groups, searching, searchQuery]);
+
+    const tabCategories = searching ? displayedGroups.map((g) => g.category) : sortedCategories;
+
+    function handleSearchChange(q: string) {
+        setSearchQuery(q);
+        setActiveCategoryId("ALL");
+    }
+
     function handleSelectMenu(menuId: string) {
         setActiveMenuId(menuId);
     }
@@ -218,7 +237,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
 
     // IntersectionObserver: update active category as user scrolls the menu list
     useEffect(() => {
-        if (!groups.length) return;
+        if (!displayedGroups.length) return;
         if (isViewingItem) return;
 
         const stickyH = stickyBarRef.current?.getBoundingClientRect().height ?? 0;
@@ -270,7 +289,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
             observer.disconnect();
             topObs.disconnect();
         };
-    }, [groups]);
+    }, [displayedGroups]);
 
     return (
         <div className="bg-white">
@@ -284,6 +303,8 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                 loading={loading}
                 orderCount={waiterListItemCount}
                 onOpenOrder={openWaiterList}
+                searchQuery={searchQuery}
+                onSearchChange={handleSearchChange}
             />
 
             {/* AGF-S2-03: open now, today's hours, phone and address */}
@@ -317,7 +338,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                 onClick={() => scrollToCategory("ALL")}
                             />
 
-                            {sortedCategories.map((c: any) => (
+                            {tabCategories.map((c: any) => (
                                 <CategoryTab
                                     key={c.id}
                                     tabId={c.id}
@@ -344,7 +365,20 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                             </div>
                          ) : (
                             <>
-                                {groups.map((g: any) => (
+                                {searching && displayedGroups.length === 0 && (
+                                    <div className="py-12 text-center">
+                                        <p className="text-base font-semibold text-gray-900">No items match "{searchQuery.trim()}"</p>
+                                        <p className="mt-1 text-sm text-gray-500">Try another word, or check the other menus.</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSearchChange("")}
+                                            className="mt-4 inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
+                                        >
+                                            Clear search
+                                        </button>
+                                    </div>
+                                )}
+                                {displayedGroups.map((g: any) => (
                                     <div
                                         key={g.category.id}
                                         data-cat-id={g.category.id}
