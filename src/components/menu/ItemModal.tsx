@@ -12,6 +12,7 @@ import {useToast} from "../ui/ToastContext.tsx";
 import {uploadToR2} from "../../utils/r2Service.ts";
 import PillInput from "./PillInput.tsx";
 import {SPICE_LEVELS} from "../../utils/spiceLevel.ts";
+import {DIETARY_TAG_SUGGESTIONS} from "../../utils/dietary.ts";
 
 // What each status means for guests (AGF-S1-12)
 const STATUS_HELP: Record<ItemStatus, string> = {
@@ -586,6 +587,7 @@ export default function ItemModal({
                     onChange={(allergens) => setDraft((d) => ({...d, allergens}))}
                     placeholder="Add allergen"
                     suggestions={COMMON_ALLERGENS}
+                    hint="Guests can exclude dishes by declared allergen, so list every allergen the dish contains."
                 />
                 {serverErrors.errorFor("allergens", draft.allergens) && (
                     <p className="text-xs text-red-600">{serverErrors.errorFor("allergens", draft.allergens)}</p>
@@ -596,6 +598,8 @@ export default function ItemModal({
                     values={draft.tags}
                     onChange={(tags) => setDraft((d) => ({...d, tags}))}
                     placeholder="e.g. vegetarian, fasting, chef's pick"
+                    suggestions={DIETARY_TAG_SUGGESTIONS}
+                    hint="Guests can filter by vegetarian, vegan, fasting and gluten-free. Add each tag that applies; fasting doesn't add vegan or vegetarian."
                 />
                 {serverErrors.errorFor("tags", draft.tags) && (
                     <p className="text-xs text-red-600">{serverErrors.errorFor("tags", draft.tags)}</p>

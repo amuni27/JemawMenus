@@ -8,12 +8,15 @@ interface Props {
     placeholder?: string;
     /** One-tap additions shown until chosen */
     suggestions?: readonly string[];
+    /** Short help text under the label, announced with the group */
+    hint?: string;
 }
 
 /** List of short text values entered one at a time; duplicates are ignored regardless of case (AGF-S2-06). */
-export default function PillInput({ label, values, onChange, placeholder, suggestions = [] }: Props) {
+export default function PillInput({ label, values, onChange, placeholder, suggestions = [], hint }: Props) {
     const [text, setText] = useState("");
     const labelId = useId();
+    const hintId = useId();
     const has = (v: string) => values.some((x) => x.toLowerCase() === v.toLowerCase());
 
     const add = (raw: string) => {
@@ -25,8 +28,9 @@ export default function PillInput({ label, values, onChange, placeholder, sugges
     const open = suggestions.filter((s) => !has(s));
 
     return (
-        <div role="group" aria-labelledby={labelId} className="space-y-2">
+        <div role="group" aria-labelledby={labelId} aria-describedby={hint ? hintId : undefined} className="space-y-2">
             <span id={labelId} className="text-sm font-medium text-gray-700">{label}</span>
+            {hint && <p id={hintId} className="text-xs text-gray-500">{hint}</p>}
 
             <div className="flex gap-2">
                 <input

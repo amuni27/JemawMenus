@@ -1,6 +1,7 @@
 import {useNavigate} from "react-router-dom";
 import { displayCurrency } from "../../utils/currency";
 import {isSoldOut} from "../../utils/itemAvailability.ts";
+import { declaredDiets, dietLabel } from "../../utils/dietary.ts";
 
 type Props = {
     item: any;
@@ -19,6 +20,7 @@ export function MenuItemCard({ item, currency, onAddItem  }: Props) {
             ? Number(item.price)
             : null;
     const soldOut = isSoldOut(item.status);
+    const diets = declaredDiets(item); // AGF-S2-14: badges for the dietary vocabulary only
 
     return (
         <article
@@ -85,6 +87,16 @@ export function MenuItemCard({ item, currency, onAddItem  }: Props) {
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-1">
                     {item.name}
                 </h3>
+
+                {diets.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                        {diets.map((d) => (
+                            <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-800">
+                                {dietLabel(d)}
+                            </span>
+                        ))}
+                    </div>
+                ) : null}
 
                 {item.description ? (
                     <p className="mt-1 text-sm text-gray-500 line-clamp-2">

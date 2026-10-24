@@ -6,6 +6,7 @@ import { MenuHeader } from "../../components/menu/MenuHeader";
 import GuestInfoPanel from "../../components/menu/GuestInfoPanel";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { FeaturedSection, type FeaturedItem } from "../../components/menu/FeaturedSection";
+import { DietaryFilters } from "../../components/menu/DietaryFilters";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../hooks/useStorageState.ts";
 import {GuestMenuOutletContext, WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
@@ -14,6 +15,7 @@ import { useToast } from "../../components/ui/ToastContext.tsx";
 import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
 import { itemMatches, normalizeSearch, type Searchable } from "../../utils/menuSearch.ts";
 import { featuredItems } from "../../utils/featured.ts";
+import { availableChips, hasActiveFilters, matchesFilters, NO_FILTERS, type DietaryFilters as Filters, type DietKey, type WithDietaryData } from "../../utils/dietary.ts";
 
 
 export default function CustomerMenu() {
@@ -26,6 +28,10 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     // AGF-S2-05: item search within the active menu
     const [searchQuery, setSearchQuery] = useState("");
     const searching = normalizeSearch(searchQuery) !== "";
+    // AGF-S2-14: dietary and allergen filters; page state only (never in the URL), reset when the menu changes
+    const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+    const filtering = hasActiveFilters(filters);
+    const narrowing = searching || filtering;
 
     // refs for scroll-sync
     const tabsBarRef = useRef<HTMLDivElement | null>(null);
@@ -180,18 +186,39 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         });
     }, [activeMenu, sortedCategories]);
 
-    // While searching: only matching items, and only categories that still have some (AGF-S2-05)
+    // While searching or filtering: only matching items, and only categories that still have some
+    // (AGF-S2-05 search; AGF-S2-14 filters, combined with AND)
     const displayedGroups = useMemo(() => {
-        if (!searching) return groups;
+        if (!narrowing) return groups;
         return groups
-            .map((g) => ({ ...g, items: g.items.filter((i: Searchable) => itemMatches(i, searchQuery)) }))
+            .map((g) => ({
+                ...g,
+                items: g.items.filter((i: Searchable & WithDietaryData) => itemMatches(i, searchQuery) && matchesFilters(i, filters)),
+            }))
             .filter((g) => g.items.length > 0);
-    }, [groups, searching, searchQuery]);
+    }, [groups, narrowing, searchQuery, filters]);
+
+    // AGF-S2-14: chips only for data the active menu has
+    const chips = useMemo(() => availableChips(groups.flatMap((g) => g.items)), [groups]);
+    const matchCount = displayedGroups.reduce((n, g) => n + g.items.length, 0);
+
+    function toggleDiet(diet: DietKey) {
+        setFilters((f) => ({ ...f, diets: f.diets.includes(diet) ? f.diets.filter((d) => d !== diet) : [...f.diets, diet] }));
+        setActiveCategoryId("ALL");
+    }
+
+    function toggleAllergen(allergen: string) {
+        setFilters((f) => ({
+            ...f,
+            excluded: f.excluded.includes(allergen) ? f.excluded.filter((a) => a !== allergen) : [...f.excluded, allergen],
+        }));
+        setActiveCategoryId("ALL");
+    }
 
     // AGF-S2-15: the active menu's featured items, from the same guest-visible groups (not copied)
     const picks = useMemo(() => featuredItems<FeaturedItem>(groups), [groups]);
 
-    const tabCategories = searching ? displayedGroups.map((g) => g.category) : sortedCategories;
+    const tabCategories = narrowing ? displayedGroups.map((g) => g.category) : sortedCategories;
 
     function handleSearchChange(q: string) {
         setSearchQuery(q);
@@ -200,6 +227,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
 
     function handleSelectMenu(menuId: string) {
         setActiveMenuId(menuId);
+        setFilters(NO_FILTERS);
     }
 
     function scrollToCategory(catId: string | "ALL") {
@@ -368,7 +396,30 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                             </div>
                          ) : (
                             <>
-                                {searching && displayedGroups.length === 0 && (
+                                <DietaryFilters
+                                    diets={chips.diets}
+                                    allergens={chips.allergens}
+                                    value={filters}
+                                    onToggleDiet={toggleDiet}
+                                    onToggleAllergen={toggleAllergen}
+                                />
+                                <p role="status" aria-live="polite" className="sr-only">
+                                    {filtering ? `${matchCount} item${matchCount === 1 ? "" : "s"} match` : ""}
+                                </p>
+                                {filtering && displayedGroups.length === 0 && (
+                                    <div className="py-12 text-center">
+                                        <p className="text-base font-semibold text-gray-900">No items match these filters</p>
+                                        <p className="mt-1 text-sm text-gray-500">Turn off a filter, or check the other menus.</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFilters(NO_FILTERS)}
+                                            className="mt-4 inline-flex items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50"
+                                        >
+                                            Clear filters
+                                        </button>
+                                    </div>
+                                )}
+                                {!filtering && searching && displayedGroups.length === 0 && (
                                     <div className="py-12 text-center">
                                         <p className="text-base font-semibold text-gray-900">No items match "{searchQuery.trim()}"</p>
                                         <p className="mt-1 text-sm text-gray-500">Try another word, or check the other menus.</p>
@@ -381,8 +432,8 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                         </button>
                                     </div>
                                 )}
-                                {/* AGF-S2-15: hidden while searching, so results aren't listed twice */}
-                                {!searching && (
+                                {/* AGF-S2-15: hidden while searching or filtering (S2-14), so results aren't listed twice */}
+                                {!narrowing && (
                                     <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} />
                                 )}
                                 {displayedGroups.map((g: any) => (
