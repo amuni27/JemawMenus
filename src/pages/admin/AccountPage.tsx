@@ -8,6 +8,7 @@ import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
 import BusinessProfileModal from "../../components/account/BusinessProfileModal";
 import BusinessLogoModal from "../../components/account/BusinessLogoModal";
+import BusinessLogo from "../../components/ui/BusinessLogo";
 import BusinessHoursModal from "../../components/account/BusinessHoursModal";
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
@@ -122,17 +123,12 @@ export default function AccountPage() {
         {/* Business Logo */}
         <Card title="Business Logo" onEdit={() => setLogoModal(true)}>
           <div className="flex items-center justify-center py-4">
-            {(business as any).logoUrl ? (
-              <img
-                src={(business as any).logoUrl}
-                alt="Business logo"
-                className="h-24 w-24 rounded-2xl object-cover border border-gray-200 shadow-sm"
-              />
-            ) : (
-              <div className="h-24 w-24 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-                <span className="text-xs text-gray-400">No logo</span>
-              </div>
-            )}
+            {/* AGF-S2-01: the same logo guests see, or the initials when there is none */}
+            <BusinessLogo
+              name={business.name}
+              logoUrl={business.logoUrl}
+              className="h-24 w-24 rounded-2xl border border-gray-200 text-2xl shadow-sm"
+            />
           </div>
         </Card>
 

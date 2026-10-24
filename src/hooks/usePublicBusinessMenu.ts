@@ -6,6 +6,8 @@ type Business = {
     name: string;
     slug?: string;
     customDomain?: string | null;
+    /** AGF-S2-01: null when the restaurant has no logo */
+    logoUrl?: string | null;
 };
 
 type Category = {

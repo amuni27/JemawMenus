@@ -275,7 +275,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         <div className="bg-white">
             <MenuHeader
                 businessName={business?.name}
-                logoUrl={"https://static.spotapps.co/website_images/ab_websites/67806_website/logo.png"}
+                logoUrl={business?.logoUrl ?? undefined}
                 activeMenuCurrency={activeMenu?.currency}
                 menus={menus}
                 activeMenuId={activeMenuId}
