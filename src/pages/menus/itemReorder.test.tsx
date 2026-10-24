@@ -109,7 +109,8 @@ describe("item reordering", () => {
         choose("Mains");
 
         fireEvent.click(button("Move Y Shiro earlier"));
-        expect(screen.getByRole("status").textContent).toBe("Saving order…");
+        // the category list's drag-and-drop live region is a status too (S2-07A), so find this one by text
+        expect(screen.getByText("Saving order…").getAttribute("role")).toBe("status");
         expect(button("Move Z Kitfo earlier").disabled).toBe(true);
         fireEvent.click(button("Move Z Kitfo earlier"));
         expect(reorder).toHaveBeenCalledTimes(1);

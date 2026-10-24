@@ -67,17 +67,16 @@ export function useCategories(menuId?: string) {
     setCategories((prev) => prev.filter((c) => (c.id !== categoryId )));
   };
 
-  // AGF-S2-07: move one place up (-1) or down (+1). Shown at once, then the full order is saved;
-  // if saving fails the previous order comes back and the error is rethrown for the caller to show.
-  const moveCategory = async (categoryId: string, direction: -1 | 1) => {
+  // AGF-S2-07: save a new order of all categories. Shown at once, then saved; if saving fails the previous
+  // order comes back and the error is rethrown for the caller to show. An unchanged order is not sent (S2-07A).
+  const setCategoryOrder = async (orderedIds: string[]) => {
     if (!menuId) throw new Error("menuId is required");
     const previous = categories;
-    const from = previous.findIndex((c) => c.id === categoryId);
-    const to = from + direction;
-    if (from < 0 || to < 0 || to >= previous.length) return;
+    const byId = new Map(previous.map((c) => [c.id, c]));
+    const next = orderedIds.map((id) => byId.get(id)).filter((c): c is Category => Boolean(c));
+    if (next.length !== previous.length) return;
+    if (next.every((c, i) => c.id === previous[i].id)) return;
 
-    const next = [...previous];
-    [next[from], next[to]] = [next[to], next[from]];
     setCategories(next.map((c, i) => ({ ...c, sortOrder: i })));
     try {
       await categoryApi.reorderCategories(menuId, next.map((c) => c.id));
@@ -85,6 +84,16 @@ export function useCategories(menuId?: string) {
       setCategories(previous);
       throw err;
     }
+  };
+
+  // AGF-S2-07: move one place up (-1) or down (+1)
+  const moveCategory = async (categoryId: string, direction: -1 | 1) => {
+    const ids = categories.map((c) => c.id);
+    const from = ids.indexOf(categoryId);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+    [ids[from], ids[to]] = [ids[to], ids[from]];
+    await setCategoryOrder(ids);
   };
 
   return {
@@ -97,5 +106,6 @@ export function useCategories(menuId?: string) {
     deleteCategory,
     setCategoryActive,
     moveCategory,
+    setCategoryOrder,
   };
 }
