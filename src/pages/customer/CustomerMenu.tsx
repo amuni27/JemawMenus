@@ -3,6 +3,7 @@ import { Outlet, useParams } from "react-router-dom";
 import { usePublicBusinessMenu } from "../../hooks/usePublicBusinessMenu";
 
 import { MenuHeader } from "../../components/menu/MenuHeader";
+import GuestInfoPanel from "../../components/menu/GuestInfoPanel";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../hooks/useStorageState.ts";
@@ -284,6 +285,9 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                 orderCount={waiterListItemCount}
                 onOpenOrder={openWaiterList}
             />
+
+            {/* AGF-S2-03: open now, today's hours, phone and address */}
+            {business && <GuestInfoPanel business={business} />}
 
             {loading ? (
                 <div className="mx-auto max-w-7xl px-6 py-10 text-gray-600">Loading menu...</div>
