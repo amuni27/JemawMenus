@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     DndContext,
     KeyboardSensor,
@@ -145,11 +146,17 @@ export default function ItemGrid({
     const [moveError, setMoveError] = useState("");
     const sortedCategories = [...categories].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
+    // AGF-S2-09: the dashboard's "N items sold out" link opens this view with ?stock=sold-out
+    const [searchParams, setSearchParams] = useSearchParams();
+    const soldOutOnly = searchParams.get("stock") === "sold-out";
+    const showAllItems = () => setSearchParams((p) => { p.delete("stock"); return p; }, { replace: true });
+
     const inCategory = categoryId
         ? items.filter((i) => i.categoryId === categoryId).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
         : items;
-    const filtered = inCategory.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
-    const canReorder = Boolean(onReorderItems && categoryId && !search.trim());
+    const inStock = soldOutOnly ? inCategory.filter((i) => i.status === "OUT_OF_STOCK") : inCategory;
+    const filtered = inStock.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
+    const canReorder = Boolean(onReorderItems && categoryId && !search.trim() && !soldOutOnly);
 
     // AGF-S2-08A: drag a card with the mouse, a press-and-hold on touch screens (a quick swipe still scrolls)
     // or the keyboard; one reorder at a time
@@ -259,8 +266,18 @@ export default function ItemGrid({
                         ? "Choose a category to change the order of its items."
                         : search.trim()
                             ? "Clear the search to change the order."
-                            : "Drag a card to change the order. Guests see the same order."}
+                            : soldOutOnly
+                                ? "Show all items to change the order."
+                                : "Drag a card to change the order. Guests see the same order."}
                 </p>
+            )}
+            {soldOutOnly && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    <span>Showing sold-out items only.</span>
+                    <button type="button" onClick={showAllItems} className="font-medium underline hover:no-underline">
+                        Show all items
+                    </button>
+                </div>
             )}
             {moving && <p role="status" className="text-xs text-gray-500">Saving order…</p>}
             {moveError && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{moveError}</p>}

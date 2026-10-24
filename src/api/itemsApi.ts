@@ -25,6 +25,11 @@ export class ItemsApi {
     return updateRequest(`/items/${itemId}`, patch);
   }
 
+  // AGF-S2-09: the menu's sold-out items (owner-scoped; the backend filters by status)
+  static listSoldOut(menuId: string) {
+    return fetchItems(`/menus/${menuId}/items?status=OUT_OF_STOCK`);
+  }
+
   // AGF-S2-08: every item of the category, in the new order
   static reorder(categoryId: string, orderedIds: string[]) {
     return postRequest(`/categories/${categoryId}/items/reorder`, { orderedIds });
