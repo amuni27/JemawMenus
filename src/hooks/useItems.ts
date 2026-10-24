@@ -175,6 +175,45 @@ export function useItems(menuId?: string) {
         [safeSetError, safeSetItems]
     );
 
+    // AGF-S2-08: move an item one place earlier (-1) or later (+1) within its category. Shown at once, then the
+    // category's full order is saved; if saving fails the previous order comes back and the error is rethrown.
+    const moveItem = useCallback(
+        async (itemId: string, direction: -1 | 1): Promise<void> => {
+            const previous = items;
+            const moving = previous.find((i) => i.id === itemId);
+            if (!moving) return;
+            const categoryId = moving.categoryId;
+
+            // the category's items by saved position (stable: equal positions keep the list order)
+            const inCategory = previous
+                .filter((i) => i.categoryId === categoryId)
+                .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+            const from = inCategory.findIndex((i) => i.id === itemId);
+            const to = from + direction;
+            if (to < 0 || to >= inCategory.length) return;
+
+            const reordered = [...inCategory];
+            [reordered[from], reordered[to]] = [reordered[to], reordered[from]];
+            const position = new Map(reordered.map((i, index) => [i.id, index]));
+
+            // Put the category's items back into the slots they held in the full list, in the new order
+            let next = 0;
+            const updated = previous.map((i) => {
+                if (i.categoryId !== categoryId) return i;
+                const placed = reordered[next++];
+                return { ...placed, sortOrder: position.get(placed.id) };
+            });
+            safeSetItems(() => updated);
+            try {
+                await itemApi.reorder(categoryId, reordered.map((i) => i.id));
+            } catch (err) {
+                safeSetItems(() => previous);
+                throw err;
+            }
+        },
+        [items, safeSetItems]
+    );
+
     // --------- image upload helpers ----------
     const presignItemImage = useCallback(async (itemId: string, contentType: string): Promise<PresignResponse> => {
         const res = await itemApi.presignImage(itemId, contentType);
@@ -217,6 +256,7 @@ export function useItems(menuId?: string) {
         toggleStatus,
         toggleSoldOut,
         deleteItem,
+        moveItem,
         presignItemImage,
         confirmItemImage,
     };

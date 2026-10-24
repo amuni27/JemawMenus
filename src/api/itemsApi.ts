@@ -25,6 +25,11 @@ export class ItemsApi {
     return updateRequest(`/items/${itemId}`, patch);
   }
 
+  // AGF-S2-08: every item of the category, in the new order
+  static reorder(categoryId: string, orderedIds: string[]) {
+    return postRequest(`/categories/${categoryId}/items/reorder`, { orderedIds });
+  }
+
   static remove(itemId: string) {
     return deleteRequest(`/items/`, itemId);
   }
