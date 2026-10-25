@@ -171,6 +171,8 @@ export default function ItemModal({
     const clearServerErrors = serverErrors.clear;
     const applyServerErrors = serverErrors.apply;
 
+    // AGF-S2-34: always update with setDraft((d) => ...). A handler that writes back the copy from its render can
+    // overwrite changes made since then, e.g. the default category set when the form opens (defect F1).
     const [draft, setDraft] = useState<Draft>(() => buildDraft(item, categories));
     const [touched, setTouched] = useState(false);
 
@@ -437,14 +439,14 @@ export default function ItemModal({
                     <Input
                         label="Name"
                         value={draft.name}
-                        onChange={(e) => setDraft({...draft, name: e.target.value})}
+                        onChange={(e) => { const name = e.target.value; setDraft((d) => ({...d, name})); }}
                         error={(touched && !draft.name.trim() ? "Required" : undefined) ?? serverErrors.errorFor("name", draft.name)}
                     />
 
                     <FormSelect
                         label="Category"
                         value={draft.categoryId}
-                        onChange={(e) => setDraft({...draft, categoryId: e.target.value})}
+                        onChange={(e) => { const categoryId = e.target.value; setDraft((d) => ({...d, categoryId})); }}
                         error={(touched && !draft.categoryId ? "Required" : undefined) ?? serverErrors.errorFor("categoryId", draft.categoryId)}
                     >
                         {categories.length === 0 ? (
@@ -463,7 +465,7 @@ export default function ItemModal({
                         value={draft.price}
                         onChange={(e) => {
                             const next = formatMoneyInput(e.target.value);
-                            if (next !== null) setDraft({...draft, price: next});
+                            if (next !== null) setDraft((d) => ({...d, price: next}));
                         }}
                         error={
                             (touched && (!draft.price || Number.isNaN(Number(draft.price)) || Number(draft.price) < 0)
@@ -477,7 +479,7 @@ export default function ItemModal({
                         value={draft.calories}
                         onChange={(e) => {
                             const v = e.target.value;
-                            if (/^\d*$/.test(v)) setDraft({...draft, calories: v});
+                            if (/^\d*$/.test(v)) setDraft((d) => ({...d, calories: v}));
                         }}
                         error={
                             (touched &&
@@ -492,7 +494,7 @@ export default function ItemModal({
                 <FormSelect
                     label="Status"
                     value={draft.status}
-                    onChange={(e) => setDraft({...draft, status: e.target.value as Draft["status"]})}
+                    onChange={(e) => { const status = e.target.value as Draft["status"]; setDraft((d) => ({...d, status})); }}
                 >
                     <option value="AVAILABLE">Available</option>
                     <option value="OUT_OF_STOCK">Out of stock — shown to guests as Sold Out</option>
@@ -505,7 +507,7 @@ export default function ItemModal({
                     rows={3}
                     placeholder="Description"
                     value={draft.description}
-                    onChange={(e) => setDraft({...draft, description: e.target.value})}
+                    onChange={(e) => { const description = e.target.value; setDraft((d) => ({...d, description})); }}
                 />
                 {serverErrors.errorFor("description", draft.description) && (
                     <p className="-mt-2 text-xs text-red-600">{serverErrors.errorFor("description", draft.description)}</p>
@@ -619,7 +621,7 @@ export default function ItemModal({
                             className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-brand focus:border-brand-dark"
                             placeholder="Add ingredient"
                             value={draft.ingredientInput}
-                            onChange={(e) => setDraft({...draft, ingredientInput: e.target.value})}
+                            onChange={(e) => { const ingredientInput = e.target.value; setDraft((d) => ({...d, ingredientInput})); }}
                             onKeyDown={handleIngredientKeyDown}
                         />
                         <Button type="button" onClick={addIngredient} disabled={!draft.ingredientInput.trim()}>

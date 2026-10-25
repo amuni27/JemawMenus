@@ -67,9 +67,6 @@ test.describe.serial("J2–J6 a menu from creation to guests and back", () => {
         await page.getByRole("textbox", { name: "Add ingredient" }).fill("beef");
         await page.getByRole("textbox", { name: "Add ingredient" }).press("Enter");
         await page.getByRole("button", { name: "Add eggs" }).click();
-        // Finding F1 (S2-28 report): right after a menu's first category is created, the form shows it selected but
-        // keeps Create disabled until the category is chosen again. Owners pick it explicitly here, as they can today.
-        await page.getByRole("dialog").or(page.locator("body")).getByRole("combobox", { name: "Category" }).last().selectOption({ label: "Mains" });
         await page.getByRole("button", { name: "Create", exact: true }).click();
         await expect(page.getByRole("list", { name: "Items" }).getByRole("heading", { name: itemName })).toBeVisible();
     });
