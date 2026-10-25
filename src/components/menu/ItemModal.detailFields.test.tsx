@@ -158,9 +158,5 @@ describe("item form: detail fields", () => {
         expect(prep().value).toBe("");
     });
 
-    it("explains that clearing a saved prep time keeps the current value", () => {
-        renderModal(legacy);
-        fireEvent.change(prep(), { target: { value: "" } });
-        expect(screen.getByText(/can't be removed yet.*20 min/i)).toBeTruthy();
-    });
+    // AGF-S2-30 replaced the old "a saved prep time can't be removed yet" note: see ItemModal.clearFields.test.tsx
 });

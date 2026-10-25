@@ -108,6 +108,9 @@ export type CreateItemPayload = {
   isFeatured?: boolean;
   prepTimeMinutes?: number | null;
   spiceLevel?: string | null;
+  /** AGF-S2-30 (edit only): remove a saved prep time / spice level; absent means unchanged */
+  clearPrepTime?: boolean;
+  clearSpiceLevel?: boolean;
   status?: ItemStatus;
 };
 
