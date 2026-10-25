@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'dist-e2e', 'playwright-report', 'test-results']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -22,6 +22,13 @@ export default defineConfig([
     rules: {
       // AGF-S1-16: keep the browser console free of application data
       'no-console': 'warn',
+    },
+  },
+  {
+    // AGF-S2-28: the E2E suite and its config run in Node, not the browser
+    files: ['e2e/**/*.{ts,mjs}', 'playwright.config.ts'],
+    languageOptions: {
+      globals: { ...globals.node },
     },
   },
 ])

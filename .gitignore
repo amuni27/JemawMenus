@@ -27,3 +27,9 @@ dist-ssr
 # put anything private in `.env.local` / `.env.*.local`, which `*.local` above already ignores.
 *.pem
 *.key
+
+# AGF-S2-28: Playwright output and the E2E build
+/playwright-report/
+/test-results/
+/e2e/.auth/
+/dist-e2e/
