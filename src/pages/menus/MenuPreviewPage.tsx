@@ -4,7 +4,8 @@ import menuApi from "../../api/menuApi";
 import CustomerMenu, { type GuestMenuPreview } from "../customer/CustomerMenu.tsx";
 import MenuStatusBadge from "../../components/menu/MenuStatusBadge";
 import LoadError from "../../components/ui/LoadError";
-import { errorMessage } from "../../utils/errorMessage";
+import { errorMessage, isNotFound } from "../../utils/errorMessage";
+import NotFound from "../../components/NotFound";
 import { menuStatus } from "../../utils/menuStatus";
 
 const ADD_OFF = "Adding is off in preview";
@@ -21,6 +22,7 @@ export default function MenuPreviewPage() {
     const [data, setData] = useState<PreviewData | null>(null);
     const [error, setError] = useState("");
     const [attempt, setAttempt] = useState(0);
+    const [notFound, setNotFound] = useState(false); // AGF-S2-33
 
     useEffect(() => {
         if (!menuId) return;
@@ -33,7 +35,9 @@ export default function MenuPreviewPage() {
                 setError("");
             })
             .catch((err) => {
-                if (alive) setError(errorMessage(err, "Failed to load the preview"));
+                if (!alive) return;
+                setNotFound(isNotFound(err));
+                setError(errorMessage(err, "Failed to load the preview"));
             });
         return () => {
             alive = false;
@@ -44,6 +48,7 @@ export default function MenuPreviewPage() {
     const live = menu ? menuStatus(menu) === "Live" : false;
     const backTo = `/${tenantSlug}/admin/menus/${menuId}`;
 
+    if (notFound) return <NotFound context="owner" fullPage />;
     if (error) {
         return (
             <div className="mx-auto max-w-2xl p-6">

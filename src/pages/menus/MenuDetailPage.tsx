@@ -11,7 +11,8 @@ import menuApi from "../../api/menuApi";
 import { useItems } from "../../hooks/useItems.ts";
 import LoadError from "../../components/ui/LoadError";
 import MenuStatusBadge from "../../components/menu/MenuStatusBadge";
-import { errorMessage } from "../../utils/errorMessage";
+import { errorMessage, isNotFound } from "../../utils/errorMessage";
+import NotFound from "../../components/NotFound";
 import MarkAllAvailableDialog from "../../components/menu/MarkAllAvailableDialog";
 import { useToast } from "../../components/ui/ToastContext";
 
@@ -36,6 +37,7 @@ export default function MenuDetailPage() {
   } = useItems(menuId);
 
   const [error, setError] = useState<string>("");
+  const [notFound, setNotFound] = useState(false); // AGF-S2-33
   const [attempt, setAttempt] = useState(0);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
@@ -80,6 +82,7 @@ export default function MenuDetailPage() {
         })
         .catch((err: any) => {
           if (!alive) return;
+          setNotFound(isNotFound(err));
           setError(errorMessage(err, "Failed to load menu"));
           setMenu(null);
         })
@@ -109,6 +112,7 @@ export default function MenuDetailPage() {
   };
 
   if (loading) return <p className="p-6">Loading...</p>;
+  if (notFound) return <NotFound context="owner" />;
   if (error) return <div className="p-6"><LoadError message={error} onRetry={() => setAttempt((n) => n + 1)} /></div>;
   if (!menu) return <p className="p-6 text-red-600">Menu not found.</p>;
 

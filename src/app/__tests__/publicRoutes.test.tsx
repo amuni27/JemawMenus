@@ -8,6 +8,8 @@ import { createMemoryRouter, Outlet, RouterProvider } from "react-router-dom";
 vi.mock("../../components/auth/RequireAuth.tsx", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("../../components/layout/AdminLayout.tsx", () => ({ default: () => <main><p>Admin layout</p><Outlet /></main> }));
 vi.mock("../../pages/admin/Dashboard", () => ({ default: () => <p>Dashboard page</p> }));
+// AGF-S2-33: unknown owner URLs show the owner not-found screen, which reads the signed-in business
+vi.mock("../../app/context/AuthContext", () => ({ useAuth: () => ({ business: { id: "biz-1", name: "Cafe" } }) }));
 
 const { routes } = await import("../routes.tsx");
 
@@ -29,7 +31,7 @@ describe("public routes after the pricing and stub cleanup", () => {
 
     it("no longer serves a Deals page in the owner area", async () => {
         renderAt("/biz-1/admin/deals");
-        expect(await screen.findByText(/404/)).toBeTruthy();
+        expect(await screen.findByRole("heading", { level: 2, name: "We can't find that page" })).toBeTruthy(); // since S2-33
         expect(document.body.textContent).not.toMatch(/deal/i);
     });
 

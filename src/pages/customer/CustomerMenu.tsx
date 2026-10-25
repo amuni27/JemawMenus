@@ -7,6 +7,8 @@ import GuestInfoPanel from "../../components/menu/GuestInfoPanel";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { FeaturedSection, type FeaturedItem } from "../../components/menu/FeaturedSection";
 import { DietaryFilters } from "../../components/menu/DietaryFilters";
+import NotFound, { StatusCard } from "../../components/NotFound";
+import { statusPrimaryClass } from "../../components/statusStyles";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../hooks/useStorageState.ts";
 import {GuestMenuOutletContext, MenuItem, WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
@@ -27,6 +29,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     const isViewingItem = Boolean(itemId);
     const publicMenu = usePublicBusinessMenu(preview ? undefined : tenantSlug);
     const { business, menus, loading, error } = preview ? { ...preview, loading: false, error: "" } : publicMenu;
+    const notFound = !preview && publicMenu.notFound;
     const addDisabledLabel = preview?.addDisabledLabel;
     const toast = useToast();
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -336,6 +339,18 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
             topObs.disconnect();
         };
     }, [displayedGroups]);
+
+    // AGF-S2-33: unknown restaurant → not-found; server or network failure without data → unavailable + Retry
+    if (notFound) return <NotFound context="restaurant" />;
+    if (error && !business && !preview) {
+        return (
+            <StatusCard
+                title="This menu is temporarily unavailable"
+                text="Please try again in a moment."
+                actions={<button type="button" onClick={publicMenu.retry} className={statusPrimaryClass}>Retry</button>}
+            />
+        );
+    }
 
     return (
         <div className="bg-white">

@@ -1,19 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatPrice } from "../../utils/currency";
-import { useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { useOutletContext, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
 import { GuestMenuOutletContext, MenuItem } from "../../types/menu.ts";
 import { isSoldOut } from "../../utils/itemAvailability.ts";
 import { spiceLabel } from "../../utils/spiceLevel.ts";
+import NotFound from "../../components/NotFound.tsx";
+import { isNotFound } from "../../utils/errorMessage.ts";
 
 export default function MenuItemDetail() {
-    const navigate = useNavigate();
     const { tenantSlug, itemId } = useParams();
     // The guest menu's waiter list (session storage), shared with the menu cards (AGF-S2-04)
     const outlet = useOutletContext<GuestMenuOutletContext | undefined>();
 
     const [fetchedItem, setFetchedItem] = useState<MenuItem | null>(null);
     const [fetching, setFetching] = useState(true);
+    // AGF-S2-33: a failed load that isn't a 404 (network/server) gets Retry instead of "not found"
+    const [loadFailed, setLoadFailed] = useState(false);
+    const [attempt, setAttempt] = useState(0);
     // AGF-S2-17: in the owner preview the item comes from the loaded preview (the public endpoint would 404)
     const inPreview = Boolean(outlet?.preview);
     const item = inPreview ? (itemId ? outlet?.preview?.findItem(itemId) ?? null : null) : fetchedItem;
@@ -25,10 +29,16 @@ export default function MenuItemDetail() {
         setFetching(true);
         publicMenueApi
             .findItem(`/venue/${tenantSlug}/items/${itemId}`) // tenant-scoped (AGF-S1-05)
-            .then((res) => setFetchedItem(res.data))
-            .catch(() => setFetchedItem(null))
+            .then((res) => {
+                setFetchedItem(res.data);
+                setLoadFailed(false);
+            })
+            .catch((err) => {
+                setFetchedItem(null);
+                setLoadFailed(!isNotFound(err));
+            })
             .finally(() => setFetching(false));
-    }, [tenantSlug, itemId, inPreview]);
+    }, [tenantSlug, itemId, inPreview, attempt]);
 
     const priceNumber = useMemo(() => {
         const raw = item?.price;
@@ -61,19 +71,19 @@ export default function MenuItemDetail() {
         return <div className="p-4 text-center text-gray-500">Loading...</div>;
     }
 
-    if (!item) {
+    if (!item && loadFailed) {
         return (
             <div className="p-4 text-center">
-                <p className="text-gray-700">Item not found.</p>
-                <button
-                    className="mt-3 rounded-lg border px-4 py-2 text-sm"
-                    onClick={() => navigate(-1)}
-                >
-                    Go back
+                <p className="text-gray-700">Couldn't load this dish. Check your connection and try again.</p>
+                <button className="mt-3 rounded-lg border px-4 py-2 text-sm" onClick={() => setAttempt((n) => n + 1)}>
+                    Retry
                 </button>
             </div>
         );
     }
+
+    // AGF-S2-33: unknown or hidden dish → friendly screen with a way back to this restaurant's menu
+    if (!item) return <NotFound context="item" businessId={tenantSlug ?? ""} />;
 
     return (
         <div className="mx-auto max-w-5xl p-4">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import publicMenuApi from "../api/publicMenueApi.ts"; // adjust path
+import { errorMessage, isNotFound } from "../utils/errorMessage.ts";
 import type { GuestBusinessInfo } from "../components/menu/GuestInfoPanel";
 
 type Business = {
@@ -49,6 +50,9 @@ export function usePublicBusinessMenu(businessId?: string) {
     const [data, setData] = useState<BusinessMenuResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>("");
+    // AGF-S2-33: 404 (unknown restaurant) vs other failures, and a way to try again
+    const [notFound, setNotFound] = useState(false);
+    const [attempt, setAttempt] = useState(0);
 
     useEffect(() => {
         if (!businessId) return;
@@ -62,10 +66,12 @@ export function usePublicBusinessMenu(businessId?: string) {
             .then((res) => {
                 if (!alive) return;
                 setData(res.data);
+                setNotFound(false);
             })
             .catch((err: any) => {
                 if (!alive) return;
-                setError(err?.response?.data?.message || err?.message || "Failed to load menu");
+                setNotFound(isNotFound(err));
+                setError(errorMessage(err, "Failed to load menu"));
                 setData(null);
             })
             .finally(() => {
@@ -76,12 +82,14 @@ export function usePublicBusinessMenu(businessId?: string) {
         return () => {
             alive = false;
         };
-    }, [businessId]);
+    }, [businessId, attempt]);
 
     return {
         business: data?.business,
         menus: data?.menus ?? [],
         loading,
         error,
+        notFound,
+        retry: () => setAttempt((n) => n + 1),
     };
 }

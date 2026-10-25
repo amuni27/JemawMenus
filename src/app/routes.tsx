@@ -17,73 +17,86 @@ import MenuItemDetail from "../pages/customer/MenuItemDetail.tsx";
 import MenuEditPage from "../pages/menus/MenuEditPage.tsx";
 import AccountPage from "../pages/admin/AccountPage.tsx";
 import MenuPreviewPage from "../pages/menus/MenuPreviewPage.tsx";
+import NotFound from "../components/NotFound.tsx";
+import RouteError from "../components/RouteError.tsx";
 
 // The app's route table, in its own module so route tests can use it (AGF-S2-29)
 export const routes: RouteObject[] = [
     {
-        path: '/',
-        element: <Landing/>,
-    },
-    {
-        // AGF-S2-29: the invented pricing page is gone (D7); old links land on the home page
-        path: '/pricing',
-        element: <Navigate to="/" replace/>,
-    },
-    {
-        path: '/auth/login',
-        element: <Login/>,
-    },
-    {
-        path: '/auth/forgot-password', // AGF-S2-13A
-        element: <ForgotPassword/>,
-    },
-    {
-        path: '/auth/reset-password',
-        element: <ResetPassword/>,
-    },
-    {
-        path: '/auth/register',
-        element: <RegisterWizard/>,
-    },
-    // Tenant routes (simulate subdomain with :tenantSlug)
-    {
-        path: '/:tenantSlug',
+        // AGF-S2-33: branded error and not-found screens instead of the router's developer page
+        errorElement: <RouteError/>,
         children: [
             {
-                path: 'menu',
-                element: <CustomerMenu/>,
-                children: [
-                    { path: "item/:itemId", element: <MenuItemDetail /> }, // child view
-                ],
-
+                path: '/',
+                element: <Landing/>,
             },
             {
-                // AGF-S2-17: owner-only guest view of one menu; signed-in owners only, outside the admin layout
-                path: 'admin/menus/:menuId/preview',
-                element: <RequireAuth><MenuPreviewPage/></RequireAuth>,
-                children: [
-                    {path: 'item/:itemId', element: <MenuItemDetail/>},
-                ],
+                // AGF-S2-29: the invented pricing page is gone (D7); old links land on the home page
+                path: '/pricing',
+                element: <Navigate to="/" replace/>,
             },
             {
-                path: 'admin',
-                element: <RequireAuth><AdminLayout/></RequireAuth>,
+                path: '/auth/login',
+                element: <Login/>,
+            },
+            {
+                path: '/auth/forgot-password', // AGF-S2-13A
+                element: <ForgotPassword/>,
+            },
+            {
+                path: '/auth/reset-password',
+                element: <ResetPassword/>,
+            },
+            {
+                path: '/auth/register',
+                element: <RegisterWizard/>,
+            },
+            // Tenant routes (simulate subdomain with :tenantSlug)
+            {
+                path: '/:tenantSlug',
                 children: [
-                    {index: true, element: <Dashboard/>},
-                    {path: 'qrcode', element: <QRPage/>},
+                    // AGF-S2-33 (D-NF-1): a bare business URL opens that restaurant's menu
+                    {index: true, element: <Navigate to="menu" replace/>},
                     {
-                        path: 'menus',
+                        path: 'menu',
+                        element: <CustomerMenu/>,
                         children: [
-                            {index: true, element: <MenusListPage/>},
-                            {path: 'new', element: <MenuCreatePage/>},
-                            {path: ':menuId', element: <MenuDetailPage/>},
-                            {path: ':menuId/edit', element: <MenuEditPage/>},
+                            { path: "item/:itemId", element: <MenuItemDetail /> }, // child view
+                        ],
+
+                    },
+                    {
+                        // AGF-S2-17: owner-only guest view of one menu; signed-in owners only, outside the admin layout
+                        path: 'admin/menus/:menuId/preview',
+                        element: <RequireAuth><MenuPreviewPage/></RequireAuth>,
+                        children: [
+                            {path: 'item/:itemId', element: <MenuItemDetail/>},
                         ],
                     },
-                    {path: 'menus/new', element: <MenuCreatePage/>},
-                    {path: 'account', element: <AccountPage/>},
+                    {
+                        path: 'admin',
+                        element: <RequireAuth><AdminLayout/></RequireAuth>,
+                        children: [
+                            {index: true, element: <Dashboard/>},
+                            {path: 'qrcode', element: <QRPage/>},
+                            {
+                                path: 'menus',
+                                children: [
+                                    {index: true, element: <MenusListPage/>},
+                                    {path: 'new', element: <MenuCreatePage/>},
+                                    {path: ':menuId', element: <MenuDetailPage/>},
+                                    {path: ':menuId/edit', element: <MenuEditPage/>},
+                                ],
+                            },
+                            {path: 'menus/new', element: <MenuCreatePage/>},
+                            {path: 'account', element: <AccountPage/>},
+                            // AGF-S2-33: unknown owner URLs (inside the guard, so signed-out visitors still see login)
+                            {path: '*', element: <NotFound context="owner"/>},
+                        ],
+                    },
                 ],
             },
+            {path: '*', element: <NotFound context="public"/>},
         ],
     },
 ];
