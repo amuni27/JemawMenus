@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import {WaiterListMap} from "../../types/menu.ts";
 import {BroomIcon, ClearIcon} from "../../assets/svg_icon.tsx";
 import {TrashIcon, XIcon} from "lucide-react";
@@ -29,23 +29,58 @@ export function WaiterListDrawer({
                                  }: Props) {
     const entries = useMemo(() => Object.values(waiterList), [waiterList]);
 
+    // AGF-S2-27: a modal dialog. Focus moves into it, stays inside, Escape closes it, and focus returns to the
+    // control that opened it (WCAG 2.1.2, 2.4.3, 4.1.2).
+    const titleId = useId();
+    const panelRef = useRef<HTMLDivElement>(null);
+    const closeRef = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+        if (!open) return;
+        const opener = document.activeElement as HTMLElement | null;
+        closeRef.current?.focus();
+        return () => opener?.focus();
+    }, [open]);
+
+    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Escape") {
+            e.stopPropagation();
+            onClose();
+            return;
+        }
+        if (e.key !== "Tab" || !panelRef.current) return;
+        const focusables = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+        }
+    };
+
     if (!open) return null;
 
     return (
         <div className="fixed inset-0 z-50">
-            {/* Backdrop */}
-            <button
-                type="button"
-                className="absolute inset-0 bg-black/30"
-                onClick={onClose}
-                aria-label="Close waiter list"
-            />
+            {/* Backdrop: closes on click; not a tab stop (the Close button is the keyboard way out) */}
+            <div className="absolute inset-0 bg-black/30" onClick={onClose} aria-hidden="true" />
 
             {/* Panel */}
-            <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+            <div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                onKeyDown={onKeyDown}
+                className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl"
+            >
                 <div className="flex items-center justify-between border-b px-4 py-3">
                     <div>
-                        <div className="text-lg font-bold text-gray-900">Waiter List</div>
+                        <h2 id={titleId} className="text-lg font-bold text-gray-900">Waiter List</h2>
                         <div className="text-xs text-gray-500">Temporary list (session only)</div>
                     </div>
 
@@ -60,6 +95,7 @@ export function WaiterListDrawer({
                             Clear
                         </button>
                         <button
+                            ref={closeRef}
                             type="button"
                             onClick={onClose}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border text-gray-700 hover:bg-gray-100"
@@ -142,6 +178,7 @@ export function WaiterListDrawer({
                                                 <button
                                                     type="button"
                                                     onClick={() => onRemove(e.itemId)}
+                                                    aria-label={`Remove ${snap.name}`}
                                                     className="ml-auto rounded-lg border px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                                                 >
                                                     <TrashIcon className="h-5 w-5" />
@@ -164,7 +201,7 @@ function EntryPhoto({ url, name }: { url?: string; name: string }) {
     const [failed, setFailed] = useState(false);
     if (!url || failed) {
         return (
-            <div className="flex h-full w-full items-center justify-center text-center text-[10px] leading-tight text-gray-400">
+            <div className="flex h-full w-full items-center justify-center text-center text-[10px] leading-tight text-gray-600">
                 No image
             </div>
         );

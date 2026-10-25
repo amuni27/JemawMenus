@@ -98,7 +98,7 @@ export default function MenuItemDetail() {
                             className="h-64 w-full rounded-2xl object-cover shadow-sm lg:h-[420px]"
                         />
                     ) : (
-                        <div className="flex h-64 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm text-gray-400 lg:h-[420px]">
+                        <div className="flex h-64 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm text-gray-600 lg:h-[420px]">
                             No image
                         </div>
                     )}
@@ -120,7 +120,7 @@ export default function MenuItemDetail() {
                                         {formatPrice(priceNumber, item.currency)}
                                     </div>
                                 ) : (
-                                    <div className="text-sm text-gray-400">Price not set</div>
+                                    <div className="text-sm text-gray-500">Price not set</div>
                                 )}
                             </div>
                         </div>
@@ -138,7 +138,7 @@ export default function MenuItemDetail() {
                                     {formatPrice(priceNumber, item.currency)}
                                 </div>
                             ) : (
-                                <div className="text-sm text-gray-400">Price not set</div>
+                                <div className="text-sm text-gray-500">Price not set</div>
                             )}
                         </div>
 
@@ -149,7 +149,7 @@ export default function MenuItemDetail() {
                     {item.description ? (
                         <p className="mt-2 text-gray-600">{item.description}</p>
                     ) : (
-                        <p className="mt-2 text-sm text-gray-400 italic">No description</p>
+                        <p className="mt-2 text-sm text-gray-500 italic">No description</p>
                     )}
 
                     <div className="mt-3 flex flex-wrap gap-3 text-sm text-gray-500">
@@ -210,7 +210,7 @@ export default function MenuItemDetail() {
 
                     <div className="mt-6">
                         <button
-                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                             onClick={() => outlet?.addToWaiterList(item)}
                             disabled={isSoldOut(item.status) || !outlet || Boolean(outlet.preview)}
                             aria-label={outlet?.preview?.addDisabledLabel}

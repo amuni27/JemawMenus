@@ -66,7 +66,8 @@ const searchBox = () => screen.getByRole("searchbox", { name: "Search menu items
 const search = (q: string) => fireEvent.change(searchBox(), { target: { value: q } });
 const main = () => screen.getByRole("main");
 const headings = () => within(main()).queryAllByRole("heading", { level: 2 }).map((h) => h.textContent?.trim());
-const names = () => within(main()).queryAllByText(/./, { selector: "h3" }).map((n) => n.textContent?.trim());
+// dish names are level-3 headings (AGF-S2-27: the name inside is a link to the dish)
+const names = () => within(main()).queryAllByRole("heading", { level: 3 }).map((n) => n.textContent?.trim());
 
 describe("guest menu search", () => {
     it("shows only matching items, grouped by category, and hides empty categories", () => {

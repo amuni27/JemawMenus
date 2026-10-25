@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import { displayCurrency } from "../../utils/currency";
 import {isSoldOut} from "../../utils/itemAvailability.ts";
 import { declaredDiets, dietLabel } from "../../utils/dietary.ts";
@@ -35,18 +35,19 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
         >
             {/* Image */}
             <div className="relative rounded-2xl border bg-white">
+                {/* AGF-S2-27: sold out dims the photo only; text keeps full contrast (WCAG 1.4.3) */}
                 <div
                     onClick={openDetail}
-                    className={`relative h-32 sm:h-36 overflow-hidden bg-gray-100 ${soldOut ? "opacity-60 grayscale" : ""}`}>
+                    className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
                         alt={item.name}
-                        className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+                        className={`h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 ${soldOut ? "opacity-60 grayscale" : ""}`}
                         loading="lazy"
                     />
                 ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                    <div className="flex h-full items-center justify-center text-sm text-gray-600">
                         No image
                     </div>
                 )}
@@ -86,9 +87,16 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
             {/* Content */}
             <div
                 onClick={openDetail}
-                className={`flex flex-1 flex-col p-3 sm:p-4 ${soldOut ? "opacity-60" : ""}`}>
+                className="flex flex-1 flex-col p-3 sm:p-4">
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-1">
-                    {item.name}
+                    {/* AGF-S2-27: the name is the keyboard and screen-reader way to the dish's details (WCAG 2.1.1) */}
+                    <Link
+                        to={`item/${item.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+                    >
+                        {item.name}
+                    </Link>
                 </h3>
 
                 {diets.length > 0 ? (
@@ -106,7 +114,7 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                         {item.description}
                     </p>
                 ) : (
-                    <p className="mt-1 text-sm text-gray-400 italic">No description</p>
+                    <p className="mt-1 text-sm text-gray-500 italic">No description</p>
                 )}
 
                 <div className="mt-3 flex items-end justify-between">
@@ -117,12 +125,12 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                                 {price.toFixed(2)}
                             </>
                         ) : (
-                            <span className="text-sm text-gray-400">Price not set</span>
+                            <span className="text-sm text-gray-500">Price not set</span>
                         )}
                     </div>
 
                     {typeof item.calories === "number" ? (
-                        <span className="text-xs text-gray-400">{item.calories} cal</span>
+                        <span className="text-xs text-gray-500">{item.calories} cal</span>
                     ) : null}
                 </div>
             </div>
