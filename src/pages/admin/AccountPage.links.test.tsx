@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/ui/ToastContext";
 import { publicMenuUrl } from "../../utils/publicMenuUrl";
+import { shareUrl } from "../../utils/shareUrl";
 
 // AGF-S2-10: the account page shows the stored subdomain correctly and the same guest menu URL as the QR page.
 
@@ -77,15 +78,18 @@ describe("guest menu link", () => {
         expect(document.querySelector('a[href^="javascript"]')).toBeNull();
     });
 
-    it("copies the link and confirms", async () => {
+    // AGF-S2-21 (D-S2-21-4): Copy link copies the share page (restaurant preview in chat apps); the visible link stays
+    it("copies the share link, keeps showing the guest menu link, and confirms", async () => {
         vi.stubEnv("VITE_PUBLIC_MENU_BASE_URL", "http://localhost:5175");
         const writeText = vi.fn().mockResolvedValue(undefined);
         vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
         renderPage();
 
+        expect(screen.getByRole("link", { name: "http://localhost:5175/biz-1/menu" })).toBeTruthy();
         fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
 
-        await waitFor(() => expect(writeText).toHaveBeenCalledWith("http://localhost:5175/biz-1/menu"));
+        await waitFor(() => expect(writeText).toHaveBeenCalledWith(shareUrl("biz-1")));
+        expect(shareUrl("biz-1")).toMatch(/\/venue\/biz-1\/share$/);
         expect(await screen.findByText("Guest menu link copied")).toBeTruthy();
     });
 

@@ -56,6 +56,8 @@ export default defineConfig({
                 APP_JWT_SECRET: process.env.E2E_JWT_SECRET,
                 APP_PASSWORD_RESET_SECRET: process.env.E2E_RESET_SECRET,
                 DEMO_OWNER_PASSWORD: process.env.E2E_OWNER_PASSWORD,
+                // AGF-S2-21: share pages redirect to the frontend under test
+                APP_PUBLIC_MENU_BASE_URL: FRONTEND,
             },
         },
         {

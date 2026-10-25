@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { displayCurrency } from "../../utils/currency";
 import { formatSubdomain } from "../../utils/subdomain";
 import { publicMenuUrl } from "../../utils/publicMenuUrl";
+import { shareUrl } from "../../utils/shareUrl";
 import CopyLinkButton from "../../components/ui/CopyLinkButton";
 import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
@@ -116,7 +117,8 @@ export default function AccountPage() {
                   >
                     {guestMenuUrl}
                   </a>
-                  <CopyLinkButton url={guestMenuUrl} successMessage="Guest menu link copied" />
+                  {/* AGF-S2-21: copies the share page (restaurant preview in chat apps); it opens the same guest menu */}
+                  <CopyLinkButton url={shareUrl(business.id)} successMessage="Guest menu link copied" />
                 </span>
               ) : (
                 // AGF-S2-20: invalid configured address → no link and nothing to copy (fail closed)
