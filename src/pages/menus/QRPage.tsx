@@ -1,7 +1,7 @@
-import {useMemo, useRef, useState} from "react";
-import {Link} from "react-router-dom";
+import {useMemo, useRef} from "react";
 import Button from "../../components/ui/Button";
-import {buildMenuUrl} from "../../utils/buildMenuUrl";
+import {publicMenuUrl} from "../../utils/publicMenuUrl";
+import {a5SheetHtml, qrFileName, tableTentHtml} from "../../utils/printKit";
 import QRCode from "react-qr-code";
 import {useAuth} from "../../app/context/AuthContext";
 
@@ -56,15 +56,13 @@ function svgToPngDataUrl(svgEl: SVGSVGElement, sizePx = 1024): Promise<string> {
             };
 
             img.src = svgUrl;
-        } catch (e: any) {
+        } catch (e) {
             reject(e);
         }
     });
 }
 
 export default function QRPage() {
-    const [loading] = useState(false);
-    const [error] = useState<string>("");
     const auth = useAuth();
 
     // ✅ Wrap ref (NOT svg ref) – avoids react-qr-code ref typing issue
@@ -72,11 +70,10 @@ export default function QRPage() {
 
     const businessName = auth.business?.name ?? "Venue";
     const businessId = auth.business?.id;
+    const logoUrl = auth.business?.logoUrl ?? null;
 
-    const qrValue = useMemo(() => buildMenuUrl(businessId), [businessId]);
-
-    if (loading) return <p className="p-6">Loading...</p>;
-    if (error) return <p className="p-6 text-red-600">{error}</p>;
+    // AGF-S2-20 / D2: the configured guest menu address; null when the configuration is invalid (fail closed)
+    const qrValue = useMemo(() => (businessId ? publicMenuUrl(businessId) : null), [businessId]);
 
     const getSvgEl = (): SVGSVGElement | null => {
         return (qrWrapRef.current?.querySelector("svg") as SVGSVGElement | null) ?? null;
@@ -90,7 +87,7 @@ export default function QRPage() {
         const svgString = serializer.serializeToString(svgEl);
 
         const blob = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
-        downloadBlob(blob, `${businessName}-qr.svg`);
+        downloadBlob(blob, qrFileName(businessName, "svg"));
     };
 
     const handleDownloadPng = async () => {
@@ -103,95 +100,28 @@ export default function QRPage() {
         // Convert dataURL to Blob
         const res = await fetch(pngDataUrl);
         const blob = await res.blob();
-        downloadBlob(blob, `${businessName}-qr.png`);
+        downloadBlob(blob, qrFileName(businessName, "png"));
     };
 
-    const handlePrint = () => {
+    // AGF-S2-20: A5 sheet or table tent, built from the on-screen QR with escaped content
+    const handlePrint = (layout: "a5" | "tent") => {
         const svgEl = getSvgEl();
-        if (!svgEl) return;
+        if (!svgEl || !qrValue) return;
 
-        const serializer = new XMLSerializer();
-        const svgString = serializer.serializeToString(svgEl);
+        const input = {name: businessName, logoUrl, url: qrValue, qrSvg: new XMLSerializer().serializeToString(svgEl)};
+        const html = layout === "a5" ? a5SheetHtml(input) : tableTentHtml(input);
 
         const win = window.open("", "_blank", "width=900,height=700");
         if (!win) return;
-
         win.document.open();
-        win.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>${businessName} - QR Code</title>
-          <style>
-            @page { margin: 16mm; }
-            body {
-              font-family: Arial, sans-serif;
-              color: #111;
-              margin: 0;
-              padding: 0;
-            }
-            .page {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              gap: 16px;
-              text-align: center;
-            }
-            .title {
-              font-size: 22px;
-              font-weight: 700;
-            }
-            .subtitle {
-              font-size: 13px;
-              color: #444;
-              max-width: 600px;
-            }
-            .qr-wrap {
-              width: 320px;
-              height: 320px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 16px;
-              border: 1px solid #ddd;
-              border-radius: 12px;
-            }
-            .qr-wrap svg { width: 100%; height: 100%; }
-            .url {
-              font-size: 11px;
-              color: #666;
-              word-break: break-all;
-              max-width: 600px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="page">
-            <div class="title">${businessName}</div>
-            <div class="subtitle">Scan to open our menu</div>
-            <div class="qr-wrap">${svgString}</div>
-            <div class="url">${qrValue}</div>
-          </div>
-          <script>
-            window.onload = () => {
-              window.focus();
-              window.print();
-              window.onafterprint = () => window.close();
-            }
-          </script>
-        </body>
-      </html>
-    `);
+        win.document.write(html);
         win.document.close();
     };
 
     return (
         <div className="w-full">
             {/* Header */}
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <nav className="mb-1 text-sm text-gray-500">
                         Venue
@@ -201,20 +131,29 @@ export default function QRPage() {
                     <h2 className="text-2xl font-bold">QR Code</h2>
                 </div>
 
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={handleDownloadPng}>
-                        Download PNG
-                    </Button>
-                    <Button variant="secondary" className="w-full sm:w-auto" onClick={handleDownloadSvg}>
-                        Download SVG
-                    </Button>
-                    <Button className="w-full sm:w-auto" onClick={handlePrint}>
-                        Print
-                    </Button>
-                </div>
+                {qrValue && (
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:w-auto lg:justify-end">
+                        <Button variant="secondary" className="w-full sm:w-auto" onClick={handleDownloadPng}>
+                            Download PNG
+                        </Button>
+                        <Button variant="secondary" className="w-full sm:w-auto" onClick={handleDownloadSvg}>
+                            Download SVG
+                        </Button>
+                        <Button className="w-full sm:w-auto" onClick={() => handlePrint("a5")}>
+                            Print A5 sheet
+                        </Button>
+                        <Button className="w-full sm:w-auto" onClick={() => handlePrint("tent")}>
+                            Print table tent
+                        </Button>
+                    </div>
+                )}
             </div>
 
-            {/* Main grid */}
+            {!qrValue ? (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    The guest menu address isn't configured correctly. Contact support.
+                </p>
+            ) : (
             <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
                 {/* QR card */}
                 <aside className="flex justify-center lg:justify-start">
@@ -254,11 +193,18 @@ export default function QRPage() {
                             Use <b>SVG</b> for best quality in design tools.
                         </li>
                         <li>
-                            Use <b>Print</b> to generate a clean A4 print page.
+                            <b>Print A5 sheet</b> makes one sign per page with your logo and name.
+                        </li>
+                        <li>
+                            <b>Print table tent</b> prints on A4 landscape: fold along the dashed line and stand it on the table.
+                        </li>
+                        <li>
+                            The QR code opens your guest menu at the address shown under it.
                         </li>
                     </ul>
                 </section>
             </div>
+            )}
         </div>
     );
 }

@@ -23,7 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Secrets (AGF-S1-02). `.env` is tracked and holds public VITE_* values only;
+# Secrets (AGF-S1-02). `.env.example` documents the public VITE_* settings (AGF-S2-20);
 # put anything private in `.env.local` / `.env.*.local`, which `*.local` above already ignores.
 *.pem
 *.key

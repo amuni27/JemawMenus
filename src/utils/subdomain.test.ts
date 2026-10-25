@@ -5,7 +5,7 @@ import { formatSubdomain } from "./subdomain";
 
 describe("formatSubdomain", () => {
     it("shows a stored full host unchanged", () => {
-        expect(formatSubdomain("abol.agafarimenu.com")).toBe("abol.agafarimenu.com");
+        expect(formatSubdomain("abol.example.com")).toBe("abol.example.com");
         expect(formatSubdomain("abol-demo.demo.agafari.test")).toBe("abol-demo.demo.agafari.test");
     });
 
@@ -14,8 +14,8 @@ describe("formatSubdomain", () => {
     });
 
     it("tidies whitespace, protocol, trailing slashes and case", () => {
-        expect(formatSubdomain("  https://Abol.AgafariMenu.com/ ")).toBe("abol.agafarimenu.com");
-        expect(formatSubdomain("http://abol.agafarimenu.com//")).toBe("abol.agafarimenu.com");
+        expect(formatSubdomain("  https://Abol.Example.com/ ")).toBe("abol.example.com");
+        expect(formatSubdomain("http://abol.example.com//")).toBe("abol.example.com");
     });
 
     it("returns null for missing values", () => {

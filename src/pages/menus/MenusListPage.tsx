@@ -2,7 +2,6 @@ import {useEffect, useRef, useState} from "react";
 import {Link, useNavigate, useParams} from "react-router-dom";
 import {Menu, MenuDuplicateResult} from "../../types/menu";
 import menuApi from "../../api/menuApi";
-import MenuQrModal from "../../components/menu/MenuQrModal";
 import {useAuth} from "../../app/context/AuthContext";
 import DeleteCategoryModal from "../../components/menu/DeleteCategoryModal.tsx";
 import {useMenus} from "../../hooks/useMenus";
@@ -18,7 +17,6 @@ export default function MenusListPage() {
     const {deleteMenu} = useMenus();
 
     const [menus, setMenus] = useState<Menu[]>([]);
-    const [qrMenu, setQrMenu] = useState<Menu | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState("");
 
@@ -186,10 +184,6 @@ export default function MenusListPage() {
                                     </div>
                                 </div>
 
-                                {/* Optional: extra actions row (if you later add QR, etc.) */}
-                                {/* <div className="mt-3 flex gap-2">
-                  <button onClick={() => setQrMenu(menu)} className="text-sm text-blue-600">QR</button>
-                </div> */}
                             </div>
                         ))}
                     </div>
@@ -267,15 +261,6 @@ export default function MenusListPage() {
                         </table>
                     </div>
                 </>
-            )}
-
-            {/* QR modal */}
-            {qrMenu && tenantSlug && (
-                <MenuQrModal
-                    tenantSlug={tenantSlug}
-                    menuId={qrMenu.id}
-                    onClose={() => setQrMenu(null)}
-                />
             )}
 
             {duplicating && (

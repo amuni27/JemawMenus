@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { displayCurrency } from "../../utils/currency";
 import { formatSubdomain } from "../../utils/subdomain";
-import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import { publicMenuUrl } from "../../utils/publicMenuUrl";
 import CopyLinkButton from "../../components/ui/CopyLinkButton";
 import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
@@ -49,6 +49,8 @@ export default function AccountPage() {
   const auth = useAuth();
   const user = auth.user;
   const business = auth.business;
+  // AGF-S2-20: the configured guest menu address (null when the configuration is invalid)
+  const guestMenuUrl = business?.id ? publicMenuUrl(business.id) : null;
 
   useEffect(() => { auth.refresh(); }, []);
 
@@ -104,17 +106,22 @@ export default function AccountPage() {
           {business.id && (
             <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
               <span className="text-sm text-gray-500 shrink-0">Guest menu link</span>
-              <span className="flex min-w-0 items-center gap-2">
-                <a
-                  href={buildMenuUrl(business.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="truncate text-sm font-medium text-blue-600 hover:underline"
-                >
-                  {buildMenuUrl(business.id)}
-                </a>
-                <CopyLinkButton url={buildMenuUrl(business.id)} successMessage="Guest menu link copied" />
-              </span>
+              {guestMenuUrl ? (
+                <span className="flex min-w-0 items-center gap-2">
+                  <a
+                    href={guestMenuUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    {guestMenuUrl}
+                  </a>
+                  <CopyLinkButton url={guestMenuUrl} successMessage="Guest menu link copied" />
+                </span>
+              ) : (
+                // AGF-S2-20: invalid configured address → no link and nothing to copy (fail closed)
+                <span className="text-sm text-gray-500">Guest menu link unavailable</span>
+              )}
             </div>
           )}
           <InfoRow label="Currency" value={displayCurrency(business.currency)} />

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/ui/ToastContext";
-import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import { publicMenuUrl } from "../../utils/publicMenuUrl";
 
 // AGF-S2-10: the account page shows the stored subdomain correctly and the same guest menu URL as the QR page.
 
@@ -26,7 +26,7 @@ function renderPage() {
 
 const valueOf = (label: string) => screen.getByText(label).parentElement!.textContent!.replace(label, "").trim();
 
-beforeEach(() => setBusiness({ customSubdomain: "abol.agafarimenu.com" }));
+beforeEach(() => setBusiness({ customSubdomain: "abol.example.test" }));
 afterEach(() => {
     cleanup();
     vi.unstubAllEnvs();
@@ -36,7 +36,7 @@ afterEach(() => {
 describe("account page subdomain", () => {
     it("shows the stored subdomain without the duplicated '.menuqrs.com' suffix", () => {
         renderPage();
-        expect(valueOf("Subdomain")).toBe("abol.agafarimenu.com");
+        expect(valueOf("Subdomain")).toBe("abol.example.test");
         expect(document.body.textContent).not.toContain("menuqrs");
     });
 
@@ -57,15 +57,24 @@ describe("guest menu link", () => {
         vi.stubEnv("VITE_PUBLIC_MENU_BASE_URL", "http://localhost:5175");
         renderPage();
         const link = screen.getByRole("link", { name: "http://localhost:5175/biz-1/menu" }) as HTMLAnchorElement;
-        expect(link.href).toBe(buildMenuUrl("biz-1"));
+        expect(link.href).toBe(publicMenuUrl("biz-1"));
         expect(link.target).toBe("_blank");
     });
 
     it("keeps the existing default when no base URL is configured (no new domain)", () => {
         vi.stubEnv("VITE_PUBLIC_MENU_BASE_URL", "");
         renderPage();
-        expect(screen.getByRole("link", { name: buildMenuUrl("biz-1") })).toBeTruthy();
-        expect(buildMenuUrl("biz-1")).toBe("https://agafari-menu.onrender.com/biz-1/menu");
+        expect(screen.getByRole("link", { name: publicMenuUrl("biz-1")! })).toBeTruthy();
+        expect(publicMenuUrl("biz-1")).toBe("https://agafari-menu.onrender.com/biz-1/menu");
+    });
+
+    // AGF-S2-20: an invalid configured address fails closed (no link, no copy)
+    it("shows 'Guest menu link unavailable' when the configured address is invalid", () => {
+        vi.stubEnv("VITE_PUBLIC_MENU_BASE_URL", "javascript:alert(1)");
+        renderPage();
+        expect(screen.getByText("Guest menu link unavailable")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+        expect(document.querySelector('a[href^="javascript"]')).toBeNull();
     });
 
     it("copies the link and confirms", async () => {
