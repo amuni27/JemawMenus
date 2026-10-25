@@ -7,6 +7,14 @@ export interface MenuType {
 }
 export type Currency = "USD" | "ETB" | (string & {});
 // Matches the backend MenuResponse (AGF-S1-14 / AGF-DEF-01): menu type fields are flat
+/** AGF-S2-18: response of POST /menus/{id}/duplicate */
+export interface MenuDuplicateResult {
+  menu: Menu;
+  categoriesCopied: number;
+  itemsCopied: number;
+  imagesNotCopied: number;
+}
+
 export interface Menu {
   id: string;
   businessId: string;
