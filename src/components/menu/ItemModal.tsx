@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import { useFieldErrors } from "../../utils/fieldErrors";
 import { displayCurrency } from "../../utils/currency";
 import { ALLOWED_IMAGE_TYPES, imageFileProblem } from "../../utils/imagePolicy";
@@ -43,6 +43,9 @@ interface Props {
 
     // Presign PUT upload URL for the item
     onPresignImage?: (itemId: string, contentType: string) => Promise<PresignResponse>;
+
+    // AGF-S2-16: remove the item's photo (called after the field save)
+    onRemoveImage?: (itemId: string) => Promise<MenuItem>;
 }
 
 
@@ -56,6 +59,7 @@ type Draft = {
     status: ItemStatus;
     imageFile: File | null;
     imagePreview: string; // blob or public url
+    removeImage: boolean; // AGF-S2-16: remove the current photo on Save
     ingredients: string[];
     ingredientInput: string;
     // AGF-S2-06: details guests see on the item page
@@ -106,6 +110,7 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
             status: ((item.status as any) ?? "AVAILABLE") as Draft["status"],
             imageFile: null,
             imagePreview: item.imageUrl ?? "",
+            removeImage: false,
             ingredients: normalizeIngredients((item as any).ingredients),
             ingredientInput: "",
             allergens: toStringList(item.allergens),
@@ -126,6 +131,7 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
         status: "AVAILABLE",
         imageFile: null,
         imagePreview: "",
+        removeImage: false,
         ingredients: [],
         ingredientInput: "",
         allergens: [],
@@ -157,6 +163,7 @@ export default function ItemModal({
                                       onUpdate,
                                       onConfirmImage,
                                       onPresignImage,
+                                      onRemoveImage,
                                       currency,
                                   }: Props) {
     const toast = useToast();
@@ -175,6 +182,17 @@ export default function ItemModal({
 
     const [imgOk, setImgOk] = useState(true);
 
+    // AGF-S2-16: focus Undo after "Remove image", and the Remove button again after Undo
+    const [removeError, setRemoveError] = useState("");
+    const [focusTarget, setFocusTarget] = useState<"undo" | "remove" | null>(null);
+    const undoRef = useRef<HTMLButtonElement>(null);
+    const removeRef = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+        if (focusTarget === "undo") undoRef.current?.focus();
+        if (focusTarget === "remove") removeRef.current?.focus();
+        if (focusTarget) setFocusTarget(null);
+    }, [focusTarget]);
+
     const defaultCategoryId = useMemo(() => categories?.[0]?.id ?? "", [categories]);
 
     // Reset when modal opens
@@ -185,6 +203,7 @@ export default function ItemModal({
         clearServerErrors();
         setStep("idle");
         setImgOk(true);
+        setRemoveError("");
     }, [open, item, categories, clearServerErrors]);
 
     // Ensure category on create
@@ -335,6 +354,16 @@ export default function ItemModal({
                 await onUpdate(item.id, basePayload);
                 await doImageFlow(item.id);
 
+                // AGF-S2-16: the fields are saved; a failed removal is reported without a false success
+                if (draft.removeImage && !draft.imageFile && onRemoveImage) {
+                    try {
+                        await onRemoveImage(item.id);
+                    } catch {
+                        setRemoveError("Your changes were saved, but the image couldn't be removed. Try again.");
+                        return;
+                    }
+                }
+
                 toast("Item updated");
                 onClose();
                 return;
@@ -373,6 +402,7 @@ export default function ItemModal({
         menuId,
         onClose,
         onCreate,
+        onRemoveImage,
         onUpdate,
         toast,
     ]);
@@ -504,7 +534,10 @@ export default function ItemModal({
                                 ...d,
                                 imageFile: file,
                                 imagePreview: file ? URL.createObjectURL(file) : item?.imageUrl ?? "",
+                                // a new file replaces the photo instead of removing it (AGF-S2-16)
+                                removeImage: file ? false : d.removeImage,
                             }));
+                            if (file) setRemoveError("");
 
                             setImgOk(true);
 
@@ -514,7 +547,7 @@ export default function ItemModal({
                         }}
                     />
 
-                    {!!draft.imagePreview && (
+                    {!!draft.imagePreview && !draft.removeImage && (
                         <img
                             src={draft.imagePreview}
                             alt="preview"
@@ -524,12 +557,51 @@ export default function ItemModal({
                         />
                     )}
 
-                    {!!draft.imagePreview && !imgOk && (
+                    {!!draft.imagePreview && !draft.removeImage && !imgOk && (
                         <p className="text-xs text-gray-500">Image failed to load. Try a different file.</p>
                     )}
 
-                    {item?.imageUrl && !draft.imageFile && (
-                        <p className="text-xs text-gray-500">Current image will stay unless you select a new file.</p>
+                    {item?.imageUrl && !draft.imageFile && onRemoveImage && !draft.removeImage && (
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-gray-500">Choose a new file to replace the image, or remove it.</p>
+                            <Button
+                                ref={removeRef}
+                                type="button"
+                                variant="secondary"
+                                disabled={submitting}
+                                onClick={() => {
+                                    setDraft((d) => ({...d, removeImage: true}));
+                                    setFocusTarget("undo");
+                                }}
+                            >
+                                Remove image
+                            </Button>
+                        </div>
+                    )}
+
+                    <div aria-live="polite">
+                        {draft.removeImage && (
+                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2">
+                                <p className="text-xs text-gray-700">Image will be removed when you save.</p>
+                                <Button
+                                    ref={undoRef}
+                                    type="button"
+                                    variant="secondary"
+                                    disabled={submitting}
+                                    onClick={() => {
+                                        setDraft((d) => ({...d, removeImage: false}));
+                                        setRemoveError("");
+                                        setFocusTarget("remove");
+                                    }}
+                                >
+                                    Undo
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {removeError && (
+                        <p role="alert" className="text-xs text-red-600">{removeError}</p>
                     )}
 
                     {draft.imageFile && !onPresignImage && (

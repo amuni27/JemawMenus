@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {WaiterListMap} from "../../types/menu.ts";
 import {BroomIcon, ClearIcon} from "../../assets/svg_icon.tsx";
 import {TrashIcon, XIcon} from "lucide-react";
@@ -87,14 +87,7 @@ export function WaiterListDrawer({
                                 return (
                                     <div key={e.itemId} className="flex gap-3 rounded-2xl border p-3">
                                         <div className="h-14 w-14 overflow-hidden rounded-xl bg-gray-100">
-                                            {snap.imageUrl ? (
-                                                <img
-                                                    src={snap.imageUrl}
-                                                    alt={snap.name}
-                                                    className="h-full w-full object-cover"
-                                                    loading="lazy"
-                                                />
-                                            ) : null}
+                                            <EntryPhoto url={snap.imageUrl} name={snap.name} />
                                         </div>
 
                                         <div className="min-w-0 flex-1">
@@ -164,4 +157,17 @@ export function WaiterListDrawer({
             </div>
         </div>
     );
+}
+
+/** AGF-S2-16: the saved photo, or "No image" when there is none or it no longer loads (e.g. the owner removed it) */
+function EntryPhoto({ url, name }: { url?: string; name: string }) {
+    const [failed, setFailed] = useState(false);
+    if (!url || failed) {
+        return (
+            <div className="flex h-full w-full items-center justify-center text-center text-[10px] leading-tight text-gray-400">
+                No image
+            </div>
+        );
+    }
+    return <img src={url} alt={name} className="h-full w-full object-cover" loading="lazy" onError={() => setFailed(true)} />;
 }

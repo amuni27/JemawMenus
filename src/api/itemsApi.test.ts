@@ -75,3 +75,14 @@ describe("menuApi.duplicateMenu", () => {
         expect(http.post).toHaveBeenCalledWith("/menus/menu-1/duplicate", { name: "Summer Menu" });
     });
 });
+
+// AGF-S2-16: removing a photo is DELETE /items/{id}/image
+describe("ItemsApi.removeImage", () => {
+    it("sends DELETE /items/{id}/image", async () => {
+        http.delete.mockResolvedValue({ data: {} });
+
+        await ItemsApi.removeImage("item-1");
+
+        expect(http.delete).toHaveBeenCalledWith("/items/item-1/image");
+    });
+});

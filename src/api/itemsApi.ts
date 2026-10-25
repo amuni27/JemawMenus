@@ -60,6 +60,11 @@ export class ItemsApi {
     return postRequest(`/items/${itemId}/image/confirm`, body);
   }
 
+  // AGF-S2-16: remove the item's photo (the storage object is deleted best-effort)
+  static removeImage(itemId: string) {
+    return deleteRequest("/items/", `${itemId}/image`);
+  }
+
   static listPublic(businessId: string, menuId: string) {
     return fetchPublicItems(`/${businessId}/menus/${menuId}/items`);
   }
