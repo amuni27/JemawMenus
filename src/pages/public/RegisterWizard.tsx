@@ -531,15 +531,18 @@ export default function RegisterWizard() {
 
                 <div className="flex items-center gap-2">
                     <Input
-                        label="Choose your subdomain *"
+                        label="Restaurant short name *"
                         value={data.subdomain}
                         error={serverErrors.errorFor("customSubdomain", data.subdomain.trim().toLowerCase())}
                         placeholder="your-restaurant"
                         onChange={(e) => update("subdomain", e.target.value.toLowerCase())}
                     />
 
-                    <span className="mt-6 text-sm">.{import.meta.env.VITE_APP_DOMAIN ?? "agafarimenu.com"}</span>
                 </div>
+                {/* AGF-S2-29: no promise of a working sub-domain until the permanent domain is decided (D2) */}
+                <p className="text-xs text-gray-500">
+                    Reserved for your future Agafari web address. Guests use your menu link and QR code.
+                </p>
             </div>
         );
     };

@@ -131,7 +131,7 @@ describe("registration", () => {
         typeInto("Region *", "Addis Ababa");
         fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
-        typeInto("Choose your subdomain *", "abol-cafe");
+        typeInto("Restaurant short name *", "abol-cafe");
         fireEvent.click(screen.getByRole("button", { name: /complete|finish|create|register/i }));
     }
 
@@ -147,7 +147,10 @@ describe("registration", () => {
     it("shows a subdomain error on the subdomain step and keeps duplicate-email messages", async () => {
         register.mockRejectedValueOnce(fieldErrors([{ field: "customSubdomain", message: "Invalid subdomain" }]));
         await fillAndSubmit();
-        expect(await within(fieldBox("Choose your subdomain *")).findByText("Invalid subdomain")).toBeTruthy();
+        expect(await within(fieldBox("Restaurant short name *")).findByText("Invalid subdomain")).toBeTruthy();
+        // AGF-S2-29: the field no longer promises a working sub-domain
+        expect(screen.getByText("Reserved for your future Agafari web address. Guests use your menu link and QR code.")).toBeTruthy();
+        expect(screen.queryByText(/Choose your subdomain/)).toBeNull();
 
         cleanup();
         register.mockRejectedValueOnce({ response: { status: 400, data: { message: "This email is already registered." } } });

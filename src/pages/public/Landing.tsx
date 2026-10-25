@@ -7,12 +7,12 @@ export default function Landing() {
     },
     {
       title: 'Real-time Updates',
-      desc: '86 items, add specials, or schedule deals and see changes reflected immediately.',
+      desc: "Mark dishes sold out, update prices and items, and see changes on your guests' phones immediately.",
       icon: '⚡',
     },
     {
       title: 'Multi-Tenant',
-      desc: 'Each restaurant gets its own sub-domain, branding and dashboard.',
+      desc: 'Each restaurant gets its own menu link, logo and dashboard.',
       icon: '🏨',
     },
   ];
@@ -25,15 +25,14 @@ export default function Landing() {
           Elevate your dining experience with <span className="text-rose-500">QR-powered</span> menus
         </h1>
         <p className="mx-auto mb-10 max-w-xl text-lg text-gray-600">
-          Manage stunning digital menus, deals and adverts from one beautiful dashboard. Guests simply scan &amp;
-          explore.
+          Manage beautiful digital menus from one dashboard. Guests simply scan &amp; explore.
         </p>
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
           <a
             href="/auth/register"
             className="rounded-full bg-rose-500 px-8 py-3 text-white shadow-lg transition hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-400"
           >
-            Get Started Free
+            Get started
           </a>
           <a
             href="/auth/login"
