@@ -4,7 +4,8 @@ import menuApi from "../../api/menuApi";
 import MenuWizard from "./MenuWizard";
 import { Menu, MenuDto } from "../../types/menu";
 import LoadError from "../../components/ui/LoadError";
-import { errorMessage } from "../../utils/errorMessage";
+import { errorMessage, isNotFound } from "../../utils/errorMessage";
+import NotFound from "../../components/NotFound";
 
 export default function MenuEditPage() {
   const { tenantSlug, menuId } = useParams<{ tenantSlug: string; menuId: string }>();
@@ -14,13 +15,17 @@ export default function MenuEditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [notFound, setNotFound] = useState(false); // AGF-S2-33
 
   useEffect(() => {
     if (!menuId) return;
     menuApi
       .getMenu(menuId)
       .then((res: any) => setMenu(res.data))
-      .catch((err: any) => setError(errorMessage(err, "Failed to load menu")))
+      .catch((err: any) => {
+        setNotFound(isNotFound(err));
+        setError(errorMessage(err, "Failed to load menu"));
+      })
       .finally(() => setLoading(false));
   }, [menuId, attempt]);
 
@@ -31,6 +36,7 @@ export default function MenuEditPage() {
   };
 
   if (loading) return <p className="p-6">Loading...</p>;
+  if (notFound) return <NotFound context="owner" />;
   if (error) return <div className="p-6"><LoadError message={error} onRetry={() => { setLoading(true); setError(""); setAttempt((n) => n + 1); }} /></div>;
   if (!menu) return <p className="p-6 text-red-600">Menu not found.</p>;
 

@@ -30,6 +30,11 @@ export class ItemsApi {
     return fetchItems(`/menus/${menuId}/items?status=OUT_OF_STOCK`);
   }
 
+  // AGF-S2-19: every sold-out item of the menu back to available, in one request; returns { updated }
+  static markAllAvailable(menuId: string) {
+    return postRequest(`/menus/${menuId}/items/mark-all-available`, {});
+  }
+
   // AGF-S2-08: every item of the category, in the new order
   static reorder(categoryId: string, orderedIds: string[]) {
     return postRequest(`/categories/${categoryId}/items/reorder`, { orderedIds });

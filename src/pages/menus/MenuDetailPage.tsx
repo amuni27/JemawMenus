@@ -11,7 +11,10 @@ import menuApi from "../../api/menuApi";
 import { useItems } from "../../hooks/useItems.ts";
 import LoadError from "../../components/ui/LoadError";
 import MenuStatusBadge from "../../components/menu/MenuStatusBadge";
-import { errorMessage } from "../../utils/errorMessage";
+import { errorMessage, isNotFound } from "../../utils/errorMessage";
+import NotFound from "../../components/NotFound";
+import MarkAllAvailableDialog from "../../components/menu/MarkAllAvailableDialog";
+import { useToast } from "../../components/ui/ToastContext";
 
 export default function MenuDetailPage() {
   const { menuId } = useParams<{ menuId: string }>();
@@ -24,6 +27,7 @@ export default function MenuDetailPage() {
     items,
     toggleStatus,
     toggleSoldOut,
+    markAllAvailable,
     deleteItem,
     createItem,
     updateItem,
@@ -33,9 +37,31 @@ export default function MenuDetailPage() {
   } = useItems(menuId);
 
   const [error, setError] = useState<string>("");
+  const [notFound, setNotFound] = useState(false); // AGF-S2-33
   const [attempt, setAttempt] = useState(0);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
+  // AGF-S2-19: mark every sold-out item of this menu available
+  const toast = useToast();
+  const soldOutCount = items.filter((i) => i.status === "OUT_OF_STOCK").length;
+  const [markAllOpen, setMarkAllOpen] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [markAllError, setMarkAllError] = useState("");
+
+  const confirmMarkAll = async () => {
+    if (markingAll) return;
+    setMarkingAll(true);
+    setMarkAllError("");
+    try {
+      const updated = await markAllAvailable();
+      setMarkAllOpen(false);
+      toast(`${updated} item${updated === 1 ? "" : "s"} marked available`);
+    } catch (err) {
+      setMarkAllError(errorMessage(err, "Couldn't mark the items as available. The list shows the current state."));
+    } finally {
+      setMarkingAll(false);
+    }
+  };
 
   // modal states
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
@@ -56,6 +82,7 @@ export default function MenuDetailPage() {
         })
         .catch((err: any) => {
           if (!alive) return;
+          setNotFound(isNotFound(err));
           setError(errorMessage(err, "Failed to load menu"));
           setMenu(null);
         })
@@ -85,6 +112,7 @@ export default function MenuDetailPage() {
   };
 
   if (loading) return <p className="p-6">Loading...</p>;
+  if (notFound) return <NotFound context="owner" />;
   if (error) return <div className="p-6"><LoadError message={error} onRetry={() => setAttempt((n) => n + 1)} /></div>;
   if (!menu) return <p className="p-6 text-red-600">Menu not found.</p>;
 
@@ -107,9 +135,25 @@ export default function MenuDetailPage() {
             {publishError && <p role="alert" className="mt-1 text-sm text-red-600">{publishError}</p>}
           </div>
 
-          <div className="flex gap-2">
+          {/* wraps on phones: the header has five actions since S2-17 / S2-19 */}
+          <div className="flex flex-wrap gap-2">
+            {/* AGF-S2-17: see the menu as guests will, whatever its publish state */}
+            <Link
+                to={`/${menu.businessId}/admin/menus/${menu.id}/preview`}
+                className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Preview
+            </Link>
             <Button variant="secondary" onClick={togglePublished} disabled={publishing}>
               {menu.active ? "Unpublish" : "Publish"}
+            </Button>
+            <Button
+                variant="secondary"
+                onClick={() => { setMarkAllError(""); setMarkAllOpen(true); }}
+                disabled={soldOutCount === 0}
+                title={soldOutCount === 0 ? "No sold-out items in this menu" : undefined}
+            >
+              Mark all available
             </Button>
             <Button variant="secondary" onClick={() => setCategoryModalOpen(true)}>
               + Add Category
@@ -171,6 +215,14 @@ export default function MenuDetailPage() {
             onCreate={createItem}
             onPresignImage={presignItemImage}
             onConfirmImage={confirmItemImage}
+        />
+        <MarkAllAvailableDialog
+            open={markAllOpen}
+            count={soldOutCount}
+            busy={markingAll}
+            error={markAllError}
+            onClose={() => setMarkAllOpen(false)}
+            onConfirm={confirmMarkAll}
         />
       </div>
   );

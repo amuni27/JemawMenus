@@ -108,6 +108,9 @@ export type CreateItemPayload = {
   isFeatured?: boolean;
   prepTimeMinutes?: number | null;
   spiceLevel?: string | null;
+  /** AGF-S2-30 (edit only): remove a saved prep time / spice level; absent means unchanged */
+  clearPrepTime?: boolean;
+  clearSpiceLevel?: boolean;
   status?: ItemStatus;
 };
 
@@ -130,4 +133,6 @@ export type WaiterListMap = Record<string, WaiterListEntry>;
 export interface GuestMenuOutletContext {
   /** Adds an item to the session waiter list (sold-out items are ignored) and confirms with a toast. */
   addToWaiterList: (item: MenuItem) => void;
+  /** AGF-S2-17: set in the owner preview; item detail comes from the loaded preview and ordering is off */
+  preview?: { findItem: (itemId: string) => MenuItem | undefined; addDisabledLabel: string };
 }

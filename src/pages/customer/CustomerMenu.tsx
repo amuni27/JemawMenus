@@ -7,9 +7,11 @@ import GuestInfoPanel from "../../components/menu/GuestInfoPanel";
 import { CategorySection } from "../../components/menu/CategorySection";
 import { FeaturedSection, type FeaturedItem } from "../../components/menu/FeaturedSection";
 import { DietaryFilters } from "../../components/menu/DietaryFilters";
+import NotFound, { StatusCard } from "../../components/NotFound";
+import { statusPrimaryClass } from "../../components/statusStyles";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../hooks/useStorageState.ts";
-import {GuestMenuOutletContext, WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
+import {GuestMenuOutletContext, MenuItem, WaiterListEntry, WaiterListMap} from "../../types/menu.ts";
 import {WaiterListDrawer} from "./WaiterListDrawer.tsx";
 import { useToast } from "../../components/ui/ToastContext.tsx";
 import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
@@ -18,10 +20,17 @@ import { featuredItems } from "../../utils/featured.ts";
 import { availableChips, hasActiveFilters, matchesFilters, NO_FILTERS, type DietaryFilters as Filters, type DietKey, type WithDietaryData } from "../../utils/dietary.ts";
 
 
-export default function CustomerMenu() {
+/** AGF-S2-17: owner preview data; when given, the public menu isn't loaded and ordering is off */
+type PublicMenuData = ReturnType<typeof usePublicBusinessMenu>;
+export type GuestMenuPreview = { business?: PublicMenuData["business"]; menus: PublicMenuData["menus"]; addDisabledLabel: string };
+
+export default function CustomerMenu({ preview }: { preview?: GuestMenuPreview } = {}) {
 const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }>();
     const isViewingItem = Boolean(itemId);
-    const { business, menus, loading, error } = usePublicBusinessMenu(tenantSlug);
+    const publicMenu = usePublicBusinessMenu(preview ? undefined : tenantSlug);
+    const { business, menus, loading, error } = preview ? { ...preview, loading: false, error: "" } : publicMenu;
+    const notFound = !preview && publicMenu.notFound;
+    const addDisabledLabel = preview?.addDisabledLabel;
     const toast = useToast();
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [activeCategoryId, setActiveCategoryId] = useState<string | "ALL">("ALL");
@@ -72,7 +81,16 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         return ids;
     }, [menus]);
 
+    // AGF-S2-17: item detail in the owner preview comes from the loaded preview, not the public endpoint
+    function findPreviewItem(id: string): MenuItem | undefined {
+        for (const menu of (menus ?? []) as unknown as { categories?: { items?: MenuItem[] }[] }[])
+            for (const cat of menu.categories ?? [])
+                for (const i of cat.items ?? []) if (String(i.id) === id) return i;
+        return undefined;
+    }
+
     function addMenuItemToWaiterList(menuItem: any) {
+        if (preview) return; // ordering is off in the owner preview
         if (isSoldOut(menuItem.status)) return; // sold-out items cannot be added
         const itemId = String(menuItem.id);
 
@@ -322,6 +340,18 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         };
     }, [displayedGroups]);
 
+    // AGF-S2-33: unknown restaurant → not-found; server or network failure without data → unavailable + Retry
+    if (notFound) return <NotFound context="restaurant" />;
+    if (error && !business && !preview) {
+        return (
+            <StatusCard
+                title="This menu is temporarily unavailable"
+                text="Please try again in a moment."
+                actions={<button type="button" onClick={publicMenu.retry} className={statusPrimaryClass}>Retry</button>}
+            />
+        );
+    }
+
     return (
         <div className="bg-white">
             <MenuHeader
@@ -392,7 +422,10 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                         ) : isViewingItem ? (
                             // ✅ REPLACE cards with item detail
                             <div className="">
-                                <Outlet context={{ addToWaiterList: addMenuItemToWaiterList } satisfies GuestMenuOutletContext} />
+                                <Outlet context={{
+                                    addToWaiterList: addMenuItemToWaiterList,
+                                    preview: preview ? { findItem: findPreviewItem, addDisabledLabel: preview.addDisabledLabel } : undefined,
+                                } satisfies GuestMenuOutletContext} />
                             </div>
                          ) : (
                             <>
@@ -434,7 +467,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                 )}
                                 {/* AGF-S2-15: hidden while searching or filtering (S2-14), so results aren't listed twice */}
                                 {!narrowing && (
-                                    <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} />
+                                    <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} />
                                 )}
                                 {displayedGroups.map((g: any) => (
                                     <div
@@ -449,6 +482,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                             items={g.items}
                                             currency={activeMenu?.currency}
                                             onAddItem={addMenuItemToWaiterList}
+                                            addDisabledLabel={addDisabledLabel}
                                         />
                                     </div>
                                 ))}

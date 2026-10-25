@@ -261,11 +261,15 @@ export default function ItemModal({
         const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
         if (!loaded || !sameList(draft.allergens, loaded.allergens)) details.allergens = draft.allergens;
         if (!loaded || !sameList(draft.tags, loaded.tags)) details.tags = draft.tags;
-        if (!loaded || draft.spiceLevel !== loaded.spiceLevel) details.spiceLevel = draft.spiceLevel || null;
+        // AGF-S2-30: unchanged → not sent; new value → sent; emptied on edit → explicit clear flag
+        if (!loaded || draft.spiceLevel !== loaded.spiceLevel) {
+            if (loaded && draft.spiceLevel === "") details.clearSpiceLevel = true;
+            else details.spiceLevel = draft.spiceLevel || null;
+        }
         if (!loaded || draft.isFeatured !== loaded.isFeatured) details.isFeatured = draft.isFeatured;
-        // An empty prep time can't clear a stored one (the API ignores null), so it is only sent when set
-        if (draft.prepTime !== "" && (!loaded || draft.prepTime !== loaded.prepTime)) {
-            details.prepTimeMinutes = Number(draft.prepTime);
+        if (!loaded || draft.prepTime !== loaded.prepTime) {
+            if (draft.prepTime !== "") details.prepTimeMinutes = Number(draft.prepTime);
+            else if (loaded) details.clearPrepTime = true;
         }
 
         return {
@@ -615,7 +619,7 @@ export default function ItemModal({
                             className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus:ring-brand focus:border-brand-dark"
                         >
                             {/* A saved level can't be cleared through the API; "None" hides it from guests */}
-                            <option value="" disabled={!!item?.spiceLevel}>Not set</option>
+                            <option value="">Not set</option>
                             {SPICE_LEVELS.map((s) => (
                                 <option key={s.value} value={s.value}>{s.label}</option>
                             ))}
@@ -643,11 +647,6 @@ export default function ItemModal({
                         {(prepTimeProblem(draft.prepTime) ?? serverErrors.errorFor("prepTimeMinutes", draft.prepTime)) && (
                             <p className="text-xs text-red-600">
                                 {prepTimeProblem(draft.prepTime) ?? serverErrors.errorFor("prepTimeMinutes", draft.prepTime)}
-                            </p>
-                        )}
-                        {draft.prepTime === "" && item?.prepTimeMinutes != null && (
-                            <p className="text-xs text-gray-500">
-                                A saved prep time can't be removed yet; the current value ({item.prepTimeMinutes} min) is kept.
                             </p>
                         )}
                     </div>

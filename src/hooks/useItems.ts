@@ -166,6 +166,25 @@ export function useItems(menuId?: string) {
         [items, safeSetError, safeSetItems]
     );
 
+    // AGF-S2-19: one bulk request, then the server's list (also after a failure, so the page never shows a guess)
+    const markAllAvailable = useCallback(async (): Promise<number> => {
+        if (!menuId) throw new Error("menuId is required");
+        safeSetError("");
+        const reload = async () => {
+            const list = safeArray<MenuItem>(unwrapData<unknown>(await itemApi.list(menuId)));
+            safeSetItems(() => list);
+        };
+        try {
+            const res = await itemApi.markAllAvailable(menuId);
+            const updated = Number(unwrapData<{ updated?: number }>(res)?.updated ?? 0);
+            await reload();
+            return updated;
+        } catch (e) {
+            await reload().catch(() => undefined);
+            throw e;
+        }
+    }, [menuId, safeSetError, safeSetItems]);
+
     const deleteItem = useCallback(
         async (itemId: string): Promise<void> => {
             safeSetError("");
@@ -268,6 +287,7 @@ export function useItems(menuId?: string) {
         updateItem,
         toggleStatus,
         toggleSoldOut,
+        markAllAvailable,
         deleteItem,
         moveItem,
         setItemOrder,

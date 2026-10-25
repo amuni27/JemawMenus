@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from "react";
 import {Link, Outlet, useLocation, useNavigate} from "react-router-dom";
 import {Settings, HelpCircle, User, LogOut} from "lucide-react";
 import {useAuth} from "../../app/context/AuthContext.tsx";
+import NotFound from "../NotFound.tsx";
 
 
 // AGF-S2-09: Dashboard added; login still lands on Menus (D4)
@@ -165,7 +166,8 @@ export default function AdminLayout() {
                     <span className="text-sm text-gray-500 pl-4">{auth.business?.name}</span>
                 </header>
                 <div className="max-w-6xl mx-auto px-4 py-6">
-                    <Outlet/>
+                    {/* AGF-S2-33 (D-NF-3): another business's admin URL shows not-found, not the owner's data under it */}
+                    {auth.business?.id && tenantSlug !== auth.business.id ? <NotFound context="owner"/> : <Outlet/>}
                 </div>
             </main>
         </div>

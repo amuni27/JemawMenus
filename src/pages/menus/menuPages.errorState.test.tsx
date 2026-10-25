@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { ToastProvider } from "../../components/ui/ToastContext";
 
 // AGF-S1-11: owner menu pages show an error and a Retry button instead of loading forever.
 
@@ -26,14 +27,17 @@ const networkError = Object.assign(new Error("Network Error"), { code: "ERR_NETW
 const MENU = { id: "m1", name: "All-Day Menu", businessId: "biz-1", menuType: { id: "t1", name: "Lunch" } };
 
 function renderAt(path: string) {
+    // the app root provides toasts (main.tsx); the menu page uses them since AGF-S2-19
     render(
-        <MemoryRouter initialEntries={[path]}>
-            <Routes>
-                <Route path="/:tenantSlug/admin/menus" element={<MenusListPage />} />
-                <Route path="/:tenantSlug/admin/menus/:menuId" element={<MenuDetailPage />} />
-                <Route path="/:tenantSlug/admin/menus/:menuId/edit" element={<MenuEditPage />} />
-            </Routes>
-        </MemoryRouter>
+        <ToastProvider>
+            <MemoryRouter initialEntries={[path]}>
+                <Routes>
+                    <Route path="/:tenantSlug/admin/menus" element={<MenusListPage />} />
+                    <Route path="/:tenantSlug/admin/menus/:menuId" element={<MenuDetailPage />} />
+                    <Route path="/:tenantSlug/admin/menus/:menuId/edit" element={<MenuEditPage />} />
+                </Routes>
+            </MemoryRouter>
+        </ToastProvider>
     );
 }
 

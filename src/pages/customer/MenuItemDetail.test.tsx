@@ -39,14 +39,28 @@ describe("MenuItemDetail", () => {
         expect(get).not.toHaveBeenCalledWith("/venue/items/item-1");
     });
 
-    it("shows 'Item not found' when the API returns 404 (hidden or unknown item)", async () => {
+    // AGF-S2-33: a 404 now shows the friendly "not on the menu" screen with a link back to this menu
+    it("shows the dish not-found screen when the API returns 404 (hidden or unknown item)", async () => {
         get.mockImplementation(() =>
             Promise.reject(Object.assign(new Error("Request failed with status code 404"), { response: { status: 404 } })));
 
         renderAt("/biz-1/menu/item/hidden-item");
 
-        expect(await screen.findByText("Item not found.")).toBeTruthy();
+        expect(await screen.findByRole("heading", { level: 1, name: "This dish isn't on the menu right now" })).toBeTruthy();
+        expect(screen.getByRole("link", { name: "Back to the menu" }).getAttribute("href")).toBe("/biz-1/menu");
         expect(get).toHaveBeenLastCalledWith("/venue/biz-1/items/hidden-item");
+    });
+
+    it("tells a network failure apart from a missing dish and offers Retry", async () => {
+        get.mockImplementationOnce(() => Promise.reject(Object.assign(new Error("Network Error"), { code: "ERR_NETWORK" })))
+            .mockResolvedValueOnce({ data: { id: "item-1", name: "Doro Wat", price: 350, ingredients: ["chicken"], status: "AVAILABLE" } });
+
+        renderAt("/biz-1/menu/item/item-1");
+
+        expect(await screen.findByText("Couldn't load this dish. Check your connection and try again.")).toBeTruthy();
+        expect(screen.queryByText(/isn't on the menu/)).toBeNull();
+        screen.getByRole("button", { name: "Retry" }).click();
+        expect(await screen.findByText("Doro Wat")).toBeTruthy();
     });
 });
 
