@@ -130,4 +130,6 @@ export type WaiterListMap = Record<string, WaiterListEntry>;
 export interface GuestMenuOutletContext {
   /** Adds an item to the session waiter list (sold-out items are ignored) and confirms with a toast. */
   addToWaiterList: (item: MenuItem) => void;
+  /** AGF-S2-17: set in the owner preview; item detail comes from the loaded preview and ordering is off */
+  preview?: { findItem: (itemId: string) => MenuItem | undefined; addDisabledLabel: string };
 }

@@ -171,3 +171,13 @@ describe("menu detail publish action and category visibility", () => {
         await waitFor(() => expect(screen.queryByText("Hidden")).toBeNull());
     });
 });
+
+// AGF-S2-17: owners open a guest-style preview of the menu from its page
+describe("menu detail preview link", () => {
+    it("links to the owner preview of this menu", async () => {
+        getMenu.mockResolvedValue({ data: { id: "m1", businessId: "biz-1", name: "Dinner", visibility: "PUBLIC", active: false } });
+        renderAt("/biz-1/admin/menus/m1");
+        const link = await screen.findByRole("link", { name: "Preview" });
+        expect(link.getAttribute("href")).toBe("/biz-1/admin/menus/m1/preview");
+    });
+});

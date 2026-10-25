@@ -7,13 +7,14 @@ type Props = {
     items: FeaturedItem[];
     currency?: string;
     onAddItem?: (item: FeaturedItem) => void;
+    addDisabledLabel?: string;
 };
 
 /**
  * AGF-S2-15: "Chef's picks" at the top of the guest menu. One horizontally scrolling row on phones,
  * the category grid from 640 px up. Not a category: it has no tab and isn't part of the scroll sync.
  */
-export function FeaturedSection({ items, currency, onAddItem }: Props) {
+export function FeaturedSection({ items, currency, onAddItem, addDisabledLabel }: Props) {
     const headingId = useId();
     const listRef = useRef<HTMLUListElement | null>(null);
     // Only a row that actually scrolls sideways needs to be focusable (keyboard scrolling)
@@ -58,7 +59,7 @@ export function FeaturedSection({ items, currency, onAddItem }: Props) {
             >
                 {items.map((item) => (
                     <li key={item.id} className="w-[70%] shrink-0 snap-start sm:w-auto">
-                        <MenuItemCard item={item} currency={currency} onAddItem={onAddItem} />
+                        <MenuItemCard item={item} currency={currency} onAddItem={onAddItem} addDisabledLabel={addDisabledLabel} />
                     </li>
                 ))}
             </ul>

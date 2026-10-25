@@ -7,9 +7,11 @@ type Props = {
     item: any;
     currency?: string; // pass from parent
     onAddItem?: (item: any) => void;
+    /** AGF-S2-17: when set (owner preview), the add button is disabled and announced with this label */
+    addDisabledLabel?: string;
 };
 
-export function MenuItemCard({ item, currency, onAddItem  }: Props) {
+export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Props) {
     const navigate = useNavigate();
 
     const openDetail = () => {
@@ -20,6 +22,7 @@ export function MenuItemCard({ item, currency, onAddItem  }: Props) {
             ? Number(item.price)
             : null;
     const soldOut = isSoldOut(item.status);
+    const addOff = soldOut || Boolean(addDisabledLabel);
     const diets = declaredDiets(item); // AGF-S2-14: badges for the dietary vocabulary only
 
     return (
@@ -61,9 +64,9 @@ export function MenuItemCard({ item, currency, onAddItem  }: Props) {
                     {/* ADD BUTTON (top-right like DoorDash/Airbnb) */}
                     <button
                         type="button"
-                        onClick={() => { if (!soldOut) onAddItem?.(item); }}
-                        disabled={soldOut}
-                        aria-label={soldOut ? `${item.name} is sold out` : `Add ${item.name}`}
+                        onClick={() => { if (!addOff) onAddItem?.(item); }}
+                        disabled={addOff}
+                        aria-label={addDisabledLabel ?? (soldOut ? `${item.name} is sold out` : `Add ${item.name}`)}
                         className={`
     absolute right-1 top-28 lg:top-32 lg:right-3
     inline-flex h-9 w-9 items-center justify-center
@@ -71,7 +74,7 @@ export function MenuItemCard({ item, currency, onAddItem  }: Props) {
     shadow-lg ring-[3px] ring-white
     transition
     focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500
-    ${soldOut ? "cursor-not-allowed bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700 active:scale-95"}
+    ${addOff ? "cursor-not-allowed bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700 active:scale-95"}
   `}
                     >
                         <PlusIcon className="h-6 w-6" />

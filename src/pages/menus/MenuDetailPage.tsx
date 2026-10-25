@@ -108,6 +108,13 @@ export default function MenuDetailPage() {
           </div>
 
           <div className="flex gap-2">
+            {/* AGF-S2-17: see the menu as guests will, whatever its publish state */}
+            <Link
+                to={`/${menu.businessId}/admin/menus/${menu.id}/preview`}
+                className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Preview
+            </Link>
             <Button variant="secondary" onClick={togglePublished} disabled={publishing}>
               {menu.active ? "Unpublish" : "Publish"}
             </Button>

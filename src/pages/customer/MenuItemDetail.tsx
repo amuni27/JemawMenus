@@ -12,19 +12,23 @@ export default function MenuItemDetail() {
     // The guest menu's waiter list (session storage), shared with the menu cards (AGF-S2-04)
     const outlet = useOutletContext<GuestMenuOutletContext | undefined>();
 
-    const [item, setItem] = useState<MenuItem | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedItem, setFetchedItem] = useState<MenuItem | null>(null);
+    const [fetching, setFetching] = useState(true);
+    // AGF-S2-17: in the owner preview the item comes from the loaded preview (the public endpoint would 404)
+    const inPreview = Boolean(outlet?.preview);
+    const item = inPreview ? (itemId ? outlet?.preview?.findItem(itemId) ?? null : null) : fetchedItem;
+    const loading = inPreview ? false : fetching;
 
     useEffect(() => {
-        if (!tenantSlug || !itemId) return;
+        if (!tenantSlug || !itemId || inPreview) return;
 
-        setLoading(true);
+        setFetching(true);
         publicMenueApi
             .findItem(`/venue/${tenantSlug}/items/${itemId}`) // tenant-scoped (AGF-S1-05)
-            .then((res) => setItem(res.data))
-            .catch(() => setItem(null))
-            .finally(() => setLoading(false));
-    }, [tenantSlug, itemId]);
+            .then((res) => setFetchedItem(res.data))
+            .catch(() => setFetchedItem(null))
+            .finally(() => setFetching(false));
+    }, [tenantSlug, itemId, inPreview]);
 
     const priceNumber = useMemo(() => {
         const raw = item?.price;
@@ -198,7 +202,8 @@ export default function MenuItemDetail() {
                         <button
                             className="rounded-lg border px-4 py-2 text-sm bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-400"
                             onClick={() => outlet?.addToWaiterList(item)}
-                            disabled={isSoldOut(item.status) || !outlet}
+                            disabled={isSoldOut(item.status) || !outlet || Boolean(outlet.preview)}
+                            aria-label={outlet?.preview?.addDisabledLabel}
                         >
                             <span className="text-white">Add to list</span>
                         </button>

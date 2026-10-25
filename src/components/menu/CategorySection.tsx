@@ -6,9 +6,10 @@ type Props = {
     items: any[];
     currency?: string;
     onAddItem?: (item: any) => void;
+    addDisabledLabel?: string;
 };
 
-export function CategorySection({ category, items, currency, onAddItem  }: Props) {
+export function CategorySection({ category, items, currency, onAddItem, addDisabledLabel }: Props) {
     const itemCount = items?.length ?? 0;
 
     return (
@@ -28,7 +29,7 @@ export function CategorySection({ category, items, currency, onAddItem  }: Props
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {items.map((item: any) => (
-                    <MenuItemCard key={item.id} item={item} currency={currency}  onAddItem={onAddItem}/>
+                    <MenuItemCard key={item.id} item={item} currency={currency} onAddItem={onAddItem} addDisabledLabel={addDisabledLabel}/>
                 ))}
 
                 {itemCount === 0 ? (

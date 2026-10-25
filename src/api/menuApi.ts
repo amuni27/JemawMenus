@@ -23,6 +23,11 @@ class MenuService {
     return fetchRequestById("/menus/", menuId); // -> /menus/{id}
   }
 
+  /** AGF-S2-17: the owner's own menu as guests would see it once published (owner-only endpoint) */
+  previewMenu(menuId: string) {
+    return fetchItems(`/menus/${menuId}/preview`);
+  }
+
   createMenu(data: MenuDto) {
     return postRequest("/menus", data);
   }

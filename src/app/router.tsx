@@ -18,6 +18,7 @@ import QRPage from "../pages/menus/QRPage.tsx";
 import MenuItemDetail from "../pages/customer/MenuItemDetail.tsx";
 import MenuEditPage from "../pages/menus/MenuEditPage.tsx";
 import AccountPage from "../pages/admin/AccountPage.tsx";
+import MenuPreviewPage from "../pages/menus/MenuPreviewPage.tsx";
 
 const router = createBrowserRouter([
     {
@@ -55,6 +56,14 @@ const router = createBrowserRouter([
                     { path: "item/:itemId", element: <MenuItemDetail /> }, // child view
                 ],
 
+            },
+            {
+                // AGF-S2-17: owner-only guest view of one menu; signed-in owners only, outside the admin layout
+                path: 'admin/menus/:menuId/preview',
+                element: <RequireAuth><MenuPreviewPage/></RequireAuth>,
+                children: [
+                    {path: 'item/:itemId', element: <MenuItemDetail/>},
+                ],
             },
             {
                 path: 'admin',
