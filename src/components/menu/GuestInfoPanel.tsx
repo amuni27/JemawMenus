@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock, MapPin, Phone } from "lucide-react";
+import { Clock, MapPin, Navigation, Phone } from "lucide-react";
 import clsx from "clsx";
 import { openingStatus, type DayHours } from "../../utils/openingHours";
 
@@ -11,6 +11,8 @@ export type GuestBusinessInfo = {
   streetAddress?: string | null;
   city?: string | null;
   state?: string | null;
+  /** AGF-S2-12: the stored, validated Google Maps link */
+  locationUrl?: string | null;
 };
 
 /** Re-evaluates "open now" every minute while the menu stays open. */
@@ -43,7 +45,9 @@ export default function GuestInfoPanel({ business }: { business: GuestBusinessIn
   const tel = telHref(business.businessPhone);
   const address = addressLine(business);
 
-  if (status.status === "unknown" && !tel && !address) return null;
+  const directions = business.locationUrl?.trim() || null; // AGF-S2-12
+
+  if (status.status === "unknown" && !tel && !address && !directions) return null;
 
   return (
     <section aria-label="Restaurant information" className="border-b bg-gray-50">
@@ -71,7 +75,27 @@ export default function GuestInfoPanel({ business }: { business: GuestBusinessIn
           </a>
         )}
 
-        {address && (
+        {/* AGF-S2-12 (D-S2-12-4): a saved link replaces the address search link; the address stays as text */}
+        {address && directions && (
+          <span className="inline-flex min-w-0 items-center gap-1.5 text-gray-700">
+            <MapPin aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" />
+            <span className="truncate">{address}</span>
+          </span>
+        )}
+
+        {directions && (
+          <a
+            href={directions}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
+          >
+            <Navigation aria-hidden="true" className="h-4 w-4" />
+            Get Directions
+          </a>
+        )}
+
+        {address && !directions && (
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
             target="_blank"

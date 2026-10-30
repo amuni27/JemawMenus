@@ -1,6 +1,6 @@
 # E2E smoke suite (AGF-S2-28)
 
-Eight owner → guest journeys in Chromium against the **real backend in its demo profile** (in-memory data, seeded
+Eleven owner → guest journeys in Chromium against the **real backend in its demo profile** (in-memory data, seeded
 restaurant "Abol Demo Café" and owner `owner@demo.agafari.test`). It complements the unit and integration tests; it
 does not replace real-device or screen-reader checks (S2-27) or production verification.
 
@@ -14,6 +14,9 @@ does not replace real-device or screen-reader checks (S2-27) or production verif
 | J6 | Unpublishing hides the menu again; old item links show the friendly not-found |
 | J7 | The QR page shows the configured guest address, and it opens the guest menu |
 | J8 | Signed-out admin pages go to login; unknown pages and restaurants show friendly screens |
+| J9 | Guest accessibility: axe scan at 375 / 1280 px, waiter dialog focus, keyboard, reflow and zoom (S2-27) |
+| J10 | Share previews: crawler tags, redirect to the guest menu, 404 for unknown restaurants (S2-21) |
+| J11 | Location link: a saved Google Maps link gives guests "Get Directions"; removing it restores the address search (S2-12) |
 
 ## Run locally
 

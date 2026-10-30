@@ -1,6 +1,7 @@
 import {useState} from "react";
 import { apiFieldNames, useFieldErrors } from "../../utils/fieldErrors";
 import { isStrongPassword, passwordChecks } from "../../utils/passwordPolicy";
+import { GOOGLE_MAPS_FIND_URL, googleMapsUrlProblem } from "../../utils/googleMapsUrl";
 import AuthLayout from "../../components/auth/AuthLayout";
 import {Input} from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -29,11 +30,8 @@ interface BusinessInfo {
     region: string; // backend "state" (Region)
     postalCode: string; // backend "zipcode" optional
 
-    // Optional Ethiopia details (backend accepts optional fields)
-    subCity?: string;
-    woreda?: string;
-    kebele?: string;
-    houseNumber?: string;
+    // AGF-S2-12: optional Google Maps share link (replaces sub-city, woreda, kebele and house number, D-S2-12-1)
+    locationUrl: string;
 }
 
 interface DayHours {
@@ -129,10 +127,7 @@ const defaultState: WizardState = {
         city: "",
         region: "",
         postalCode: "",
-        subCity: "",
-        woreda: "",
-        kebele: "",
-        houseNumber: "",
+        locationUrl: "",
     },
     hours: {
         open247: false,
@@ -152,7 +147,7 @@ const steps = [{label: "Personal"}, {label: "Business"}, {label: "Hours"}];
 // Wizard step holding each backend registration field (AGF-S2-11)
 const FIELD_STEP: Record<string, number> = {
     fullName: 0, email: 0, phoneNumber: 0, password: 0,
-    businessName: 1, businessPhone: 1, streetAddress: 1, city: 1, state: 1, zipcode: 1,
+    businessName: 1, businessPhone: 1, streetAddress: 1, city: 1, state: 1, zipcode: 1, locationUrl: 1,
     customSubdomain: 2,
 };
 
@@ -194,6 +189,9 @@ export default function RegisterWizard() {
 
             // Business phone is required and must be Ethiopian.
             if (!isValidEthiopianPhoneNumber(b.businessPhone)) return false;
+
+            // AGF-S2-12: the link is optional, but if given it must be a Google Maps share link
+            if (googleMapsUrlProblem(b.locationUrl)) return false;
 
             return true;
         }
@@ -241,10 +239,7 @@ export default function RegisterWizard() {
 
                 // optional Ethiopia details
                 zipcode: b.postalCode.trim() || "",
-                subCity: b.subCity?.trim() || undefined,
-                woreda: b.woreda?.trim() || undefined,
-                kebele: b.kebele?.trim() || undefined,
-                houseNumber: b.houseNumber?.trim() || undefined,
+                locationUrl: b.locationUrl.trim() || undefined, // AGF-S2-12
 
                 // subdomain
                 customSubdomain: data.subdomain.trim().toLowerCase(),
@@ -273,7 +268,7 @@ export default function RegisterWizard() {
             const banner = serverErrors.apply(err, {
                 fullName: p.fullName.trim(), email: p.email.trim().toLowerCase(), phoneNumber: p.phone.trim(), password: p.password,
                 businessName: b.businessName.trim(), businessPhone: b.businessPhone.trim(), streetAddress: b.address.trim(),
-                city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim(),
+                city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim(), locationUrl: b.locationUrl.trim(),
                 customSubdomain: data.subdomain.trim().toLowerCase(),
             }, "Registration failed");
             const steps = apiFieldNames(err).map((f) => FIELD_STEP[f]).filter((s) => s !== undefined);
@@ -432,32 +427,25 @@ export default function RegisterWizard() {
                         onChange={(e) => update("business", {...b, postalCode: e.target.value})}
                     />
 
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* AGF-S2-12: find the restaurant in Google Maps (new tab), then paste its share link */}
+                    <div className="space-y-1">
+                        <a
+                            href={GOOGLE_MAPS_FIND_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-blue-600 hover:underline"
+                        >
+                            Find Location on Google Maps
+                        </a>
                         <Input
-                            label="Sub-City "
-                            value={b.subCity ?? ""}
-                            onChange={(e) => update("business", {...b, subCity: e.target.value})}
+                            label="Google Maps link (optional)"
+                            placeholder="https://maps.app.goo.gl/…"
+                            maxLength={2048}
+                            value={b.locationUrl}
+                            error={googleMapsUrlProblem(b.locationUrl) ?? serverErrors.errorFor("locationUrl", b.locationUrl.trim())}
+                            onChange={(e) => update("business", {...b, locationUrl: e.target.value})}
                         />
-
-                        <Input
-                            label="Woreda "
-                            value={b.woreda ?? ""}
-                            onChange={(e) => update("business", {...b, woreda: e.target.value})}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <Input
-                            label="Kebele "
-                            value={b.kebele ?? ""}
-                            onChange={(e) => update("business", {...b, kebele: e.target.value})}
-                        />
-
-                        <Input
-                            label="House No. "
-                            value={b.houseNumber ?? ""}
-                            onChange={(e) => update("business", {...b, houseNumber: e.target.value})}
-                        />
+                        <p className="text-xs text-gray-500">In Google Maps, open your restaurant, choose Share and paste the link here.</p>
                     </div>
                 </div>
             );

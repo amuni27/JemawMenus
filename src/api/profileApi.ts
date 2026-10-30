@@ -24,6 +24,8 @@ export interface UpdateBusinessPayload {
   zipcode?: string;
   /** ETB or USD (AGF-S2-02) */
   currency?: string;
+  /** AGF-S2-12: Google Maps link; "" removes it, omitted keeps it */
+  locationUrl?: string;
 }
 
 export interface PresignLogoPayload {

@@ -30,6 +30,8 @@ export interface BusinessDTO {
     currency?: string;
     open24_7?: boolean;
     logoUrl?: string;
+    /** AGF-S2-12 */
+    locationUrl?: string | null;
     updatedAt: Date
     createdAt: Date
 }

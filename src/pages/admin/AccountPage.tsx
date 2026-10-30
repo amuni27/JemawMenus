@@ -126,6 +126,17 @@ export default function AccountPage() {
               )}
             </div>
           )}
+          {/* AGF-S2-12 */}
+          <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+            <span className="text-sm text-gray-500 shrink-0">Google Maps link</span>
+            {business.locationUrl ? (
+              <a href={business.locationUrl} target="_blank" rel="noopener noreferrer" className="min-w-0 break-all text-right text-sm font-medium text-blue-600 hover:underline">
+                {business.locationUrl}
+              </a>
+            ) : (
+              <span className="text-sm font-medium text-gray-900">—</span>
+            )}
+          </div>
           <InfoRow label="Currency" value={displayCurrency(business.currency)} />
         </Card>
 

@@ -9,6 +9,7 @@ import Button from "../ui/Button";
 import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { profileApi } from "../../api/profileApi";
+import { GOOGLE_MAPS_FIND_URL, googleMapsUrlProblem } from "../../utils/googleMapsUrl";
 import { useToast } from "../ui/ToastContext";
 import { BusinessDTO } from "../../services/authService";
 
@@ -35,6 +36,8 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
   const [region, setRegion] = useState("");
   const [zipcode, setZipcode] = useState("");
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
+  const [locationUrl, setLocationUrl] = useState(""); // AGF-S2-12
+  const [locationError, setLocationError] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const serverErrors = useFieldErrors(); // AGF-S2-11
@@ -49,6 +52,8 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
     setRegion(business.state ?? "");
     setZipcode(business.zipcode ?? "");
     setCurrency(displayCurrency(business.currency));
+    setLocationUrl(business.locationUrl ?? "");
+    setLocationError("");
     setError("");
     clearServerErrors();
   }, [open, business, clearServerErrors]);
@@ -56,6 +61,11 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
   const handleSave = async () => {
     if (!name.trim()) { setError("Business name is required"); return; }
     if (phone && !isValidEthiopianPhone(phone)) { setError("Enter a valid Ethiopian phone number"); return; }
+    const locationProblem = googleMapsUrlProblem(locationUrl);
+    setLocationError(locationProblem ?? "");
+    if (locationProblem) return;
+    // AGF-S2-12 (D-S2-12-P1): sent only when changed; "" removes the saved link
+    const locationChanged = locationUrl.trim() !== (business.locationUrl ?? "");
 
     setSaving(true);
     setError("");
@@ -69,6 +79,8 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
         zipcode: zipcode.trim() || undefined,
         // Only when changed, so a legacy stored value never blocks other profile edits
         currency: currency !== displayCurrency(business.currency) ? currency : undefined,
+        // AGF-S2-12: sent only when changed; "" removes the link (D-S2-12-P1)
+        ...(locationChanged ? { locationUrl: locationUrl.trim() } : {}),
       });
       toast("Business profile updated");
       onSaved();
@@ -77,7 +89,7 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
       // AGF-S2-11: field errors under their fields; otherwise the server message
       setError(serverErrors.apply(err, {
         name: name.trim(), businessPhone: phone, streetAddress: address.trim(), city: city.trim(),
-        state: region.trim(), zipcode: zipcode.trim(), currency,
+        state: region.trim(), zipcode: zipcode.trim(), currency, locationUrl: locationUrl.trim(),
       }, "Failed to update business profile") ?? "");
     } finally {
       setSaving(false);
@@ -152,6 +164,29 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
             <option value={displayCurrency(business.currency)}>{displayCurrency(business.currency)} (current)</option>
           )}
         </FormSelect>
+        {/* AGF-S2-12: the restaurant's Google Maps share link powers "Get Directions" on the guest menu */}
+        <div className="space-y-1">
+          <FormInput
+            label="Google Maps link"
+            placeholder="https://maps.app.goo.gl/…"
+            value={locationUrl}
+            maxLength={2048}
+            error={locationError || serverErrors.errorFor("locationUrl", locationUrl.trim())}
+            onChange={(e) => { setLocationUrl(e.target.value); setLocationError(""); }}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <a href={GOOGLE_MAPS_FIND_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
+              Find on Google Maps
+            </a>
+            {locationUrl && (
+              <button type="button" className="font-medium text-red-600 hover:underline" onClick={() => { setLocationUrl(""); setLocationError(""); }}>
+                Remove link
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">In Google Maps, open your restaurant, choose Share and paste the link here.</p>
+        </div>
+
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} isLoading={saving}>Save Changes</Button>

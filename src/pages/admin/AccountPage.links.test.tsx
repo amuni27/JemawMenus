@@ -53,6 +53,23 @@ describe("account page subdomain", () => {
     });
 });
 
+// AGF-S2-12: the saved Google Maps link is shown on the account page (opens in a new tab), or "—"
+describe("Google Maps link on the account page", () => {
+    it("shows the saved link", () => {
+        setBusiness({ locationUrl: "https://maps.app.goo.gl/AbC123xyz" });
+        renderPage();
+        const link = screen.getByRole("link", { name: "https://maps.app.goo.gl/AbC123xyz" }) as HTMLAnchorElement;
+        expect(link.target).toBe("_blank");
+        expect(link.rel).toContain("noopener");
+    });
+
+    it("shows a dash without a link", () => {
+        setBusiness({ locationUrl: null });
+        renderPage();
+        expect(valueOf("Google Maps link")).toBe("—");
+    });
+});
+
 describe("guest menu link", () => {
     it("uses the same URL as the QR page (configured base URL)", () => {
         vi.stubEnv("VITE_PUBLIC_MENU_BASE_URL", "http://localhost:5175");
