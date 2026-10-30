@@ -8,6 +8,7 @@ import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
 import BusinessProfileModal from "../../components/account/BusinessProfileModal";
+import { countryName, countryOf } from "../../utils/countryRules";
 import BusinessLogoModal from "../../components/account/BusinessLogoModal";
 import BusinessLogo from "../../components/ui/BusinessLogo";
 import BusinessHoursModal from "../../components/account/BusinessHoursModal";
@@ -99,9 +100,16 @@ export default function AccountPage() {
         <Card title="Business Profile" onEdit={() => setBusinessModal(true)}>
           <InfoRow label="Name" value={business.name} />
           <InfoRow label="Phone" value={business.businessPhone} />
-          <InfoRow label="Address" value={business.streetAddress} />
-          <InfoRow label="City" value={business.city} />
-          <InfoRow label="Region" value={business.state} />
+          {/* AGF-S2-12 CR1: Ethiopian restaurants have no address rows (location = the Google Maps link) */}
+          <InfoRow label="Country" value={countryName(countryOf(business.country))} />
+          {countryOf(business.country) === "US" && (
+            <>
+              <InfoRow label="Address" value={business.streetAddress} />
+              <InfoRow label="City" value={business.city} />
+              <InfoRow label="State" value={business.state} />
+              <InfoRow label="ZIP Code" value={business.zipcode} />
+            </>
+          )}
           {/* AGF-S2-10: the stored host as-is (no second domain); the guest link is built exactly like the QR code */}
           <InfoRow label="Subdomain" value={formatSubdomain(business.customSubdomain)} />
           {business.id && (

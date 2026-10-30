@@ -2,6 +2,7 @@ import {useState} from "react";
 import { apiFieldNames, useFieldErrors } from "../../utils/fieldErrors";
 import { isStrongPassword, passwordChecks } from "../../utils/passwordPolicy";
 import { GOOGLE_MAPS_FIND_URL, googleMapsUrlProblem } from "../../utils/googleMapsUrl";
+import { COUNTRIES, type CountryCode, US_STATES, isUsState, isUsZip, phoneMatchesCountry, phoneMessage, usZipProblem } from "../../utils/countryRules";
 import AuthLayout from "../../components/auth/AuthLayout";
 import {Input} from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -25,13 +26,15 @@ interface BusinessInfo {
     businessName: string;
     businessPhone: string;
 
-    address: string; // streetAddress
-    city: string;
-    region: string; // backend "state" (Region)
-    postalCode: string; // backend "zipcode" optional
+    // AGF-S2-12 CR1: the country decides the location fields (D-CR1-1)
+    country: CountryCode;
+    address: string; // streetAddress (United States only)
+    city: string; // United States only
+    region: string; // backend "state": the US state code (United States only)
+    postalCode: string; // backend "zipcode": the US ZIP code (United States only)
 
     // AGF-S2-12: optional Google Maps share link (replaces sub-city, woreda, kebele and house number, D-S2-12-1)
-    locationUrl: string;
+    locationUrl: string; // required for Ethiopia, optional for the United States (CR1)
 }
 
 interface DayHours {
@@ -86,16 +89,17 @@ function PasswordStrength({password}: { password: string }) {
     );
 }
 
-// ----- Ethiopia Phone Validation ------------------------------------------
-const isValidEthiopianPhoneNumber = (phone?: string) => {
-    if (!phone) return false;
+// ----- Phone Validation (AGF-S2-12 CR1: Ethiopian or US numbers, D-CR1-3) ---
+const isValidPhoneFor = (country: CountryCode, phone?: string) =>
+    !!phone && phoneMatchesCountry(country, phone) && isValidPhoneNumber(phone);
 
-    // Library validates phone number format.
-    // startsWith("+251") makes sure only Ethiopian numbers are accepted.
-    return phone.startsWith("+251") && isValidPhoneNumber(phone);
-};
+// The owner's own phone is optional and may be Ethiopian or American
+const isValidOwnerPhone = (phone: string) => isValidPhoneFor("ET", phone) || isValidPhoneFor("US", phone);
 
 // ----- Tailwind Classes ----------------------------------------------------
+const selectClass =
+    "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm " +
+    "focus:outline-none focus:ring-2 focus:ring-blue-500";
 const phoneInputClass =
     "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm " +
     "focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500";
@@ -124,6 +128,7 @@ const defaultState: WizardState = {
         businessName: "",
         businessPhone: "",
         address: "",
+        country: "ET",
         city: "",
         region: "",
         postalCode: "",
@@ -147,7 +152,7 @@ const steps = [{label: "Personal"}, {label: "Business"}, {label: "Hours"}];
 // Wizard step holding each backend registration field (AGF-S2-11)
 const FIELD_STEP: Record<string, number> = {
     fullName: 0, email: 0, phoneNumber: 0, password: 0,
-    businessName: 1, businessPhone: 1, streetAddress: 1, city: 1, state: 1, zipcode: 1, locationUrl: 1,
+    country: 1, businessName: 1, businessPhone: 1, streetAddress: 1, city: 1, state: 1, zipcode: 1, locationUrl: 1,
     customSubdomain: 2,
 };
 
@@ -170,9 +175,8 @@ export default function RegisterWizard() {
             if (!fullName || !email || !password || !confirm) return false;
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
 
-            // Personal phone is optional.
-            // But if entered, it must be a valid Ethiopian phone number.
-            if (phone && !isValidEthiopianPhoneNumber(phone)) return false;
+            // Personal phone is optional; if entered, it must be a valid Ethiopian or US number.
+            if (phone && !isValidOwnerPhone(phone)) return false;
 
             if (!isStrongPassword(password) || password !== confirm) return false;
 
@@ -182,18 +186,17 @@ export default function RegisterWizard() {
         if (step === 1) {
             const b = data.business;
 
-            // Ethiopia backend required fields:
-            if (!b.businessName || !b.businessPhone || !b.address || !b.city || !b.region) {
-                return false;
-            }
+            if (!b.businessName.trim()) return false;
 
-            // Business phone is required and must be Ethiopian.
-            if (!isValidEthiopianPhoneNumber(b.businessPhone)) return false;
+            // Business phone is required and must belong to the selected country.
+            if (!isValidPhoneFor(b.country, b.businessPhone)) return false;
 
-            // AGF-S2-12: the link is optional, but if given it must be a Google Maps share link
+            // AGF-S2-12: a given link must be a Google Maps share link
             if (googleMapsUrlProblem(b.locationUrl)) return false;
 
-            return true;
+            // AGF-S2-12 CR1: Ethiopia needs the link; the United States needs the full address
+            if (b.country === "ET") return !!b.locationUrl.trim();
+            return !!b.address.trim() && !!b.city.trim() && isUsState(b.region) && isUsZip(b.postalCode);
         }
 
         if (step === 2) {
@@ -231,19 +234,17 @@ export default function RegisterWizard() {
                 // business
                 businessName: b.businessName.trim(),
                 businessPhone: b.businessPhone.trim(),
-                streetAddress: b.address.trim(),
-                city: b.city.trim(),
 
-                // Region maps to backend "state"
-                state: b.region.trim(),
-
-                // optional Ethiopia details
-                zipcode: b.postalCode.trim() || "",
+                // AGF-S2-12 CR1: only the selected country's location fields are sent
+                country: b.country,
+                ...(b.country === "US"
+                    ? { streetAddress: b.address.trim(), city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim() }
+                    : {}),
                 locationUrl: b.locationUrl.trim() || undefined, // AGF-S2-12
 
                 // subdomain
                 customSubdomain: data.subdomain.trim().toLowerCase(),
-                currency: "ETB",
+                currency: b.country === "US" ? "USD" : "ETB", // D-CR1-8 (the backend decides)
 
                 // hours
                 open24_7: h.open247,
@@ -267,7 +268,7 @@ export default function RegisterWizard() {
             const b = data.business;
             const banner = serverErrors.apply(err, {
                 fullName: p.fullName.trim(), email: p.email.trim().toLowerCase(), phoneNumber: p.phone.trim(), password: p.password,
-                businessName: b.businessName.trim(), businessPhone: b.businessPhone.trim(), streetAddress: b.address.trim(),
+                country: b.country, businessName: b.businessName.trim(), businessPhone: b.businessPhone.trim(), streetAddress: b.address.trim(),
                 city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim(), locationUrl: b.locationUrl.trim(),
                 customSubdomain: data.subdomain.trim().toLowerCase(),
             }, "Registration failed");
@@ -314,7 +315,7 @@ export default function RegisterWizard() {
                         <PhoneInput
                             international
                             defaultCountry="ET"
-                            countries={["ET"]}
+                            countries={["ET", "US"]}
                             countryCallingCodeEditable={false}
                             value={p.phone}
                             onChange={(value) => update("personal", {...p, phone: value || ""})}
@@ -322,9 +323,9 @@ export default function RegisterWizard() {
                             className={phoneInputClass}
                         />
 
-                        {p.phone && !isValidEthiopianPhoneNumber(p.phone) && (
+                        {p.phone && !isValidOwnerPhone(p.phone) && (
                             <p className="text-sm text-red-600 mt-1">
-                                Enter a valid Ethiopian phone number.
+                                Enter a valid Ethiopian or US phone number.
                             </p>
                         )}
                         {serverErrors.errorFor("phoneNumber", p.phone.trim()) && (
@@ -360,9 +361,30 @@ export default function RegisterWizard() {
 
         if (step === 1) {
             const b = data.business;
+            const us = b.country === "US";
+            // AGF-S2-12 CR1: switching country keeps what was typed for the other one (not sent), and clears a
+            // business phone that doesn't belong to the new country
+            const chooseCountry = (country: CountryCode) => update("business", {
+                ...b, country, businessPhone: phoneMatchesCountry(country, b.businessPhone) ? b.businessPhone : "",
+            });
 
             return (
                 <div className="space-y-4">
+                    <div>
+                        <label htmlFor="register-country" className="block text-sm font-medium mb-1">Country *</label>
+                        <select
+                            id="register-country"
+                            value={b.country}
+                            onChange={(e) => chooseCountry(e.target.value as CountryCode)}
+                            className={selectClass}
+                        >
+                            {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                        </select>
+                        {serverErrors.errorFor("country", b.country) && (
+                            <p className="text-sm text-red-600 mt-1">{serverErrors.errorFor("country", b.country)}</p>
+                        )}
+                    </div>
+
                     <Input
                         label="Business Name *"
                         value={b.businessName}
@@ -376,9 +398,10 @@ export default function RegisterWizard() {
                         </label>
 
                         <PhoneInput
+                            key={b.country}
                             international
-                            defaultCountry="ET"
-                            countries={["ET"]}
+                            defaultCountry={b.country}
+                            countries={[b.country]}
                             countryCallingCodeEditable={false}
                             value={b.businessPhone}
                             onChange={(value) => update("business", {...b, businessPhone: value || ""})}
@@ -386,46 +409,59 @@ export default function RegisterWizard() {
                             className={phoneInputClass}
                         />
 
-                        {b.businessPhone && !isValidEthiopianPhoneNumber(b.businessPhone) && (
-                            <p className="text-sm text-red-600 mt-1">
-                                Enter a valid Ethiopian business phone number.
-                            </p>
+                        {b.businessPhone && !isValidPhoneFor(b.country, b.businessPhone) && (
+                            <p className="text-sm text-red-600 mt-1">{phoneMessage(b.country)}</p>
                         )}
                         {serverErrors.errorFor("businessPhone", b.businessPhone.trim()) && (
                             <p className="text-sm text-red-600 mt-1">{serverErrors.errorFor("businessPhone", b.businessPhone.trim())}</p>
                         )}
                     </div>
 
-                    <Input
-                        label="Street Address *"
-                        error={serverErrors.errorFor("streetAddress", b.address.trim())}
-                        value={b.address}
-                        onChange={(e) => update("business", {...b, address: e.target.value})}
-                    />
+                    {us && (
+                        <>
+                            <Input
+                                label="Street Address *"
+                                error={serverErrors.errorFor("streetAddress", b.address.trim())}
+                                value={b.address}
+                                onChange={(e) => update("business", {...b, address: e.target.value})}
+                            />
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <Input
-                            label="City *"
-                            error={serverErrors.errorFor("city", b.city.trim())}
-                            value={b.city}
-                            onChange={(e) => update("business", {...b, city: e.target.value})}
-                        />
+                            <Input
+                                label="City *"
+                                error={serverErrors.errorFor("city", b.city.trim())}
+                                value={b.city}
+                                onChange={(e) => update("business", {...b, city: e.target.value})}
+                            />
 
-                        <Input
-                            label="Region *"
-                            error={serverErrors.errorFor("state", b.region.trim())}
-                            value={b.region}
-                            placeholder="Addis Ababa, Oromia, Amhara..."
-                            onChange={(e) => update("business", {...b, region: e.target.value})}
-                        />
-                    </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label htmlFor="register-state" className="block text-sm font-medium mb-1">State *</label>
+                                    <select
+                                        id="register-state"
+                                        value={b.region}
+                                        onChange={(e) => update("business", {...b, region: e.target.value})}
+                                        className={selectClass}
+                                    >
+                                        <option value="">Select a state</option>
+                                        {US_STATES.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+                                    </select>
+                                    {serverErrors.errorFor("state", b.region.trim()) && (
+                                        <p className="text-sm text-red-600 mt-1">{serverErrors.errorFor("state", b.region.trim())}</p>
+                                    )}
+                                </div>
 
-                    <Input
-                        label="Postal Code "
-                        error={serverErrors.errorFor("zipcode", b.postalCode.trim())}
-                        value={b.postalCode}
-                        onChange={(e) => update("business", {...b, postalCode: e.target.value})}
-                    />
+                                <Input
+                                    label="ZIP Code *"
+                                    inputMode="numeric"
+                                    autoComplete="postal-code"
+                                    maxLength={10}
+                                    error={usZipProblem(b.postalCode) ?? serverErrors.errorFor("zipcode", b.postalCode.trim())}
+                                    value={b.postalCode}
+                                    onChange={(e) => update("business", {...b, postalCode: e.target.value})}
+                                />
+                            </div>
+                        </>
+                    )}
 
                     {/* AGF-S2-12: find the restaurant in Google Maps (new tab), then paste its share link */}
                     <div className="space-y-1">
@@ -438,7 +474,7 @@ export default function RegisterWizard() {
                             Find Location on Google Maps
                         </a>
                         <Input
-                            label="Google Maps link (optional)"
+                            label={us ? "Google Maps link (optional)" : "Google Maps link *"}
                             placeholder="https://maps.app.goo.gl/…"
                             maxLength={2048}
                             value={b.locationUrl}

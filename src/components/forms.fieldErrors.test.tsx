@@ -103,7 +103,7 @@ describe("business profile form", () => {
         updateBusiness.mockRejectedValueOnce(fieldErrors([{ field: "city", message: "must not be blank" }]))
             .mockRejectedValueOnce({ response: { status: 400, data: { message: "Unsupported currency. Use ETB or USD." } } });
         wrap(<BusinessProfileModal open onClose={() => {}} onSaved={() => {}}
-                                   business={{ id: "b1", name: "Cafe", city: "Addis", currency: "ETB", createdAt: new Date(), updatedAt: new Date() }} />);
+                                   business={{ id: "b1", name: "Cafe", country: "US", businessPhone: "+12125550100", streetAddress: "350 5th Ave", city: "New York", state: "NY", zipcode: "10118", currency: "ETB", createdAt: new Date(), updatedAt: new Date() }} />);
         fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
         expect(await within(fieldBox("City")).findByText("must not be blank")).toBeTruthy();
 
@@ -126,9 +126,7 @@ describe("registration", () => {
 
         typeInto("Business Name *", "Cafe");
         fireEvent.change(screen.getByLabelText("Enter business phone number"), { target: { value: "+251911000000" } });
-        typeInto("Street Address *", "1 Road");
-        typeInto("City *", "Addis Ababa");
-        typeInto("Region *", "Addis Ababa");
+        typeInto("Google Maps link *", "https://maps.app.goo.gl/AbC123xyz"); // CR1: Ethiopia needs only the link
         fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
         typeInto("Restaurant short name *", "abol-cafe");

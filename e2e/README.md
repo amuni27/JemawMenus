@@ -16,7 +16,7 @@ does not replace real-device or screen-reader checks (S2-27) or production verif
 | J8 | Signed-out admin pages go to login; unknown pages and restaurants show friendly screens |
 | J9 | Guest accessibility: axe scan at 375 / 1280 px, waiter dialog focus, keyboard, reflow and zoom (S2-27) |
 | J10 | Share previews: crawler tags, redirect to the guest menu, 404 for unknown restaurants (S2-21) |
-| J11 | Location link: a saved Google Maps link gives guests "Get Directions"; removing it restores the address search (S2-12) |
+| J11 | Location by country (S2-12 + CR1): Ethiopian link → "Get Directions", replace but not remove; registration at 375 px (Ethiopia link only, switch to US fields) and desktop (US address, add/remove link) |
 
 ## Run locally
 

@@ -123,3 +123,22 @@ describe("guest menu link", () => {
         expect(await screen.findByText("Couldn't copy the link. Select it and copy it manually.")).toBeTruthy();
     });
 });
+
+// AGF-S2-12 CR1: the account page shows the country; Ethiopian restaurants have no address rows
+describe("country on the account page", () => {
+    it("Ethiopia (also when no country is stored): country row, no address rows", () => {
+        setBusiness({ streetAddress: "Old Road 1", city: "Addis Ababa", state: "Addis Ababa" });
+        renderPage();
+        expect(valueOf("Country")).toBe("Ethiopia");
+        for (const label of ["Address", "City", "Region", "State", "ZIP Code"]) expect(screen.queryByText(label)).toBeNull();
+    });
+
+    it("United States: country, address, city, state and ZIP rows", () => {
+        setBusiness({ country: "US", streetAddress: "350 5th Ave", city: "New York", state: "NY", zipcode: "10118" });
+        renderPage();
+        expect(valueOf("Country")).toBe("United States");
+        expect(valueOf("Address")).toBe("350 5th Ave");
+        expect(valueOf("State")).toBe("NY");
+        expect(valueOf("ZIP Code")).toBe("10118");
+    });
+});

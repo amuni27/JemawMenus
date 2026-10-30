@@ -32,6 +32,8 @@ export interface BusinessDTO {
     logoUrl?: string;
     /** AGF-S2-12 */
     locationUrl?: string | null;
+    /** AGF-S2-12 CR1: "ET" or "US"; missing means Ethiopia */
+    country?: string | null;
     updatedAt: Date
     createdAt: Date
 }
