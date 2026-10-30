@@ -90,4 +90,21 @@ describe("openingStatus", () => {
             expect(openingStatus(biz(weekdays, { timeZone }), at("2026-10-21T21:00:00")).label).toBe("Open now · until 22:00");
         }
     });
+
+    // AGF-S2-26: US restaurants are evaluated in their own zone, with daylight saving (AC3, AC4)
+    it("follows a US restaurant's local clock in winter and summer", () => {
+        const nineToFive = week({ MONDAY: ["09:00", "17:00"], TUESDAY: ["09:00", "17:00"], WEDNESDAY: ["09:00", "17:00"],
+            THURSDAY: ["09:00", "17:00"], FRIDAY: ["09:00", "17:00"], SATURDAY: null, SUNDAY: null });
+        const ny = biz(nineToFive, { timeZone: "America/New_York" });
+        const phx = biz(nineToFive, { timeZone: "America/Phoenix" });
+        // Wednesday 2026-01-14 15:00 UTC = 10:00 New York (EST) = 08:00 Phoenix
+        expect(openingStatus(ny, new Date("2026-01-14T15:00:00Z")).status).toBe("open");
+        expect(openingStatus(phx, new Date("2026-01-14T15:00:00Z")).status).toBe("closed");
+        // Wednesday 2026-07-15 14:00 UTC = 10:00 New York (EDT) = 07:00 Phoenix (no DST)
+        expect(openingStatus(ny, new Date("2026-07-15T14:00:00Z")).status).toBe("open");
+        expect(openingStatus(phx, new Date("2026-07-15T14:00:00Z")).status).toBe("closed");
+        // 22:00 UTC in July = 18:00 New York: closed; 15:00 Phoenix: open
+        expect(openingStatus(ny, new Date("2026-07-15T22:00:00Z")).status).toBe("closed");
+        expect(openingStatus(phx, new Date("2026-07-15T22:00:00Z")).status).toBe("open");
+    });
 });

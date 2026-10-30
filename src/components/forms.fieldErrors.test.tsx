@@ -103,7 +103,7 @@ describe("business profile form", () => {
         updateBusiness.mockRejectedValueOnce(fieldErrors([{ field: "city", message: "must not be blank" }]))
             .mockRejectedValueOnce({ response: { status: 400, data: { message: "Unsupported currency. Use ETB or USD." } } });
         wrap(<BusinessProfileModal open onClose={() => {}} onSaved={() => {}}
-                                   business={{ id: "b1", name: "Cafe", country: "US", businessPhone: "+12125550100", streetAddress: "350 5th Ave", city: "New York", state: "NY", zipcode: "10118", currency: "ETB", createdAt: new Date(), updatedAt: new Date() }} />);
+                                   business={{ id: "b1", name: "Cafe", country: "US", businessPhone: "+12125550100", streetAddress: "350 5th Ave", city: "New York", state: "NY", zipcode: "10118", timeZone: "America/New_York", currency: "ETB", createdAt: new Date(), updatedAt: new Date() }} />);
         fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
         expect(await within(fieldBox("City")).findByText("must not be blank")).toBeTruthy();
 

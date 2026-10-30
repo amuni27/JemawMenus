@@ -34,6 +34,8 @@ export interface BusinessDTO {
     locationUrl?: string | null;
     /** AGF-S2-12 CR1: "ET" or "US"; missing means Ethiopia */
     country?: string | null;
+    /** AGF-S2-26: IANA time zone; Ethiopia is Africa/Addis_Ababa */
+    timeZone?: string | null;
     updatedAt: Date
     createdAt: Date
 }

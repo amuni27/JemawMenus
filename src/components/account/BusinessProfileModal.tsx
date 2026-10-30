@@ -14,6 +14,7 @@ import {
   CITY_MESSAGE, LINK_KEEP_MESSAGE, STATE_MESSAGE, STREET_MESSAGE, US_STATES, ZIP_MESSAGE, countryName, countryOf,
   isUsState, isUsZip, phoneMatchesCountry, phoneMessage, usZipProblem,
 } from "../../utils/countryRules";
+import { US_TIME_ZONES, US_ZONE_MESSAGE, isUsZone } from "../../utils/timeZones";
 import { useToast } from "../ui/ToastContext";
 import { BusinessDTO } from "../../services/authService";
 
@@ -40,6 +41,7 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
   const [city, setCity] = useState("");
   const [region, setRegion] = useState("");
   const [zipcode, setZipcode] = useState("");
+  const [timeZone, setTimeZone] = useState(""); // AGF-S2-26 (US only)
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [locationUrl, setLocationUrl] = useState(""); // AGF-S2-12
   const [locationError, setLocationError] = useState("");
@@ -57,6 +59,7 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
     setCity(business.city ?? "");
     setRegion(business.state ?? "");
     setZipcode(business.zipcode ?? "");
+    setTimeZone(isUsZone(business.timeZone) ? business.timeZone! : "");
     setCurrency(displayCurrency(business.currency));
     setLocationUrl(business.locationUrl ?? "");
     setLocationError("");
@@ -82,6 +85,7 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
       if (!city.trim()) problems.city = CITY_MESSAGE;
       if (!isUsState(region)) problems.state = STATE_MESSAGE;
       if (!isUsZip(zipcode)) problems.zipcode = ZIP_MESSAGE;
+      if (!isUsZone(timeZone)) problems.timeZone = US_ZONE_MESSAGE;
     }
     setAddressErrors(problems);
     if (locationProblem || Object.keys(problems).length > 0) return;
@@ -96,6 +100,8 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
         businessPhone: phone || undefined,
         // AGF-S2-12 CR1: address fields only for the United States (Ethiopia doesn't collect them)
         ...(us ? { streetAddress: address.trim(), city: city.trim(), state: region.trim().toUpperCase(), zipcode: zipcode.trim() } : {}),
+        // AGF-S2-26: US only, sent only when changed
+        ...(us && timeZone !== business.timeZone ? { timeZone } : {}),
         // Only when changed, so a legacy stored value never blocks other profile edits
         currency: currency !== displayCurrency(business.currency) ? currency : undefined,
         // AGF-S2-12: sent only when changed; "" removes the link (D-S2-12-P1)
@@ -184,6 +190,15 @@ export default function BusinessProfileModal({ open, onClose, business, onSaved 
                 onChange={(e) => setZipcode(e.target.value)}
               />
             </div>
+            <FormSelect
+              label="Time zone"
+              value={timeZone}
+              error={addressErrors.timeZone || serverErrors.errorFor("timeZone", timeZone)}
+              onChange={(e) => setTimeZone(e.target.value)}
+            >
+              <option value="">Select a time zone</option>
+              {US_TIME_ZONES.map((z) => <option key={z.id} value={z.id}>{z.label}</option>)}
+            </FormSelect>
           </>
         )}
 

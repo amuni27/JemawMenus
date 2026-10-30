@@ -9,6 +9,7 @@ import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
 import BusinessProfileModal from "../../components/account/BusinessProfileModal";
 import { countryName, countryOf } from "../../utils/countryRules";
+import { timeZoneLabel } from "../../utils/timeZones";
 import BusinessLogoModal from "../../components/account/BusinessLogoModal";
 import BusinessLogo from "../../components/ui/BusinessLogo";
 import BusinessHoursModal from "../../components/account/BusinessHoursModal";
@@ -108,6 +109,7 @@ export default function AccountPage() {
               <InfoRow label="City" value={business.city} />
               <InfoRow label="State" value={business.state} />
               <InfoRow label="ZIP Code" value={business.zipcode} />
+              <InfoRow label="Time zone" value={timeZoneLabel(business.timeZone)} />
             </>
           )}
           {/* AGF-S2-10: the stored host as-is (no second domain); the guest link is built exactly like the QR code */}

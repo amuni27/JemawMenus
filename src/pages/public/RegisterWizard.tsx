@@ -2,6 +2,7 @@ import {useState} from "react";
 import { apiFieldNames, useFieldErrors } from "../../utils/fieldErrors";
 import { isStrongPassword, passwordChecks } from "../../utils/passwordPolicy";
 import { GOOGLE_MAPS_FIND_URL, googleMapsUrlProblem } from "../../utils/googleMapsUrl";
+import { US_TIME_ZONES, defaultZoneForState, isUsZone } from "../../utils/timeZones";
 import { COUNTRIES, type CountryCode, US_STATES, isUsState, isUsZip, phoneMatchesCountry, phoneMessage, usZipProblem } from "../../utils/countryRules";
 import AuthLayout from "../../components/auth/AuthLayout";
 import {Input} from "../../components/ui/Input";
@@ -32,6 +33,7 @@ interface BusinessInfo {
     city: string; // United States only
     region: string; // backend "state": the US state code (United States only)
     postalCode: string; // backend "zipcode": the US ZIP code (United States only)
+    timeZone: string; // AGF-S2-26: IANA zone, United States only (Ethiopia is always Africa/Addis_Ababa)
 
     // AGF-S2-12: optional Google Maps share link (replaces sub-city, woreda, kebele and house number, D-S2-12-1)
     locationUrl: string; // required for Ethiopia, optional for the United States (CR1)
@@ -132,6 +134,7 @@ const defaultState: WizardState = {
         city: "",
         region: "",
         postalCode: "",
+        timeZone: "",
         locationUrl: "",
     },
     hours: {
@@ -152,7 +155,7 @@ const steps = [{label: "Personal"}, {label: "Business"}, {label: "Hours"}];
 // Wizard step holding each backend registration field (AGF-S2-11)
 const FIELD_STEP: Record<string, number> = {
     fullName: 0, email: 0, phoneNumber: 0, password: 0,
-    country: 1, businessName: 1, businessPhone: 1, streetAddress: 1, city: 1, state: 1, zipcode: 1, locationUrl: 1,
+    country: 1, businessName: 1, businessPhone: 1, streetAddress: 1, city: 1, state: 1, zipcode: 1, timeZone: 1, locationUrl: 1,
     customSubdomain: 2,
 };
 
@@ -196,7 +199,7 @@ export default function RegisterWizard() {
 
             // AGF-S2-12 CR1: Ethiopia needs the link; the United States needs the full address
             if (b.country === "ET") return !!b.locationUrl.trim();
-            return !!b.address.trim() && !!b.city.trim() && isUsState(b.region) && isUsZip(b.postalCode);
+            return !!b.address.trim() && !!b.city.trim() && isUsState(b.region) && isUsZip(b.postalCode) && isUsZone(b.timeZone);
         }
 
         if (step === 2) {
@@ -238,7 +241,7 @@ export default function RegisterWizard() {
                 // AGF-S2-12 CR1: only the selected country's location fields are sent
                 country: b.country,
                 ...(b.country === "US"
-                    ? { streetAddress: b.address.trim(), city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim() }
+                    ? { streetAddress: b.address.trim(), city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim(), timeZone: b.timeZone }
                     : {}),
                 locationUrl: b.locationUrl.trim() || undefined, // AGF-S2-12
 
@@ -269,7 +272,7 @@ export default function RegisterWizard() {
             const banner = serverErrors.apply(err, {
                 fullName: p.fullName.trim(), email: p.email.trim().toLowerCase(), phoneNumber: p.phone.trim(), password: p.password,
                 country: b.country, businessName: b.businessName.trim(), businessPhone: b.businessPhone.trim(), streetAddress: b.address.trim(),
-                city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim(), locationUrl: b.locationUrl.trim(),
+                city: b.city.trim(), state: b.region.trim(), zipcode: b.postalCode.trim(), timeZone: b.timeZone, locationUrl: b.locationUrl.trim(),
                 customSubdomain: data.subdomain.trim().toLowerCase(),
             }, "Registration failed");
             const steps = apiFieldNames(err).map((f) => FIELD_STEP[f]).filter((s) => s !== undefined);
@@ -364,6 +367,9 @@ export default function RegisterWizard() {
             const us = b.country === "US";
             // AGF-S2-12 CR1: switching country keeps what was typed for the other one (not sent), and clears a
             // business phone that doesn't belong to the new country
+            // AGF-S2-26: follow the state's default unless the owner picked another zone
+            const zoneAfterStateChange = (state: string) =>
+                !b.timeZone || b.timeZone === defaultZoneForState(b.region) ? defaultZoneForState(state) : b.timeZone;
             const chooseCountry = (country: CountryCode) => update("business", {
                 ...b, country, businessPhone: phoneMatchesCountry(country, b.businessPhone) ? b.businessPhone : "",
             });
@@ -439,7 +445,7 @@ export default function RegisterWizard() {
                                     <select
                                         id="register-state"
                                         value={b.region}
-                                        onChange={(e) => update("business", {...b, region: e.target.value})}
+                                        onChange={(e) => update("business", {...b, region: e.target.value, timeZone: zoneAfterStateChange(e.target.value)})}
                                         className={selectClass}
                                     >
                                         <option value="">Select a state</option>
@@ -459,6 +465,24 @@ export default function RegisterWizard() {
                                     value={b.postalCode}
                                     onChange={(e) => update("business", {...b, postalCode: e.target.value})}
                                 />
+                            </div>
+
+                            {/* AGF-S2-26: pre-selected from the state; split states can pick another zone */}
+                            <div>
+                                <label htmlFor="register-time-zone" className="block text-sm font-medium mb-1">Time zone *</label>
+                                <select
+                                    id="register-time-zone"
+                                    value={b.timeZone}
+                                    onChange={(e) => update("business", {...b, timeZone: e.target.value})}
+                                    className={selectClass}
+                                >
+                                    <option value="">Select a time zone</option>
+                                    {US_TIME_ZONES.map((z) => <option key={z.id} value={z.id}>{z.label}</option>)}
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">Pick another zone if your city uses a different one.</p>
+                                {serverErrors.errorFor("timeZone", b.timeZone) && (
+                                    <p className="text-sm text-red-600 mt-1">{serverErrors.errorFor("timeZone", b.timeZone)}</p>
+                                )}
                             </div>
                         </>
                     )}

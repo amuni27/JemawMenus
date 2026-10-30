@@ -142,3 +142,18 @@ describe("country on the account page", () => {
         expect(valueOf("ZIP Code")).toBe("10118");
     });
 });
+
+// AGF-S2-26: the account page shows a US restaurant's time zone; Ethiopian restaurants have no row
+describe("time zone on the account page", () => {
+    it("United States: shows the zone label", () => {
+        setBusiness({ country: "US", streetAddress: "350 5th Ave", city: "New York", state: "NY", zipcode: "10118", timeZone: "America/New_York" });
+        renderPage();
+        expect(valueOf("Time zone")).toBe("Eastern");
+    });
+
+    it("Ethiopia: no time zone row", () => {
+        setBusiness({ timeZone: "Africa/Addis_Ababa" });
+        renderPage();
+        expect(screen.queryByText("Time zone")).toBeNull();
+    });
+});

@@ -24,7 +24,7 @@ const LINK = "https://maps.app.goo.gl/AbC123xyz";
 // CR1: Ethiopian unless another country is given; US restaurants carry a full address
 const business = (locationUrl: string | null, country?: "ET" | "US") =>
     ({ id: "b1", name: "Cafe", city: country === "US" ? "New York" : "Addis", currency: "ETB", locationUrl, createdAt: new Date(), updatedAt: new Date(),
-       ...(country === "US" ? { country, businessPhone: "+12125550100", streetAddress: "350 5th Ave", state: "NY", zipcode: "10118" } : country ? { country } : {}) });
+       ...(country === "US" ? { country, businessPhone: "+12125550100", streetAddress: "350 5th Ave", state: "NY", zipcode: "10118", timeZone: "America/New_York" } : country ? { country } : {}) });
 
 beforeEach(() => updateBusiness.mockReset().mockResolvedValue({ data: {} }));
 afterEach(() => cleanup());
@@ -141,5 +141,32 @@ describe("business profile: country rules", () => {
         save();
         await waitFor(() => expect(updateBusiness).toHaveBeenCalled());
         expect(updateBusiness.mock.calls[0][1]).toMatchObject({ streetAddress: "350 5th Ave", city: "New York", state: "CA", zipcode: "10118" });
+    });
+});
+
+// AGF-S2-26: US owners can change the time zone (sent only when changed); Ethiopian restaurants have no zone field
+describe("business profile: time zone", () => {
+    it("Ethiopia: no time zone field", () => {
+        renderModal(LINK, "ET");
+        expect(screen.queryByLabelText("Time zone")).toBeNull();
+    });
+
+    it("United States: shows the stored zone and sends a change", async () => {
+        render(<ToastProvider><MemoryRouter><BusinessProfileModal open onClose={() => {}} onSaved={() => {}}
+            business={{ ...business(null, "US"), timeZone: "America/Chicago" }} /></MemoryRouter></ToastProvider>);
+        const select = screen.getByLabelText("Time zone") as HTMLSelectElement;
+        expect(select.value).toBe("America/Chicago");
+        fireEvent.change(select, { target: { value: "America/Denver" } });
+        save();
+        await waitFor(() => expect(updateBusiness).toHaveBeenCalled());
+        expect(updateBusiness.mock.calls[0][1]).toMatchObject({ timeZone: "America/Denver" });
+    });
+
+    it("United States: an unchanged zone isn't sent", async () => {
+        render(<ToastProvider><MemoryRouter><BusinessProfileModal open onClose={() => {}} onSaved={() => {}}
+            business={{ ...business(null, "US"), timeZone: "America/New_York" }} /></MemoryRouter></ToastProvider>);
+        save();
+        await waitFor(() => expect(updateBusiness).toHaveBeenCalled());
+        expect(updateBusiness.mock.calls[0][1]).not.toHaveProperty("timeZone");
     });
 });

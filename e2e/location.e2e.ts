@@ -8,7 +8,8 @@ import { randomSecret } from "./support/runEnv.mjs";
 // - Registration on a phone (375 px): Ethiopia shows only the required link; switching to the United States shows
 //   street, city, state and ZIP; an Ethiopian restaurant registers with just the link.
 // - Registration on a desktop: a US restaurant registers with its address and no link; its owner adds a link and
-//   removes it again, and guests get the address search link back.
+//   removes it again, and guests get the address search link back. AGF-S2-26: the time zone is pre-selected from the
+//   state, and guests see "open now" for New York time (fixed browser clock, winter and summer).
 
 const LINK = "https://maps.app.goo.gl/AgafariJ11Demo";
 const PHONE = { width: 375, height: 812 };
@@ -108,7 +109,7 @@ test.describe("J11 registration by country", () => {
         await context.close();
     });
 
-    test("on a desktop: a US restaurant registers with its address; its owner adds and removes a link", async ({ browser }) => {
+    test("on a desktop: a US restaurant registers with its address and zone; its owner adds and removes a link", async ({ browser, request }) => {
         const context = await browser.newContext({ storageState: { cookies: [], origins: [] }, viewport: DESKTOP });
         const page = await context.newPage();
         const id = uniqueName("us").replace(/\W+/g, "");
@@ -122,6 +123,7 @@ test.describe("J11 registration by country", () => {
         await field(page, "Street Address *").fill("350 5th Ave");
         await field(page, "City *").fill("New York");
         await page.getByLabel("State *").selectOption("NY");
+        await expect(page.getByLabel("Time zone *")).toHaveValue("America/New_York"); // AGF-S2-26: from the state
         await field(page, "ZIP Code *").fill("1011");
         await expect(page.getByText(/12345 or 12345-6789/)).toBeVisible();
         await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
@@ -158,6 +160,27 @@ test.describe("J11 registration by country", () => {
         await expect(info.getByRole("link", { name: /350 5th Ave/ })).toHaveAttribute("href", /google\.com\/maps\/search/);
         await expect(info.getByRole("link", { name: "Get Directions" })).toHaveCount(0);
         await guest.context().close();
+
+        // AGF-S2-26: weekday hours 09:00–17:00; guests see the status for New York time, not Addis Ababa time
+        const token = (await (await request.post("/api/auth/login", { data: { email, password } })).json()).token;
+        const weekday = (day: string) => ({ dayOfWeek: day, isOpen: true, startTime: "09:00", endTime: "17:00" });
+        const hours = await request.patch(`/api/business/${businessId}/hours`, {
+            headers: { Authorization: `Bearer ${token}` },
+            data: { open24_7: false, businessHours: [...["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"].map(weekday),
+                ...["SATURDAY", "SUNDAY"].map((day) => ({ dayOfWeek: day, isOpen: false, startTime: null, endTime: null }))] },
+        });
+        expect(hours.ok()).toBe(true);
+        for (const [instant, expected] of [
+            ["2026-01-14T15:00:00Z", /^Open now/],   // Wednesday 10:00 in New York (18:00 in Addis Ababa)
+            ["2026-01-14T23:00:00Z", /^Closed/],     // Wednesday 18:00 in New York
+            ["2026-07-15T14:00:00Z", /^Open now/],   // Wednesday 10:00 in New York, daylight saving
+        ] as const) {
+            const timed = await guestPage(browser);
+            await timed.clock.setFixedTime(new Date(instant));
+            await timed.goto(`/${businessId}/menu`);
+            await expect(timed.getByRole("region", { name: "Restaurant information" }).getByText(expected)).toBeVisible();
+            await timed.context().close();
+        }
         await context.close();
     });
 });

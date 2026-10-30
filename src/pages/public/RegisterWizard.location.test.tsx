@@ -171,3 +171,47 @@ describe("registration: changing country", () => {
         for (const key of ADDRESS_KEYS) expect(payload).not.toHaveProperty(key);
     });
 });
+
+// AGF-S2-26: US restaurants choose a time zone, pre-selected from the state; Ethiopia has none (always Addis Ababa)
+describe("registration: time zone", () => {
+    const zone = () => screen.getByLabelText("Time zone *") as HTMLSelectElement;
+
+    it("is not shown or sent for Ethiopia", async () => {
+        toBusinessStep();
+        expect(screen.queryByLabelText("Time zone *")).toBeNull();
+        fillEthiopia();
+        finish();
+        await waitFor(() => expect(register).toHaveBeenCalled());
+        expect(register.mock.calls[0][0]).not.toHaveProperty("timeZone");
+    });
+
+    it("is pre-selected from the state, follows state changes, and is sent for the United States", async () => {
+        toBusinessStep();
+        chooseCountry("US");
+        expect(zone().value).toBe(""); // no state yet
+        expect(within(zone()).getAllByRole("option")).toHaveLength(8); // placeholder + 7
+        fillUnitedStates(); // state NY
+        expect(zone().value).toBe("America/New_York");
+        fireEvent.change(screen.getByLabelText("State *"), { target: { value: "TX" } });
+        expect(zone().value).toBe("America/Chicago");
+        finish();
+        await waitFor(() => expect(register).toHaveBeenCalled());
+        expect(register.mock.calls[0][0]).toMatchObject({ country: "US", state: "TX", timeZone: "America/Chicago" });
+    });
+
+    it("keeps a zone the owner picked when the state changes (split states)", () => {
+        toBusinessStep();
+        fillUnitedStates();
+        fireEvent.change(screen.getByLabelText("State *"), { target: { value: "TX" } });
+        fireEvent.change(zone(), { target: { value: "America/Denver" } }); // El Paso
+        fireEvent.change(screen.getByLabelText("State *"), { target: { value: "NM" } });
+        expect(zone().value).toBe("America/Denver");
+    });
+
+    it("needs a zone before going on", () => {
+        toBusinessStep();
+        fillUnitedStates();
+        fireEvent.change(zone(), { target: { value: "" } });
+        expect(next().disabled).toBe(true);
+    });
+});
