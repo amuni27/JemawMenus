@@ -81,7 +81,8 @@ export default function AccountPage() {
         <h2 className="text-2xl font-bold text-gray-900">Account &amp; Settings</h2>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* AGF-S2-35 (Defect F2): a shrinkable phone column, so long values (e.g. the guest link) can't widen the page */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* User Profile */}
         <Card title="User Profile" onEdit={() => setUserModal(true)}>
           <div className="flex items-center gap-4 mb-4">

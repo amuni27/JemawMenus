@@ -157,3 +157,13 @@ describe("time zone on the account page", () => {
         expect(screen.queryByText("Time zone")).toBeNull();
     });
 });
+
+// AGF-S2-35 (Defect F2): the cards' grid declares a phone column (minmax(0, 1fr)) so long values can't widen the page.
+// jsdom does no layout, so this only guards the class; E2E J12 checks the real layout at 375 and 320 px.
+describe("account page layout on phones", () => {
+    it("gives the cards' grid a single shrinkable column below lg", () => {
+        renderPage();
+        const grid = screen.getByRole("heading", { name: "Business Profile" }).closest("div.grid") as HTMLElement;
+        expect(grid.className.split(" ")).toEqual(expect.arrayContaining(["grid", "grid-cols-1", "lg:grid-cols-2"]));
+    });
+});
