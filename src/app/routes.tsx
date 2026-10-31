@@ -13,6 +13,7 @@ import MenusListPage from "../pages/menus/MenusListPage.tsx";
 import MenuCreatePage from "../pages/menus/MenuCreatePage.tsx";
 import MenuDetailPage from "../pages/menus/MenuDetailPage.tsx";
 import QRPage from "../pages/menus/QRPage.tsx";
+import SpecialsPage from "../pages/admin/SpecialsPage.tsx";
 import MenuItemDetail from "../pages/customer/MenuItemDetail.tsx";
 import MenuEditPage from "../pages/menus/MenuEditPage.tsx";
 import AccountPage from "../pages/admin/AccountPage.tsx";
@@ -79,6 +80,7 @@ export const routes: RouteObject[] = [
                         children: [
                             {index: true, element: <Dashboard/>},
                             {path: 'qrcode', element: <QRPage/>},
+                            {path: 'specials', element: <SpecialsPage/>}, // AGF-S2-25
                             {
                                 path: 'menus',
                                 children: [
