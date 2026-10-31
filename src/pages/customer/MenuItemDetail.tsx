@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { DetailSpecialPrice, SpecialBadge, SpecialNote } from "../../components/menu/SpecialPrice";
+import { specialApplies, useGuestNow } from "../../utils/specials";
+import { useLocalized } from "../../utils/guestLanguage";
 import { formatPrice } from "../../utils/currency";
 import { useOutletContext, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
@@ -21,6 +24,8 @@ export default function MenuItemDetail() {
     // AGF-S2-17: in the owner preview the item comes from the loaded preview (the public endpoint would 404)
     const inPreview = Boolean(outlet?.preview);
     const item = inPreview ? (itemId ? outlet?.preview?.findItem(itemId) ?? null : null) : fetchedItem;
+    const t = useLocalized(); // AGF-S2-23
+    const now = useGuestNow(); // AGF-S2-25
     const loading = inPreview ? false : fetching;
 
     useEffect(() => {
@@ -84,6 +89,9 @@ export default function MenuItemDetail() {
 
     // AGF-S2-33: unknown or hidden dish → friendly screen with a way back to this restaurant's menu
     if (!item) return <NotFound context="item" businessId={tenantSlug ?? ""} />;
+    const name = t(item.name, item.nameAm);
+    const special = specialApplies(item, now); // AGF-S2-25
+    const description = t(item.description, item.descriptionAm);
 
     return (
         <div className="mx-auto max-w-5xl p-4">
@@ -94,11 +102,11 @@ export default function MenuItemDetail() {
                     {item.imageUrl ? (
                         <img
                             src={item.imageUrl}
-                            alt={item.name ?? "Menu item"}
+                            alt={name.text || "Menu item"}
                             className="h-64 w-full rounded-2xl object-cover shadow-sm lg:h-[420px]"
                         />
                     ) : (
-                        <div className="flex h-64 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm text-gray-400 lg:h-[420px]">
+                        <div className="flex h-64 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm text-gray-600 lg:h-[420px]">
                             No image
                         </div>
                     )}
@@ -110,17 +118,19 @@ export default function MenuItemDetail() {
                     <div className="flex flex-col gap-1">
                         <div className="flex items-start justify-between gap-3 lg:justify-start">
                             <h1 className="text-2xl font-bold text-gray-900 lg:text-3xl">
-                                {item.name ?? "Untitled item"}
+                                <span lang={name.lang}>{name.text || "Untitled item"}</span>
                             </h1>
 
                             {/* Mobile price beside title */}
                             <div className="text-right lg:hidden">
-                                {priceNumber !== null ? (
+                                {special ? (
+                                    <div className="text-sm font-semibold text-gray-900"><DetailSpecialPrice item={item} currency={item.currency} /></div>
+                                ) : priceNumber !== null ? (
                                     <div className="text-sm font-semibold text-gray-900">
                                         {formatPrice(priceNumber, item.currency)}
                                     </div>
                                 ) : (
-                                    <div className="text-sm text-gray-400">Price not set</div>
+                                    <div className="text-sm text-gray-500">Price not set</div>
                                 )}
                             </div>
                         </div>
@@ -133,23 +143,33 @@ export default function MenuItemDetail() {
 
                         {/* Desktop price under title (slightly softer color) */}
                         <div className="hidden lg:block">
-                            {priceNumber !== null ? (
+                            {special ? (
+                                <div className="text-xl font-semibold text-gray-700"><DetailSpecialPrice item={item} currency={item.currency} /></div>
+                            ) : priceNumber !== null ? (
                                 <div className="text-xl font-semibold text-gray-700">
                                     {formatPrice(priceNumber, item.currency)}
                                 </div>
                             ) : (
-                                <div className="text-sm text-gray-400">Price not set</div>
+                                <div className="text-sm text-gray-500">Price not set</div>
                             )}
                         </div>
+
+                        {/* AGF-S2-25: shown once for both layouts */}
+                        {special ? (
+                            <div className="space-y-1">
+                                <SpecialBadge until={item.specialUntil} />
+                                <SpecialNote item={item} />
+                            </div>
+                        ) : null}
 
                         {/* Small divider (more “senior” polish) */}
                         <hr className="my-3 border-gray-200" />
                     </div>
 
-                    {item.description ? (
-                        <p className="mt-2 text-gray-600">{item.description}</p>
+                    {description.text ? (
+                        <p lang={description.lang} className="mt-2 text-gray-600">{description.text}</p>
                     ) : (
-                        <p className="mt-2 text-sm text-gray-400 italic">No description</p>
+                        <p className="mt-2 text-sm text-gray-500 italic">No description</p>
                     )}
 
                     <div className="mt-3 flex flex-wrap gap-3 text-sm text-gray-500">
@@ -210,7 +230,7 @@ export default function MenuItemDetail() {
 
                     <div className="mt-6">
                         <button
-                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+                            className="rounded-lg border px-4 py-2 text-sm bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                             onClick={() => outlet?.addToWaiterList(item)}
                             disabled={isSoldOut(item.status) || !outlet || Boolean(outlet.preview)}
                             aria-label={outlet?.preview?.addDisabledLabel}

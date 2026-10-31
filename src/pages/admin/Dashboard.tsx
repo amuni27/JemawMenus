@@ -5,7 +5,7 @@ import menuApi from "../../api/menuApi";
 import itemApi from "../../api/itemsApi.ts";
 import LoadError from "../../components/ui/LoadError";
 import { MENU_STATUS_CLASSES, menuStatus, type MenuStatus } from "../../utils/menuStatus";
-import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import { publicMenuUrl } from "../../utils/publicMenuUrl";
 import { errorMessage } from "../../utils/errorMessage";
 
 // AGF-S2-09: at-a-glance owner home (backlog scope only): menus by status, sold-out items with a link to the
@@ -49,6 +49,7 @@ export default function Dashboard() {
     for (const m of data?.menus ?? []) counts[menuStatus(m)] += 1;
     const withSoldOut = (data?.soldOut ?? []).filter((s) => s.count > 0);
     const soldOutTotal = withSoldOut.reduce((sum, s) => sum + s.count, 0);
+    const guestMenuUrl = tenantSlug ? publicMenuUrl(tenantSlug) : null;
     const soldOutLink = (menuId: string) => `/${tenantSlug}/admin/menus/${menuId}?stock=sold-out`;
 
     return (
@@ -142,14 +143,21 @@ export default function Dashboard() {
                             <Link to={`/${tenantSlug}/admin/qrcode`} className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">
                                 <QrCode aria-hidden="true" className="h-4 w-4" /> View QR code
                             </Link>
-                            <a
-                                href={buildMenuUrl(tenantSlug)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
-                            >
-                                <ExternalLink aria-hidden="true" className="h-4 w-4" /> Open guest menu
-                            </a>
+                            {guestMenuUrl ? (
+                                <a
+                                    href={guestMenuUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                >
+                                    <ExternalLink aria-hidden="true" className="h-4 w-4" /> Open guest menu
+                                </a>
+                            ) : (
+                                // AGF-S2-20: invalid configured address → no link (fail closed)
+                                <span className="inline-flex items-center justify-center rounded-xl border border-dashed border-gray-200 px-4 py-2.5 text-sm text-gray-500">
+                                    Guest menu link unavailable
+                                </span>
+                            )}
                         </div>
                     </section>
                 </>

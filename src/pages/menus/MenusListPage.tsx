@@ -1,14 +1,15 @@
-import {useEffect, useState} from "react";
-import {Link, useParams} from "react-router-dom";
-import {Menu} from "../../types/menu";
+import {useEffect, useRef, useState} from "react";
+import {Link, useNavigate, useParams} from "react-router-dom";
+import {Menu, MenuDuplicateResult} from "../../types/menu";
 import menuApi from "../../api/menuApi";
-import MenuQrModal from "../../components/menu/MenuQrModal";
 import {useAuth} from "../../app/context/AuthContext";
 import DeleteCategoryModal from "../../components/menu/DeleteCategoryModal.tsx";
 import {useMenus} from "../../hooks/useMenus";
 import LoadError from "../../components/ui/LoadError";
 import MenuStatusBadge from "../../components/menu/MenuStatusBadge";
 import {errorMessage} from "../../utils/errorMessage";
+import DuplicateMenuDialog from "../../components/menu/DuplicateMenuDialog";
+import {useToast} from "../../components/ui/ToastContext";
 
 export default function MenusListPage() {
     const auth = useAuth();
@@ -16,7 +17,6 @@ export default function MenusListPage() {
     const {deleteMenu} = useMenus();
 
     const [menus, setMenus] = useState<Menu[]>([]);
-    const [qrMenu, setQrMenu] = useState<Menu | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState("");
 
@@ -24,6 +24,31 @@ export default function MenusListPage() {
     const [deleting, setDeleting] = useState<Menu>();
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState("");
+
+    // AGF-S2-18: duplicate a menu; Cancel returns focus to the button that opened the dialog
+    const navigate = useNavigate();
+    const toast = useToast();
+    const [duplicating, setDuplicating] = useState<Menu | null>(null);
+    const duplicateTrigger = useRef<HTMLButtonElement | null>(null);
+
+    const openDuplicate = (menu: Menu, button: HTMLButtonElement) => {
+        duplicateTrigger.current = button;
+        setDuplicating(menu);
+    };
+
+    const closeDuplicate = () => {
+        setDuplicating(null);
+        duplicateTrigger.current?.focus();
+    };
+
+    const duplicated = ({menu, itemsCopied, imagesNotCopied}: MenuDuplicateResult) => {
+        const images = imagesNotCopied > 0
+            ? `. ${imagesNotCopied} image${imagesNotCopied === 1 ? "" : "s"} couldn't be copied.`
+            : "";
+        toast(`Menu duplicated: ${itemsCopied} item${itemsCopied === 1 ? "" : "s"} copied${images}`);
+        setDuplicating(null);
+        navigate(`/${auth.business?.id ?? menu.businessId}/admin/menus/${menu.id}`);
+    };
 
     const openDelete = (menu: Menu) => {
         setDeleting(menu);
@@ -134,7 +159,15 @@ export default function MenusListPage() {
                                         <div className="mt-2"><MenuStatusBadge menu={menu}/></div>
                                     </div>
 
-                                    <div className="flex shrink-0 items-center gap-3">
+                                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            aria-label={`Duplicate ${menu.name}`}
+                                            onClick={(e) => openDuplicate(menu, e.currentTarget)}
+                                            className="text-sm font-medium text-gray-700 hover:underline"
+                                        >
+                                            Duplicate
+                                        </button>
                                         <Link
                                             to={`/${tenantSlug}/admin/menus/${menu.id}/edit`}
                                             className="text-sm font-medium text-indigo-600 hover:underline"
@@ -151,10 +184,6 @@ export default function MenusListPage() {
                                     </div>
                                 </div>
 
-                                {/* Optional: extra actions row (if you later add QR, etc.) */}
-                                {/* <div className="mt-3 flex gap-2">
-                  <button onClick={() => setQrMenu(menu)} className="text-sm text-blue-600">QR</button>
-                </div> */}
                             </div>
                         ))}
                     </div>
@@ -202,6 +231,14 @@ export default function MenusListPage() {
 
                                     <td className="px-6 py-4 text-right text-sm font-medium">
                                         <div className="inline-flex items-center gap-4">
+                                            <button
+                                                type="button"
+                                                aria-label={`Duplicate ${menu.name}`}
+                                                onClick={(e) => openDuplicate(menu, e.currentTarget)}
+                                                className="text-gray-700 hover:underline"
+                                            >
+                                                Duplicate
+                                            </button>
                                             <Link
                                                 to={`/${tenantSlug}/admin/menus/${menu.id}/edit`}
                                                 className="text-indigo-600 hover:underline"
@@ -226,12 +263,12 @@ export default function MenusListPage() {
                 </>
             )}
 
-            {/* QR modal */}
-            {qrMenu && tenantSlug && (
-                <MenuQrModal
-                    tenantSlug={tenantSlug}
-                    menuId={qrMenu.id}
-                    onClose={() => setQrMenu(null)}
+            {duplicating && (
+                <DuplicateMenuDialog
+                    key={duplicating.id}
+                    menu={duplicating}
+                    onClose={closeDuplicate}
+                    onDuplicated={duplicated}
                 />
             )}
 

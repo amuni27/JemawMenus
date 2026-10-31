@@ -34,6 +34,7 @@ export default function MenuDetailPage() {
     setItemOrder,
     presignItemImage,
     confirmItemImage,
+    removeItemImage,
   } = useItems(menuId);
 
   const [error, setError] = useState<string>("");
@@ -191,6 +192,7 @@ export default function MenuDetailPage() {
                 onCreate={createItem}
                 onPresignImage={presignItemImage}
                 onConfirmImage={confirmItemImage}
+                onRemoveImage={removeItemImage}
                 currency={menu.currency}
             />
           </section>

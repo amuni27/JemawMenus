@@ -30,6 +30,12 @@ export interface BusinessDTO {
     currency?: string;
     open24_7?: boolean;
     logoUrl?: string;
+    /** AGF-S2-12 */
+    locationUrl?: string | null;
+    /** AGF-S2-12 CR1: "ET" or "US"; missing means Ethiopia */
+    country?: string | null;
+    /** AGF-S2-26: IANA time zone; Ethiopia is Africa/Addis_Ababa */
+    timeZone?: string | null;
     updatedAt: Date
     createdAt: Date
 }

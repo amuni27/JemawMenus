@@ -3,7 +3,7 @@ import { clsx } from "../../utils/clsx";
 
 type Props = {
     active: boolean;
-    label: string;
+    label: React.ReactNode; // AGF-S2-23: may be a localized text
     onClick: () => void;
     tabId?: string; // <-- added (for auto-scroll into view)
 };

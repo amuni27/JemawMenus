@@ -26,11 +26,18 @@ export default function ItemCard({item, onEdit, onToggle, onSoldOutToggle, onDel
         <div className="relative overflow-hidden rounded-2xl border bg-white shadow transition hover:shadow-md">
 
 
-            <img
-                src={item.imageUrl ?? undefined}
-                alt={item.name}
-                className="h-32 w-full object-cover"
-            />
+            {item.imageUrl ? (
+                <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="h-32 w-full object-cover"
+                />
+            ) : (
+                // AGF-S2-16: same neutral placeholder as the guest card instead of a broken image
+                <div className="flex h-32 w-full items-center justify-center bg-gray-100 text-sm text-gray-400">
+                    No image
+                </div>
+            )}
 
             <div className="p-4 space-y-1">
                 <h3 className="font-semibold">{item.name}</h3>

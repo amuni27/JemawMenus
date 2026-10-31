@@ -36,6 +36,72 @@ jobs:
       - name: Unit tests
         run: npm test
 
+  # AGF-S2-28: owner → guest smoke journeys in a real browser against the real backend (demo profile, in-memory data).
+  # The backend branch is the same-named one if it exists, else develop (pull requests: the base branch's name).
+  e2e-smoke:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Choose the backend branch
+        id: backend
+        run: |
+          ref="$(node e2e/support/runEnv.mjs backend-ref)"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "Backend branch: $ref"
+
+      - name: Check out the backend
+        uses: actions/checkout@v4
+        with:
+          repository: amuni27/jemaw-menu-backend-spring
+          ref: ${{ steps.backend.outputs.ref }}
+          path: backend
+
+      - name: Backend commit under test
+        run: git -C backend log -1 --format='%H %s'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Secrets (owner password, JWT and reset secrets) are generated per run inside playwright.config.ts.
+      - name: Run smoke journeys
+        env:
+          E2E_BACKEND_DIR: backend
+        run: npm run e2e
+
+      - name: Upload report and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
   secret-scan:
     name: Secret scan (gitleaks, full history)
     runs-on: ubuntu-latest

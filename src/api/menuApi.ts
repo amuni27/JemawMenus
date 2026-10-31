@@ -28,6 +28,11 @@ class MenuService {
     return fetchItems(`/menus/${menuId}/preview`);
   }
 
+  /** AGF-S2-18: copies the menu with all categories and items into a new, unpublished menu */
+  duplicateMenu(menuId: string, name: string) {
+    return postRequest(`/menus/${menuId}/duplicate`, { name });
+  }
+
   createMenu(data: MenuDto) {
     return postRequest("/menus", data);
   }

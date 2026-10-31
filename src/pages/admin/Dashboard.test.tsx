@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import { publicMenuUrl } from "../../utils/publicMenuUrl";
 
 // AGF-S2-09: the owner dashboard shows menus by status, sold-out items with a link to the filtered items view,
 // a "Menu coming soon" warning when nothing is live, and quick actions. Data comes from the owner's own APIs.
@@ -92,9 +92,20 @@ describe("owner dashboard", () => {
         expect((await screen.findByRole("link", { name: "Create menu" })).getAttribute("href")).toBe("/biz-1/admin/menus/new");
         expect(screen.getByRole("link", { name: "View QR code" }).getAttribute("href")).toBe("/biz-1/admin/qrcode");
         const guest = screen.getByRole("link", { name: /Open guest menu/ }) as HTMLAnchorElement;
-        expect(guest.getAttribute("href")).toBe(buildMenuUrl("biz-1"));
+        expect(guest.getAttribute("href")).toBe(publicMenuUrl("biz-1"));
         expect(guest.target).toBe("_blank");
         expect(guest.rel).toContain("noopener");
+    });
+
+    // AGF-S2-20: an invalid configured address fails closed
+    it("shows 'Guest menu link unavailable' instead of the guest link when the address is invalid", async () => {
+        vi.stubEnv("VITE_PUBLIC_MENU_BASE_URL", "http://menu.example.test");
+        listMenus.mockResolvedValue({ data: [menu("m1", "All-Day", true)] });
+        renderDashboard();
+
+        expect(await screen.findByText("Guest menu link unavailable")).toBeTruthy();
+        expect(screen.queryByRole("link", { name: /Open guest menu/ })).toBeNull();
+        vi.unstubAllEnvs();
     });
 
     it("handles a business with no menus yet", async () => {

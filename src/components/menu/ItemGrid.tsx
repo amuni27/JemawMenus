@@ -36,6 +36,8 @@ interface Props {
     // ✅ NEW: required for image upload flow
     onConfirmImage: (itemId: string, objectKey: string) => Promise<MenuItem>;
     // ✅ NEW: required when an image file is selected (create/edit)
+    // AGF-S2-16: remove the item's photo
+    onRemoveImage?: (itemId: string) => Promise<MenuItem>;
     onPresignImage: (itemId: string, contentType: string) => Promise<{
         item: MenuItem;
         upload?: { uploadUrl: string; objectKey: string; expiresInSeconds?: number } | null;
@@ -129,6 +131,7 @@ export default function ItemGrid({
                                      onCreate,
                                      onConfirmImage,
                                      onPresignImage,
+                                     onRemoveImage,
                                      currency,
                                  }: Props) {
     const [search, setSearch] = useState("");
@@ -327,6 +330,7 @@ export default function ItemGrid({
                 onUpdate={onUpdate}
                 onConfirmImage={onConfirmImage}
                 onPresignImage={onPresignImage}
+                onRemoveImage={onRemoveImage}
                 currency={currency}
             />
 

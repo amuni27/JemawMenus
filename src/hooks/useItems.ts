@@ -278,6 +278,17 @@ export function useItems(menuId?: string) {
         [safeSetItems]
     );
 
+    // AGF-S2-16: the item comes back without a photo
+    const removeItemImage = useCallback(
+        async (itemId: string): Promise<MenuItem> => {
+            const res = await itemApi.removeImage(itemId);
+            const updated = unwrapData<MenuItem>(res);
+            safeSetItems((prev) => prev.map((i) => (i.id === itemId ? updated : i)));
+            return updated;
+        },
+        [safeSetItems]
+    );
+
     return {
         items,
         loading,
@@ -293,5 +304,6 @@ export function useItems(menuId?: string) {
         setItemOrder,
         presignItemImage,
         confirmItemImage,
+        removeItemImage,
     };
 }

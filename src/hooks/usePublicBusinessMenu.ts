@@ -16,6 +16,7 @@ type Category = {
     id: string;
     menuId: string;
     name: string;
+    nameAm?: string | null; // AGF-S2-23
     sortOrder: number;
 };
 
@@ -24,6 +25,8 @@ type MenuItem = {
     menuId: string;
     categoryId: string;
     name: string;
+    nameAm?: string | null; // AGF-S2-23
+    descriptionAm?: string | null;
     description?: string;
     price: string;
     calories?: number;
@@ -35,6 +38,7 @@ type MenuItem = {
 type Menu = {
     id: string;
     name: string;
+    nameAm?: string | null; // AGF-S2-23
     description?: string;
     currency: string;
     categories: Category[];

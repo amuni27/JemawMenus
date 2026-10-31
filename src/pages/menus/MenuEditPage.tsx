@@ -45,6 +45,7 @@ export default function MenuEditPage() {
     name: menu.name,
     menuTypeId: menu.menuTypeId ?? menu.menuType?.id,
     description: menu.description ?? "",
+    nameAm: menu.nameAm ?? "", // AGF-S2-23
     visibility: menu.visibility,
     isActive: menu.active,
   };

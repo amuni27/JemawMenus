@@ -109,9 +109,9 @@ describe("item drag and drop", () => {
         expect(within(grid).queryByRole("button", { name: /^Drag .* to reorder$/ })).toBeNull();
         expect(grid.querySelector("svg.lucide-grip-vertical")).toBeNull();
         expect(card("X Tibs").getAttribute("tabindex")).toBe("0");
-        // images, names, prices, badges and actions are still on the card
+        // image area, names, prices, badges and actions are still on the card
         const x = card("X Tibs");
-        expect(within(x).getByRole("img", { name: "X Tibs" })).toBeTruthy();
+        expect(within(x).getByText("No image")).toBeTruthy(); // AGF-S2-16: no photo → placeholder, not a broken <img>
         expect(within(x).getByText("ETB 100.00")).toBeTruthy();
         expect(within(x).getByRole("button", { name: "Hide" })).toBeTruthy();
         // keyboard instructions are attached to the card

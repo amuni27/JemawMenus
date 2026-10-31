@@ -57,3 +57,19 @@ describe("ItemCard owner actions", () => {
         expect(screen.queryByRole("button", { name: "Back in stock" })).toBeNull();
     });
 });
+
+// AGF-S2-16: an item without a photo shows a neutral placeholder, not a broken image
+describe("ItemCard photo", () => {
+    it("shows 'No image' and no <img> when the item has no photo", () => {
+        renderCard("AVAILABLE");
+        expect(screen.getByText("No image")).toBeTruthy();
+        expect(screen.queryByRole("img")).toBeNull();
+    });
+
+    it("shows the photo when there is one", () => {
+        render(<ItemCard item={{ ...item("AVAILABLE"), imageUrl: "https://images.test.invalid/x.jpg" }}
+                         onEdit={vi.fn()} onToggle={vi.fn()} onDelete={vi.fn()} />);
+        expect((screen.getByRole("img", { name: "Tibs" }) as HTMLImageElement).src).toBe("https://images.test.invalid/x.jpg");
+        expect(screen.queryByText("No image")).toBeNull();
+    });
+});
