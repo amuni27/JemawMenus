@@ -1,6 +1,8 @@
 import React from "react";
 import { MenuPicker } from "./MenuPicker.tsx";
 import BusinessLogo from "../ui/BusinessLogo";
+import { LanguageSwitch } from "./LanguageSwitch";
+import { useGuestLanguage } from "../../utils/guestLanguage";
 
 type Props = {
   businessName?: string;
@@ -33,10 +35,11 @@ export function MenuHeader({
   searchQuery,
   onSearchChange,
 }: Props) {
+  const { available: languageSwitch } = useGuestLanguage(); // AGF-S2-23
   return (
     <header className="border-b bg-white lg:sticky lg:top-0 lg:z-40">
       {/* Top row */}
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 pt-2">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3 pt-2">
         {/* Brand */}
         <div className="inline-flex items-center px-2 py-1">
           {/* AGF-S2-01: the restaurant's own logo, or its initials */}
@@ -45,6 +48,13 @@ export function MenuHeader({
             {businessName ?? "Menu"}
           </p>
         </div>
+
+        {/* AGF-S2-23: only when the restaurant has Amharic text; its own line on phones, inline from sm */}
+        {languageSwitch && (
+          <div className="order-last flex w-full justify-end px-2 sm:order-none sm:ml-auto sm:w-auto sm:px-0">
+            <LanguageSwitch />
+          </div>
+        )}
 
         {/* Right actions */}
         <div className="flex items-center gap-3">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocalized } from "../../utils/guestLanguage";
 import { formatPrice } from "../../utils/currency";
 import { useOutletContext, useParams } from "react-router-dom";
 import publicMenueApi from "../../api/publicMenueApi.ts";
@@ -21,6 +22,7 @@ export default function MenuItemDetail() {
     // AGF-S2-17: in the owner preview the item comes from the loaded preview (the public endpoint would 404)
     const inPreview = Boolean(outlet?.preview);
     const item = inPreview ? (itemId ? outlet?.preview?.findItem(itemId) ?? null : null) : fetchedItem;
+    const t = useLocalized(); // AGF-S2-23
     const loading = inPreview ? false : fetching;
 
     useEffect(() => {
@@ -84,6 +86,8 @@ export default function MenuItemDetail() {
 
     // AGF-S2-33: unknown or hidden dish → friendly screen with a way back to this restaurant's menu
     if (!item) return <NotFound context="item" businessId={tenantSlug ?? ""} />;
+    const name = t(item.name, item.nameAm);
+    const description = t(item.description, item.descriptionAm);
 
     return (
         <div className="mx-auto max-w-5xl p-4">
@@ -94,7 +98,7 @@ export default function MenuItemDetail() {
                     {item.imageUrl ? (
                         <img
                             src={item.imageUrl}
-                            alt={item.name ?? "Menu item"}
+                            alt={name.text || "Menu item"}
                             className="h-64 w-full rounded-2xl object-cover shadow-sm lg:h-[420px]"
                         />
                     ) : (
@@ -110,7 +114,7 @@ export default function MenuItemDetail() {
                     <div className="flex flex-col gap-1">
                         <div className="flex items-start justify-between gap-3 lg:justify-start">
                             <h1 className="text-2xl font-bold text-gray-900 lg:text-3xl">
-                                {item.name ?? "Untitled item"}
+                                <span lang={name.lang}>{name.text || "Untitled item"}</span>
                             </h1>
 
                             {/* Mobile price beside title */}
@@ -146,8 +150,8 @@ export default function MenuItemDetail() {
                         <hr className="my-3 border-gray-200" />
                     </div>
 
-                    {item.description ? (
-                        <p className="mt-2 text-gray-600">{item.description}</p>
+                    {description.text ? (
+                        <p lang={description.lang} className="mt-2 text-gray-600">{description.text}</p>
                     ) : (
                         <p className="mt-2 text-sm text-gray-500 italic">No description</p>
                     )}

@@ -137,6 +137,8 @@ export type CreateItemPayload = {
 
 export type WaiterListSnapshot = {
   name: string;
+  /** AGF-S2-23: shown when the guest has chosen Amharic */
+  nameAm?: string;
   imageUrl?: string;
   price?: number;      // snapshot of price at time added
   currency?: string;   // snapshot of currency at time added

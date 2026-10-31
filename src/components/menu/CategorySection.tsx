@@ -1,3 +1,4 @@
+import { Localized } from "./Localized";
 import React from "react";
 import { MenuItemCard } from "./MenuItemCard";
 
@@ -17,7 +18,7 @@ export function CategorySection({ category, items, currency, onAddItem, addDisab
             <div className="mb-4 flex items-end justify-between gap-3">
                 <div>
                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
-                        {category.name}
+                        <Localized main={category.name} am={category.nameAm} />
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">
                         {itemCount} item{itemCount === 1 ? "" : "s"}

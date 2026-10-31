@@ -1,4 +1,5 @@
 import {Link, useNavigate} from "react-router-dom";
+import { useLocalized } from "../../utils/guestLanguage";
 import { displayCurrency } from "../../utils/currency";
 import {isSoldOut} from "../../utils/itemAvailability.ts";
 import { declaredDiets, dietLabel } from "../../utils/dietary.ts";
@@ -22,6 +23,10 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
             ? Number(item.price)
             : null;
     const soldOut = isSoldOut(item.status);
+    // AGF-S2-23: the selected language, field by field
+    const t = useLocalized();
+    const name = t(item.name, item.nameAm);
+    const description = t(item.description, item.descriptionAm);
     const addOff = soldOut || Boolean(addDisabledLabel);
     const diets = declaredDiets(item); // AGF-S2-14: badges for the dietary vocabulary only
 
@@ -42,7 +47,7 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
-                        alt={item.name}
+                        alt={name.text}
                         className={`h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 ${soldOut ? "opacity-60 grayscale" : ""}`}
                         loading="lazy"
                     />
@@ -67,7 +72,7 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                         type="button"
                         onClick={() => { if (!addOff) onAddItem?.(item); }}
                         disabled={addOff}
-                        aria-label={addDisabledLabel ?? (soldOut ? `${item.name} is sold out` : `Add ${item.name}`)}
+                        aria-label={addDisabledLabel ?? (soldOut ? `${name.text} is sold out` : `Add ${name.text}`)}
                         className={`
     absolute right-1 top-28 lg:top-32 lg:right-3
     inline-flex h-9 w-9 items-center justify-center
@@ -95,7 +100,7 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                         onClick={(e) => e.stopPropagation()}
                         className="rounded hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
                     >
-                        {item.name}
+                        <span lang={name.lang}>{name.text}</span>
                     </Link>
                 </h3>
 
@@ -109,9 +114,9 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                     </div>
                 ) : null}
 
-                {item.description ? (
-                    <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-                        {item.description}
+                {description.text ? (
+                    <p lang={description.lang} className="mt-1 text-sm text-gray-500 line-clamp-2">
+                        {description.text}
                     </p>
                 ) : (
                     <p className="mt-1 text-sm text-gray-500 italic">No description</p>

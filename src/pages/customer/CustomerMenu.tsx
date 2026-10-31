@@ -17,6 +17,8 @@ import { useToast } from "../../components/ui/ToastContext.tsx";
 import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
 import { itemMatches, normalizeSearch, type Searchable } from "../../utils/menuSearch.ts";
 import { featuredItems } from "../../utils/featured.ts";
+import { hasAmharic, initialLanguage, localized, readStoredLanguage, storeLanguage, type GuestLang } from "../../utils/guestLanguage";
+import { GuestLanguageProvider, Localized } from "../../components/menu/Localized";
 import { availableChips, hasActiveFilters, matchesFilters, NO_FILTERS, type DietaryFilters as Filters, type DietKey, type WithDietaryData } from "../../utils/dietary.ts";
 
 
@@ -58,6 +60,15 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
 
     const [isWaiterListOpen, setIsWaiterListOpen] = useState(false);
 
+    // AGF-S2-23: guest language (D-S2-23-3, -4); the switch only appears when the restaurant has Amharic text
+    const [language, setLanguageState] = useState<GuestLang>(() => initialLanguage(readStoredLanguage(), typeof navigator === "undefined" ? "" : navigator.language));
+    const amharicAvailable = useMemo(() => hasAmharic(menus as never), [menus]);
+    const guestLanguage = useMemo(() => ({
+        lang: amharicAvailable ? language : "en" as GuestLang,
+        available: amharicAvailable,
+        setLang: (next: GuestLang) => { setLanguageState(next); storeLanguage(next); },
+    }), [language, amharicAvailable]);
+
     const waiterListItemCount = useMemo(() => {
         return Object.values(waiterList).reduce((sum, e) => sum + e.quantity, 0);
     }, [waiterList]);
@@ -97,6 +108,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         // snapshot: keep it small + stable
         const snapshot = {
             name: String(menuItem.name ?? "Unnamed item"),
+            nameAm: menuItem.nameAm ? String(menuItem.nameAm) : undefined, // AGF-S2-23
             imageUrl: menuItem.imageUrl ? String(menuItem.imageUrl) : undefined,
             price:
                 typeof menuItem.price === "number" || typeof menuItem.price === "string"
@@ -124,7 +136,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
 
             return { ...prev, [itemId]: next };
         });
-        toast(`Added: ${menuItem.name ?? "Item"}`);
+        toast(`Added: ${localized(menuItem.name, menuItem.nameAm, guestLanguage.lang).text || "Item"}`);
     }
 
     function incrementWaiterListItem(itemId: string) {
@@ -353,6 +365,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     }
 
     return (
+        <GuestLanguageProvider value={guestLanguage}>
         <div className="bg-white">
             <MenuHeader
                 businessName={business?.name}
@@ -404,7 +417,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                     key={c.id}
                                     tabId={c.id}
                                     active={activeCategoryId === c.id}
-                                    label={c.name}
+                                    label={<Localized main={c.name} am={c.nameAm} />}
                                     onClick={() => scrollToCategory(c.id)}
                                 />
                             ))}
@@ -502,5 +515,6 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                 onClear={clearWaiterList}
             />
         </div>
+        </GuestLanguageProvider>
     );
 }

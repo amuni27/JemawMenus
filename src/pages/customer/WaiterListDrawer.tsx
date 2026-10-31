@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useLocalized } from "../../utils/guestLanguage";
 import {WaiterListMap} from "../../types/menu.ts";
 import {BroomIcon, ClearIcon} from "../../assets/svg_icon.tsx";
 import {TrashIcon, XIcon} from "lucide-react";
@@ -27,6 +28,7 @@ export function WaiterListDrawer({
                                      onRemove,
                                      onClear,
                                  }: Props) {
+    const t = useLocalized(); // AGF-S2-23: names in the selected language
     const entries = useMemo(() => Object.values(waiterList), [waiterList]);
 
     // AGF-S2-27: a modal dialog. Focus moves into it, stays inside, Escape closes it, and focus returns to the
@@ -119,17 +121,18 @@ export function WaiterListDrawer({
                         <div className="space-y-3">
                             {entries.map((e) => {
                                 const snap = e.snapshot;
+                                const name = t(snap.name, snap.nameAm); // AGF-S2-23
                                 const soldOut = soldOutItemIds?.has(e.itemId) ?? false;
                                 return (
                                     <div key={e.itemId} className="flex gap-3 rounded-2xl border p-3">
                                         <div className="h-14 w-14 overflow-hidden rounded-xl bg-gray-100">
-                                            <EntryPhoto url={snap.imageUrl} name={snap.name} />
+                                            <EntryPhoto url={snap.imageUrl} name={name.text} />
                                         </div>
 
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <div className="truncate font-semibold text-gray-900">
-                                                    {snap.name}
+                                                <div lang={name.lang} className="truncate font-semibold text-gray-900">
+                                                    {name.text}
                                                 </div>
                                                 {soldOut ? (
                                                     <span className="shrink-0 rounded-full bg-gray-900 px-2 py-0.5 text-xs font-semibold text-white">
@@ -158,7 +161,7 @@ export function WaiterListDrawer({
                                                     type="button"
                                                     onClick={() => onDecrement(e.itemId)}
                                                     className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-100"
-                                                    aria-label={`Decrease ${snap.name}`}
+                                                    aria-label={`Decrease ${name.text}`}
                                                 >
                                                     –
                                                 </button>
@@ -170,7 +173,7 @@ export function WaiterListDrawer({
                                                     onClick={() => onIncrement(e.itemId)}
                                                     disabled={soldOut}
                                                     className="h-8 w-8 rounded-full border text-lg font-bold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                                                    aria-label={`Increase ${snap.name}`}
+                                                    aria-label={`Increase ${name.text}`}
                                                 >
                                                     +
                                                 </button>
@@ -178,7 +181,7 @@ export function WaiterListDrawer({
                                                 <button
                                                     type="button"
                                                     onClick={() => onRemove(e.itemId)}
-                                                    aria-label={`Remove ${snap.name}`}
+                                                    aria-label={`Remove ${name.text}`}
                                                     className="ml-auto rounded-lg border px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                                                 >
                                                     <TrashIcon className="h-5 w-5" />
