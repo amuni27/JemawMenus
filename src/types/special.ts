@@ -51,3 +51,38 @@ export interface DishOption {
     menuId: string;
     menuName: string;
 }
+
+// ---- AGF-S2-36: category specials (a percentage off every eligible dish in one category) ----------------------
+
+export interface CategorySpecial {
+    id: string;
+    categoryId: string;
+    categoryName: string;
+    menuId: string;
+    menuName: string;
+    discountPercent: number;
+    note?: string | null;
+    noteAm?: string | null;
+    startsOn?: string | null;
+    endsOn?: string | null;
+    daysOfWeek: string[];
+    startTime?: string | null;
+    endTime?: string | null;
+    paused: boolean;
+    status: SpecialStatus;
+    /** Dishes guests can see in the category with a price above 0 */
+    eligibleDishes: number;
+}
+
+export type CategorySpecialPayload = Omit<SpecialPayload, "menuItemId" | "specialPrice"> & Partial<{
+    categoryId: string;
+    discountPercent: number;
+}>;
+
+/** A category the owner can put on special. */
+export interface CategoryOption {
+    id: string;
+    name: string;
+    menuId: string;
+    menuName: string;
+}

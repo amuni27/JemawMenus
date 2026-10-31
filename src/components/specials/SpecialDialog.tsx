@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import Modal from "../ui/Modal";
 import ModalHeader from "../ui/ModalHeader";
 import Button from "../ui/Button";
+import ScheduleFields from "./ScheduleFields";
 import { useFieldErrors } from "../../utils/fieldErrors";
 import { formatPrice } from "../../utils/currency";
-import { WEEK_DAYS, type DishOption, type Special, type SpecialPayload } from "../../types/special";
+import { scheduleChangePayload, scheduleCreatePayload, scheduleDraftOf, scheduleErrors, type ScheduleDraft } from "../../utils/specialSchedule";
+import type { DishOption, Special, SpecialPayload } from "../../types/special";
 
 // AGF-S2-25 (checkpoint A): create or edit a special (D-S2-25-1, -4, -8, -9). The backend re-checks every rule.
+// AGF-S2-36: the schedule controls are shared with category specials (ScheduleFields); behaviour unchanged.
 
 type Props = {
     open: boolean;
@@ -22,15 +25,7 @@ type Draft = {
     specialPrice: string;
     note: string;
     noteAm: string;
-    startsOn: string;
-    endsOn: string;
-    days: string[];
-    startTime: string;
-    endTime: string;
-};
-
-const DAY_LABELS: Record<string, string> = {
-    MONDAY: "Mon", TUESDAY: "Tue", WEDNESDAY: "Wed", THURSDAY: "Thu", FRIDAY: "Fri", SATURDAY: "Sat", SUNDAY: "Sun",
+    schedule: ScheduleDraft;
 };
 
 const inputClass = "w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand";
@@ -41,15 +36,9 @@ function draftOf(s?: Special): Draft {
         specialPrice: s?.specialPrice != null ? String(s.specialPrice) : "",
         note: s?.note ?? "",
         noteAm: s?.noteAm ?? "",
-        startsOn: s?.startsOn ?? "",
-        endsOn: s?.endsOn ?? "",
-        days: s?.daysOfWeek ?? [],
-        startTime: s?.startTime ?? "",
-        endTime: s?.endTime ?? "",
+        schedule: scheduleDraftOf(s),
     };
 }
-
-const inWeekOrder = (days: string[]) => WEEK_DAYS.filter((d) => days.includes(d));
 
 export default function SpecialDialog({ open, onClose, dishes, special, currency, onSave }: Props) {
     const [draft, setDraft] = useState<Draft>(() => draftOf(special));
@@ -76,7 +65,6 @@ export default function SpecialDialog({ open, onClose, dishes, special, currency
 
     const dish = dishes.find((d) => d.id === draft.menuItemId);
     const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
-    const toggleDay = (day: string) => set("days", draft.days.includes(day) ? draft.days.filter((d) => d !== day) : [...draft.days, day]);
 
     function validate(): Record<string, string> {
         const e: Record<string, string> = {};
@@ -85,39 +73,25 @@ export default function SpecialDialog({ open, onClose, dishes, special, currency
         if (draft.specialPrice.trim() === "" || Number.isNaN(price)) e.specialPrice = "Enter the special price.";
         else if (price < 0) e.specialPrice = "The special price can't be negative.";
         else if (dish && price >= dish.price) e.specialPrice = `The special price must be lower than the regular price (${formatPrice(dish.price, currency)}).`;
-        if (draft.startsOn && draft.endsOn && draft.endsOn < draft.startsOn) e.endsOn = "The end date can't be before the start date.";
-        if (draft.startTime && !draft.endTime) e.endTime = "Add an end time too.";
-        else if (!draft.startTime && draft.endTime) e.startTime = "Add a start time too.";
-        else if (draft.startTime && draft.endTime && draft.endTime <= draft.startTime) e.endTime = "The end time must be after the start time.";
-        return e;
+        return { ...e, ...scheduleErrors(draft.schedule) };
     }
 
     function payload(): SpecialPayload {
-        const next = { ...draft, note: draft.note.trim(), noteAm: draft.noteAm.trim(), days: inWeekOrder(draft.days) };
-        const p: SpecialPayload = {};
+        const note = draft.note.trim();
+        const noteAm = draft.noteAm.trim();
         if (!special) {
-            p.menuItemId = next.menuItemId;
-            p.specialPrice = Number(next.specialPrice);
-            if (next.note) p.note = next.note;
-            if (next.noteAm) p.noteAm = next.noteAm;
-            if (next.startsOn) p.startsOn = next.startsOn;
-            if (next.endsOn) p.endsOn = next.endsOn;
-            if (next.days.length) p.daysOfWeek = next.days;
-            if (next.startTime && next.endTime) { p.startTime = next.startTime; p.endTime = next.endTime; }
-            return p;
+            const p: SpecialPayload = { menuItemId: draft.menuItemId, specialPrice: Number(draft.specialPrice) };
+            if (note) p.note = note;
+            if (noteAm) p.noteAm = noteAm;
+            return { ...p, ...scheduleCreatePayload(draft.schedule) };
         }
         const was = draftOf(special);
-        if (next.menuItemId !== was.menuItemId) p.menuItemId = next.menuItemId;
-        if (Number(next.specialPrice) !== Number(was.specialPrice)) p.specialPrice = Number(next.specialPrice);
-        if (next.note !== was.note) p.note = next.note;
-        if (next.noteAm !== was.noteAm) p.noteAm = next.noteAm;
-        if (next.startsOn !== was.startsOn) { if (next.startsOn) p.startsOn = next.startsOn; else p.clearStartsOn = true; }
-        if (next.endsOn !== was.endsOn) { if (next.endsOn) p.endsOn = next.endsOn; else p.clearEndsOn = true; }
-        if (next.days.join() !== inWeekOrder(was.days).join()) p.daysOfWeek = next.days;
-        if (next.startTime !== was.startTime || next.endTime !== was.endTime) {
-            if (next.startTime && next.endTime) { p.startTime = next.startTime; p.endTime = next.endTime; } else p.clearTimeWindow = true;
-        }
-        return p;
+        const p: SpecialPayload = {};
+        if (draft.menuItemId !== was.menuItemId) p.menuItemId = draft.menuItemId;
+        if (Number(draft.specialPrice) !== Number(was.specialPrice)) p.specialPrice = Number(draft.specialPrice);
+        if (note !== was.note) p.note = note;
+        if (noteAm !== was.noteAm) p.noteAm = noteAm;
+        return { ...p, ...scheduleChangePayload(draft.schedule, was.schedule) };
     }
 
     const save = async () => {
@@ -129,9 +103,10 @@ export default function SpecialDialog({ open, onClose, dishes, special, currency
             await onSave(payload());
             onClose();
         } catch (err) {
+            const s = draft.schedule;
             serverErrors.apply(err, {
                 menuItemId: draft.menuItemId, specialPrice: draft.specialPrice, note: draft.note.trim(), noteAm: draft.noteAm.trim(),
-                startsOn: draft.startsOn, endsOn: draft.endsOn, daysOfWeek: draft.days, startTime: draft.startTime, endTime: draft.endTime,
+                startsOn: s.startsOn, endsOn: s.endsOn, daysOfWeek: s.days, startTime: s.startTime, endTime: s.endTime,
             }, "Couldn't save the special");
         } finally {
             setSaving(false);
@@ -181,48 +156,7 @@ export default function SpecialDialog({ open, onClose, dishes, special, currency
                     </div>
                 </div>
 
-                <fieldset className="space-y-3 rounded-xl border border-gray-200 p-4">
-                    <legend className="px-1 text-sm font-medium text-gray-700">When (restaurant time)</legend>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div>
-                            <label htmlFor="special-starts" className="mb-1 block text-xs font-medium text-gray-600">Start date (optional)</label>
-                            <input id="special-starts" type="date" className={inputClass} value={draft.startsOn} onChange={(e) => set("startsOn", e.target.value)} />
-                            <Err field="startsOn" value={draft.startsOn} />
-                        </div>
-                        <div>
-                            <label htmlFor="special-ends" className="mb-1 block text-xs font-medium text-gray-600">End date (optional)</label>
-                            <input id="special-ends" type="date" className={inputClass} value={draft.endsOn} onChange={(e) => set("endsOn", e.target.value)} />
-                            <Err field="endsOn" value={draft.endsOn} />
-                        </div>
-                    </div>
-
-                    <div>
-                        <p className="mb-1 text-xs font-medium text-gray-600">Days (none ticked = every day)</p>
-                        <div className="flex flex-wrap gap-2">
-                            {WEEK_DAYS.map((day) => (
-                                <label key={day} className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs">
-                                    <input type="checkbox" checked={draft.days.includes(day)} onChange={() => toggleDay(day)} />
-                                    {DAY_LABELS[day]}
-                                </label>
-                            ))}
-                        </div>
-                        <Err field="daysOfWeek" value={draft.days} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label htmlFor="special-from" className="mb-1 block text-xs font-medium text-gray-600">From</label>
-                            <input id="special-from" type="time" className={inputClass} value={draft.startTime} onChange={(e) => set("startTime", e.target.value)} />
-                            <Err field="startTime" value={draft.startTime} />
-                        </div>
-                        <div>
-                            <label htmlFor="special-until" className="mb-1 block text-xs font-medium text-gray-600">Until</label>
-                            <input id="special-until" type="time" className={inputClass} value={draft.endTime} onChange={(e) => set("endTime", e.target.value)} />
-                            <Err field="endTime" value={draft.endTime} />
-                        </div>
-                    </div>
-                    <p className="text-xs text-gray-500">Leave the times empty for all day. A time window can't run past midnight.</p>
-                </fieldset>
+                <ScheduleFields idPrefix="special" draft={draft.schedule} onChange={(schedule) => set("schedule", schedule)} errorFor={error} />
 
                 <div className="flex justify-end gap-3 pt-2">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>

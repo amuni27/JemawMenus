@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import specialsApi from "../../api/specialsApi";
 import menuApi from "../../api/menuApi";
 import SpecialDialog from "../../components/specials/SpecialDialog";
+import CategorySpecialDialog from "../../components/specials/CategorySpecialDialog";
+import categorySpecialsApi from "../../api/categorySpecialsApi";
+import categoryApi from "../../api/categoriesApi";
 import Modal from "../../components/ui/Modal";
 import ModalHeader from "../../components/ui/ModalHeader";
 import Button from "../../components/ui/Button";
@@ -9,7 +12,7 @@ import LoadError from "../../components/ui/LoadError";
 import { useToast } from "../../components/ui/ToastContext";
 import { formatPrice } from "../../utils/currency";
 import { errorMessage } from "../../utils/errorMessage";
-import type { DishOption, Special, SpecialPayload, SpecialStatus } from "../../types/special";
+import type { CategoryOption, CategorySpecial, CategorySpecialPayload, DishOption, Special, SpecialPayload, SpecialStatus } from "../../types/special";
 
 // AGF-S2-25 (checkpoint A, D-S2-25-7): the owner's specials. Free for every restaurant (G7/D7). Guests see specials
 // in checkpoint B.
@@ -27,7 +30,7 @@ const DAY_SHORT: Record<string, string> = {
 };
 
 /** e.g. "Mon, Fri · 16:00–18:00" or "Every day · 2026-11-10 to 2026-11-30" */
-function scheduleOf(s: Special): string {
+function scheduleOf(s: Pick<Special, "daysOfWeek" | "startTime" | "endTime" | "startsOn" | "endsOn">): string {
     const days = s.daysOfWeek?.length ? s.daysOfWeek.map((d) => DAY_SHORT[d] ?? d).join(", ") : "Every day";
     const parts = [days];
     if (s.startTime && s.endTime) parts.push(`${s.startTime}–${s.endTime}`);
@@ -51,11 +54,18 @@ export default function SpecialsPage() {
     const [attempt, setAttempt] = useState(0);
     const [editing, setEditing] = useState<Special | "new" | null>(null);
     const [deleting, setDeleting] = useState<Special | null>(null);
+    // AGF-S2-36: category specials beside dish specials
+    const [categorySpecials, setCategorySpecials] = useState<CategorySpecial[]>([]);
+    const [categories, setCategories] = useState<CategoryOption[]>([]);
+    const [editingCategory, setEditingCategory] = useState<CategorySpecial | "new" | null>(null);
+    const [deletingCategory, setDeletingCategory] = useState<CategorySpecial | null>(null);
 
     const reload = useCallback(async () => {
-        const list = listFrom<Special>(await specialsApi.list());
-        setSpecials(list);
-        if (list[0]?.currency) setCurrency(list[0].currency);
+        const [list, categoryList] = await Promise.all([specialsApi.list(), categorySpecialsApi.list()]);
+        const dishSpecials = listFrom<Special>(list);
+        setSpecials(dishSpecials);
+        setCategorySpecials(listFrom<CategorySpecial>(categoryList));
+        if (dishSpecials[0]?.currency) setCurrency(dishSpecials[0].currency);
     }, []);
 
     useEffect(() => {
@@ -71,6 +81,11 @@ export default function SpecialsPage() {
                     listFrom<{ id: string; name: string; price: number }>(await menuApi.listItems(m.id))
                         .map((i) => ({ id: i.id, name: i.name, price: Number(i.price), menuId: m.id, menuName: m.name }))));
                 if (alive) setDishes(perMenu.flat());
+                // categories for the category special dialog (AGF-S2-36)
+                const perMenuCategories = await Promise.all(menus.map(async (m) =>
+                    listFrom<{ id: string; name: string }>(await categoryApi.getCategories(m.id))
+                        .map((c) => ({ id: c.id, name: c.name, menuId: m.id, menuName: m.name }))));
+                if (alive) setCategories(perMenuCategories.flat());
             } catch (err) {
                 if (alive) setError(errorMessage(err, "Couldn't load your specials. Please try again."));
             }
@@ -85,6 +100,23 @@ export default function SpecialsPage() {
         await reload();
     };
 
+    const saveCategory = async (payload: CategorySpecialPayload) => {
+        if (editingCategory && editingCategory !== "new") await categorySpecialsApi.update(editingCategory.id, payload);
+        else await categorySpecialsApi.create(payload);
+        toast(editingCategory && editingCategory !== "new" ? "Category special updated" : "Category special added");
+        await reload();
+    };
+
+    const setCategoryPaused = async (s: CategorySpecial, paused: boolean) => {
+        try {
+            await categorySpecialsApi.update(s.id, { paused });
+            toast(paused ? "Special paused" : "Special resumed");
+            await reload();
+        } catch (err) {
+            toast(errorMessage(err, "Couldn't update the special"));
+        }
+    };
+
     const setPaused = async (s: Special, paused: boolean) => {
         try {
             await specialsApi.update(s.id, { paused });
@@ -96,11 +128,13 @@ export default function SpecialsPage() {
     };
 
     const confirmDelete = async () => {
-        if (!deleting) return;
+        if (!deleting && !deletingCategory) return;
         try {
-            await specialsApi.remove(deleting.id);
+            if (deleting) await specialsApi.remove(deleting.id);
+            else if (deletingCategory) await categorySpecialsApi.remove(deletingCategory.id);
             toast("Special deleted");
             setDeleting(null);
+            setDeletingCategory(null);
             await reload();
         } catch (err) {
             toast(errorMessage(err, "Couldn't delete the special"));
@@ -115,14 +149,18 @@ export default function SpecialsPage() {
                     <h2 className="text-2xl font-bold text-gray-900">Specials</h2>
                     <p className="mt-1 text-sm text-gray-600">Offer a dish at a lower price for a time. Times use your restaurant's time zone.</p>
                 </div>
-                <Button onClick={() => setEditing("new")}>Add special</Button>
+                {/* "Add special" keeps opening the dish special dialog (S2-25 unchanged); category specials are an extra option (AGF-S2-36) */}
+                <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => setEditing("new")}>Add special</Button>
+                    <Button variant="secondary" onClick={() => setEditingCategory("new")}>Add category special</Button>
+                </div>
             </div>
 
             {error ? (
                 <LoadError message={error} onRetry={() => { setSpecials(null); setAttempt((n) => n + 1); }} />
             ) : specials === null ? (
                 <p className="text-gray-500">Loading specials…</p>
-            ) : specials.length === 0 ? (
+            ) : specials.length === 0 && categorySpecials.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-600">
                     No specials yet. Add one to offer a dish at a lower price for a time.
                 </p>
@@ -158,8 +196,40 @@ export default function SpecialsPage() {
                             </div>
                         </li>
                     ))}
+                    {categorySpecials.map((s) => (
+                        <li key={`category-${s.id}`} className="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <h3 className="truncate text-base font-semibold text-gray-900">{s.categoryName}</h3>
+                                    <p className="text-xs text-gray-500">{s.menuName} · Category special</p>
+                                </div>
+                                <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS[s.status]?.className ?? ""}`}>
+                                    {STATUS[s.status]?.label ?? s.status}
+                                </span>
+                            </div>
+                            <p className="mt-3 text-sm font-semibold text-gray-900">{s.discountPercent}% off</p>
+                            <p className="mt-1 text-sm text-gray-700">{scheduleOf(s)}</p>
+                            {s.note && <p className="mt-1 text-sm text-gray-600">{s.note}</p>}
+                            {s.eligibleDishes === 0 && (
+                                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">No eligible dishes in this category yet. Guests will see the discount once it has dishes they can see.</p>
+                            )}
+                            <div className="mt-4 flex flex-wrap gap-2">
+                                <Button variant="secondary" onClick={() => setEditingCategory(s)}>Edit</Button>
+                                <Button variant="secondary" onClick={() => setCategoryPaused(s, !s.paused)}>{s.paused ? "Resume" : "Pause"}</Button>
+                                <Button variant="danger" onClick={() => setDeletingCategory(s)}>Delete</Button>
+                            </div>
+                        </li>
+                    ))}
                 </ul>
             )}
+
+            <CategorySpecialDialog
+                open={editingCategory !== null}
+                onClose={() => setEditingCategory(null)}
+                categories={categories}
+                special={editingCategory && editingCategory !== "new" ? editingCategory : undefined}
+                onSave={saveCategory}
+            />
 
             <SpecialDialog
                 open={editing !== null}
@@ -170,13 +240,13 @@ export default function SpecialsPage() {
                 onSave={save}
             />
 
-            <Modal open={deleting !== null} onClose={() => setDeleting(null)}>
-                <ModalHeader title="Delete special?" onClose={() => setDeleting(null)} />
+            <Modal open={deleting !== null || deletingCategory !== null} onClose={() => { setDeleting(null); setDeletingCategory(null); }}>
+                <ModalHeader title="Delete special?" onClose={() => { setDeleting(null); setDeletingCategory(null); }} />
                 <p className="text-sm text-gray-700">
-                    {deleting?.itemName} goes back to its regular price. This can't be undone.
+                    {deleting ? `${deleting.itemName} goes back to its regular price.` : `Dishes in ${deletingCategory?.categoryName} go back to their regular prices.`} This can't be undone.
                 </p>
                 <div className="mt-6 flex justify-end gap-3">
-                    <Button variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button>
+                    <Button variant="secondary" onClick={() => { setDeleting(null); setDeletingCategory(null); }}>Cancel</Button>
                     <Button variant="danger" onClick={confirmDelete}>Delete special</Button>
                 </div>
             </Modal>

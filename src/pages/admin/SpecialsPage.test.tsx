@@ -9,6 +9,9 @@ import { ToastProvider } from "../../components/ui/ToastContext";
 
 const api = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() }));
 vi.mock("../../api/specialsApi", () => ({ default: api }));
+// AGF-S2-36: category specials load beside dish specials
+const catApi = vi.hoisted(() => ({ list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() }));
+vi.mock("../../api/categorySpecialsApi", () => ({ default: catApi }));
 vi.mock("../../api/menuApi", () => ({ default: { listMenus: vi.fn().mockResolvedValue({ data: [] }), listItems: vi.fn().mockResolvedValue({ data: [] }) } }));
 
 const { default: SpecialsPage } = await import("./SpecialsPage.tsx");
@@ -21,6 +24,10 @@ const special = (extra: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
     Object.values(api).forEach((f) => f.mockReset());
+    Object.values(catApi).forEach((f) => f.mockReset());
+    catApi.list.mockResolvedValue({ data: [] });
+    catApi.update.mockResolvedValue({ data: {} });
+    catApi.remove.mockResolvedValue({});
     api.update.mockResolvedValue({ data: {} });
     api.remove.mockResolvedValue({});
 });
@@ -102,5 +109,49 @@ describe("specials page", () => {
         const doro = within(await screen.findByRole("heading", { name: "Doro Wat" }).then((h) => h.closest("li") as HTMLElement));
         expect(doro.getByText("Not a discount")).toBeTruthy();
         expect(doro.getByText(/regular price \(ETB 340\.00\) is now at or below the special price \(ETB 350\.00\)/)).toBeTruthy();
+    });
+
+    // ---- AGF-S2-36: category specials beside dish specials -------------------------------------------------------
+
+    const categorySpecial = (extra: Record<string, unknown> = {}) => ({
+        id: "cs1", categoryId: "c2", categoryName: "Desserts", menuId: "m1", menuName: "Lunch", discountPercent: 20,
+        note: "Sweet hour", noteAm: null, startsOn: null, endsOn: null, daysOfWeek: [], startTime: "16:00", endTime: "18:00",
+        paused: false, status: "ACTIVE", eligibleDishes: 3, ...extra,
+    });
+
+    it("lists category specials with their percentage, kind and status", async () => {
+        api.list.mockResolvedValue({ data: [special()] });
+        catApi.list.mockResolvedValue({ data: [categorySpecial(), categorySpecial({ id: "cs2", categoryId: "c9", categoryName: "Seasonal", eligibleDishes: 0, status: "SCHEDULED" })] });
+        renderPage();
+        const desserts = within(await screen.findByRole("heading", { name: "Desserts" }).then((h) => h.closest("li") as HTMLElement));
+        expect(desserts.getByText("20% off")).toBeTruthy();
+        expect(desserts.getByText("Lunch · Category special")).toBeTruthy();
+        expect(desserts.getByText("Every day · 16:00–18:00")).toBeTruthy();
+        expect(desserts.getByText("Active now")).toBeTruthy();
+        expect(within(row("Seasonal")).getByText(/No eligible dishes/)).toBeTruthy();
+        expect(within(row("Doro Wat")).getByText("Lunch · Mains")).toBeTruthy(); // dish specials unchanged
+    });
+
+    it("keeps Add special for dish specials and adds Add category special", async () => {
+        api.list.mockResolvedValue({ data: [] });
+        renderPage();
+        fireEvent.click(await screen.findByRole("button", { name: "Add special" }));
+        expect(await screen.findByRole("heading", { name: "Add special" })).toBeTruthy(); // dish dialog, as before
+        cleanup();
+        renderPage();
+        fireEvent.click(await screen.findByRole("button", { name: "Add category special" }));
+        expect(await screen.findByRole("heading", { name: "Add category special" })).toBeTruthy();
+    });
+
+    it("pauses and deletes a category special", async () => {
+        api.list.mockResolvedValue({ data: [] });
+        catApi.list.mockResolvedValue({ data: [categorySpecial()] });
+        renderPage();
+        fireEvent.click(within(await screen.findByRole("heading", { name: "Desserts" }).then((h) => h.closest("li") as HTMLElement)).getByRole("button", { name: "Pause" }));
+        await waitFor(() => expect(catApi.update).toHaveBeenCalledWith("cs1", { paused: true }));
+        fireEvent.click(within(row("Desserts")).getByRole("button", { name: "Delete" }));
+        fireEvent.click(screen.getByRole("button", { name: "Delete special" }));
+        await waitFor(() => expect(catApi.remove).toHaveBeenCalledWith("cs1"));
+        expect(api.remove).not.toHaveBeenCalled();
     });
 });
