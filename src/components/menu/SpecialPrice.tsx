@@ -1,6 +1,6 @@
 import { displayCurrency, formatPrice } from "../../utils/currency";
 import { Localized } from "./Localized";
-import type { SpecialFields } from "../../utils/specials";
+import { categoryBadgeText, type CategorySpecialInfo, type SpecialFields } from "../../utils/specials";
 
 // AGF-S2-25 (checkpoint B): a special price with the regular price struck through, a "Special" badge and the end
 // time. Screen readers hear "Special price … Regular price …".
@@ -34,6 +34,18 @@ export function DetailSpecialPrice({ item, currency }: { item: SpecialFields; cu
             <span className="text-rose-800">{formatPrice(Number(item.specialPrice), currency)}</span>{" "}
             <s className="text-sm font-medium text-gray-500"><span className="sr-only">Regular price </span><span>{formatPrice(Number(item.price), currency)}</span></s>
         </>
+    );
+}
+
+/** AGF-S2-36: "20% off until 18:00" under a category heading, with the note */
+export function CategorySpecialBadge({ special }: { special: CategorySpecialInfo }) {
+    return (
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="rounded-full bg-rose-700 px-2.5 py-0.5 text-xs font-semibold text-white">{categoryBadgeText(special)}</span>
+            {special.note || special.noteAm ? (
+                <span className="text-sm font-medium text-rose-800"><Localized main={special.note} am={special.noteAm} /></span>
+            ) : null}
+        </div>
     );
 }
 

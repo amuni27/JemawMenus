@@ -1,3 +1,4 @@
+import type { CategorySpecialInfo } from "../utils/specials";
 // Type definitions for menus, categories, items
 export interface MenuType {
   id: string;
@@ -59,6 +60,8 @@ export interface Category {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  /** AGF-S2-36: the active category special on guest responses */
+  special?: CategorySpecialInfo | null;
 }
 
 export type CreateCategoryDTO = {
@@ -105,6 +108,9 @@ export interface MenuItem {
   specialNoteAm?: string | null;
   specialEndsAt?: string | null;
   specialUntil?: string | null;
+  /** AGF-S2-36: DISH or CATEGORY, and the category discount in percent */
+  specialType?: "DISH" | "CATEGORY" | null;
+  specialPercent?: number | null;
 }
 
 export type CreateMenuItemDTO = {

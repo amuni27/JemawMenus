@@ -20,6 +20,7 @@ does not replace real-device or screen-reader checks (S2-27) or production verif
 | J12 | Account page on phones (AGF-S2-35, Defect F2): no sideways scroll at 375/320 px (phone emulation), Edit buttons and Copy link on-screen, profile editor inside the screen; desktop keeps two columns |
 | J13 | Bilingual menu (AGF-S2-23): owner adds a dish with an Amharic name; guest at 375 px switches to አማርኛ (field-by-field fallback), choice kept after reload, Amharic search, dish detail in Amharic |
 | J14 | Specials (AGF-S2-25): owner adds a special on the Specials page; guest at 375 px sees the Specials section, struck regular price and badge (axe clean); paused → regular price |
+| J15 | Category specials (AGF-S2-36): owner adds a 20% Mains category special and a dish special on Beef Tibs; guest at 375 px sees the discounted price, heading badge and one Specials line, the dish special wins (never stacked), axe clean; paused → regular prices |
 
 ## Run locally
 

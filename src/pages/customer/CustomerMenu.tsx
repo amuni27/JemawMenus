@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNow } from "../../hooks/useNow";
-import { activeSpecials, shownPrice, type SpecialFields } from "../../utils/specials";
+import { activeCategorySpecials, activeSpecials, shownPrice, type SpecialFields } from "../../utils/specials";
 import { GuestClockProvider } from "../../components/menu/GuestClock";
 import { SpecialsSection } from "../../components/menu/SpecialsSection";
 import { Outlet, useParams } from "react-router-dom";
@@ -255,6 +255,10 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     // AGF-S2-25: the active menu's specials now; the clock refreshes so a special ends on time without a reload
     const now = useNow(15_000);
     const specials = useMemo(() => activeSpecials(groups as unknown as { items: (FeaturedItem & SpecialFields)[] }[], now), [groups, now]);
+    // AGF-S2-36: one Specials line per category special (D-CS-7)
+    const categorySpecials = useMemo(
+        () => activeCategorySpecials(groups, now).map((g) => ({ id: g.category.id, name: g.category.name, nameAm: g.category.nameAm, special: g.category.special })),
+        [groups, now]);
 
     const tabCategories = narrowing ? displayedGroups.map((g) => g.category) : sortedCategories;
 
@@ -490,7 +494,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                 {/* AGF-S2-15: hidden while searching or filtering (S2-14), so results aren't listed twice */}
                                 {!narrowing && (
                                     <>
-                                        <SpecialsSection items={specials} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} />
+                                        <SpecialsSection items={specials} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} categories={categorySpecials} onSelectCategory={scrollToCategory} />
                                         <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} />
                                     </>
                                 )}
