@@ -47,4 +47,13 @@ describe("itemMatches", () => {
     it("matches Amharic names", () => {
         expect(itemMatches({ name: "ዶሮ ወጥ" }, "ዶሮ")).toBe(true);
     });
+
+    // AGF-S2-23: Amharic names and descriptions are searched too, whatever language is selected
+    it("finds items by their Amharic name or description", () => {
+        const doro = { name: "Doro Wat", description: "Chicken stew", nameAm: "ዶሮ ወጥ", descriptionAm: "የዶሮ ወጥ ከእንጀራ ጋር" };
+        expect(itemMatches(doro, "ዶሮ")).toBe(true);
+        expect(itemMatches(doro, "እንጀራ")).toBe(true);
+        expect(itemMatches(doro, "doro")).toBe(true);
+        expect(itemMatches(doro, "ሽሮ")).toBe(false);
+    });
 });

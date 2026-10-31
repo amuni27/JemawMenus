@@ -13,14 +13,16 @@ interface Props {
   onClose: () => void;
   menuId?: string;
   category?: Category;
-  onCreate: (name: string) => Promise<Category>;
-  onUpdate: (categoryId: string, name: string) => Promise<Category>;
+  // AGF-S2-23: nameAm undefined = none / unchanged; "" clears on rename
+  onCreate: (name: string, nameAm?: string) => Promise<Category>;
+  onUpdate: (categoryId: string, name: string, nameAm?: string) => Promise<Category>;
 }
 
 export default function CategoryModal({ open, onClose, menuId, category, onCreate, onUpdate }: Props) {
   const toast = useToast();
 
   const [name, setName] = useState("");
+  const [nameAm, setNameAm] = useState(""); // AGF-S2-23
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
   const serverErrors = useFieldErrors(); // AGF-S2-11
@@ -30,6 +32,7 @@ export default function CategoryModal({ open, onClose, menuId, category, onCreat
   useEffect(() => {
     if (!open) return;
     setName(category?.name ?? "");
+    setNameAm(category?.nameAm ?? "");
     setTouched(false);
     setSubmitting(false);
     clearServerErrors();
@@ -46,19 +49,20 @@ export default function CategoryModal({ open, onClose, menuId, category, onCreat
 
       if (category) {
         // ✅ rename
-        await onUpdate(category.id, name.trim());
+        const am = nameAm.trim();
+        await onUpdate(category.id, name.trim(), am === (category.nameAm ?? "") ? undefined : am);
         toast("Category updated");
       } else {
         // ✅ create
         if (!menuId) throw new Error("menuId is required");
-        await onCreate(name.trim());
+        await onCreate(name.trim(), nameAm.trim() || undefined);
         toast("Category created");
       }
 
       onClose();
     } catch (e) {
       // AGF-S2-11: name errors under the field; anything else keeps the server message (was Axios' generic text)
-      const banner = serverErrors.apply(e, { name: name.trim() }, "Failed to save category");
+      const banner = serverErrors.apply(e, { name: name.trim(), nameAm: nameAm.trim() }, "Failed to save category");
       if (banner) toast(banner);
     } finally {
       setSubmitting(false);
@@ -75,6 +79,17 @@ export default function CategoryModal({ open, onClose, menuId, category, onCreat
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={(touched && !isValid ? "Name is required" : undefined) ?? serverErrors.errorFor("name", name.trim())}
+          />
+
+          {/* AGF-S2-23: shown to guests who choose Amharic */}
+          <Input
+              label="Name in Amharic (optional)"
+              aria-label="Name in Amharic (optional)"
+              lang="am"
+              maxLength={255}
+              value={nameAm}
+              onChange={(e) => setNameAm(e.target.value)}
+              error={serverErrors.errorFor("nameAm", nameAm.trim())}
           />
 
           <div className="flex justify-end gap-3 pt-2">

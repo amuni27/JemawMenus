@@ -63,3 +63,26 @@ describe("ItemsApi.presignImage (AGF-S1-17)", () => {
         expect(http.get).toHaveBeenCalledWith("/items/item-1/image/presign?contentType=image%2Fpng");
     });
 });
+
+// AGF-S2-18: duplicating a menu is one POST with the optional name
+describe("menuApi.duplicateMenu", () => {
+    it("sends POST /menus/{id}/duplicate with the name", async () => {
+        const { default: menuApi } = await import("./menuApi.ts");
+        http.post.mockResolvedValue({ data: {} });
+
+        await menuApi.duplicateMenu("menu-1", "Summer Menu");
+
+        expect(http.post).toHaveBeenCalledWith("/menus/menu-1/duplicate", { name: "Summer Menu" });
+    });
+});
+
+// AGF-S2-16: removing a photo is DELETE /items/{id}/image
+describe("ItemsApi.removeImage", () => {
+    it("sends DELETE /items/{id}/image", async () => {
+        http.delete.mockResolvedValue({ data: {} });
+
+        await ItemsApi.removeImage("item-1");
+
+        expect(http.delete).toHaveBeenCalledWith("/items/item-1/image");
+    });
+});

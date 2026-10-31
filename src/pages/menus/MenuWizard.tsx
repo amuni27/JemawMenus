@@ -21,6 +21,7 @@ export default function MenuWizard({ initial, onSave }: Props) {
     name: initial?.name ?? "",
     menuTypeId: initial?.menuTypeId ?? "",
     description: initial?.description ?? "",
+    nameAm: initial?.nameAm ?? "", // AGF-S2-23
     // New menus: Public but Unpublished (PO-2). Edits send the menu's own state (never forced).
     visibility: isEdit ? initial?.visibility : "PUBLIC",
     isActive: isEdit ? initial?.isActive : false,
@@ -73,14 +74,17 @@ export default function MenuWizard({ initial, onSave }: Props) {
     setSaving(true);
     setSaveError("");
     try {
-      const payload: MenuDto = { ...data };
+      // AGF-S2-23: the Amharic name is sent when filled (new menu) or changed (edit; "" clears)
+      const nameAm = (data.nameAm ?? "").trim();
+      const payload: MenuDto = { ...data, nameAm };
+      if (nameAm === (initial?.nameAm ?? "").trim()) delete payload.nameAm;
       if (payload.visibility === undefined) delete payload.visibility;
       if (payload.isActive === undefined) delete payload.isActive;
       await onSave(payload);
     } catch (err) {
       // Field errors appear under their fields; otherwise the server message is shown (AGF-S2-11)
       setSaveError(serverErrors.apply(err, {
-        name: data.name, menuTypeId: data.menuTypeId, description: data.description ?? "",
+        name: data.name, menuTypeId: data.menuTypeId, description: data.description ?? "", nameAm: (data.nameAm ?? "").trim(),
         visibility: data.visibility, isActive: data.isActive,
       }, "Failed to save menu") ?? "");
       setSaving(false);
@@ -108,6 +112,17 @@ export default function MenuWizard({ initial, onSave }: Props) {
               value={data.name}
               error={errors.name || serverErrors.errorFor("name", data.name)}
               onChange={(e) => handleChange("name", e.target.value)}
+          />
+
+          {/* AGF-S2-23: shown to guests who choose Amharic */}
+          <FormInput
+              label="Name in Amharic (optional)"
+              aria-label="Name in Amharic (optional)"
+              lang="am"
+              maxLength={255}
+              value={data.nameAm ?? ""}
+              error={serverErrors.errorFor("nameAm", (data.nameAm ?? "").trim())}
+              onChange={(e) => handleChange("nameAm", e.target.value)}
           />
 
           <FormSelect

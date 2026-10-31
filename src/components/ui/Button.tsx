@@ -1,9 +1,10 @@
-import { ComponentPropsWithoutRef } from 'react';
+import { ComponentProps } from 'react';
 import clsx from 'clsx';
 
 type Variant = 'primary' | 'secondary' | 'danger';
 
-interface ButtonProps extends ComponentPropsWithoutRef<'button'> {
+// React 19: `ref` is an ordinary prop and reaches the <button> through ...rest (AGF-S2-16 focus handling)
+interface ButtonProps extends ComponentProps<'button'> {
   variant?: Variant;
   isLoading?: boolean;
 }

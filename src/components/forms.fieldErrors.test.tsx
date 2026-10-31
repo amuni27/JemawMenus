@@ -87,11 +87,11 @@ describe("category form", () => {
         const onCreate = vi.fn().mockRejectedValueOnce(fieldErrors([{ field: "name", message: "size must be between 0 and 255" }]))
             .mockRejectedValueOnce({ response: { status: 400, data: { message: "Category has items; delete items first" } } });
         wrap(<CategoryModal open onClose={() => {}} menuId="m1" onCreate={onCreate} onUpdate={vi.fn()} />);
-        fireEvent.change(screen.getByRole("textbox"), { target: { value: "Desserts" } });
+        fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "Desserts" } });
         fireEvent.click(screen.getByRole("button", { name: "Create" }));
         expect(await within(fieldBox("Name")).findByText("size must be between 0 and 255")).toBeTruthy();
 
-        fireEvent.change(screen.getByRole("textbox"), { target: { value: "Drinks" } });
+        fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "Drinks" } });
         expect(within(fieldBox("Name")).queryByText("size must be between 0 and 255")).toBeNull();
         fireEvent.click(screen.getByRole("button", { name: "Create" }));
         expect(await screen.findByText("Category has items; delete items first")).toBeTruthy();
@@ -103,7 +103,7 @@ describe("business profile form", () => {
         updateBusiness.mockRejectedValueOnce(fieldErrors([{ field: "city", message: "must not be blank" }]))
             .mockRejectedValueOnce({ response: { status: 400, data: { message: "Unsupported currency. Use ETB or USD." } } });
         wrap(<BusinessProfileModal open onClose={() => {}} onSaved={() => {}}
-                                   business={{ id: "b1", name: "Cafe", city: "Addis", currency: "ETB", createdAt: new Date(), updatedAt: new Date() }} />);
+                                   business={{ id: "b1", name: "Cafe", country: "US", businessPhone: "+12125550100", streetAddress: "350 5th Ave", city: "New York", state: "NY", zipcode: "10118", timeZone: "America/New_York", currency: "ETB", createdAt: new Date(), updatedAt: new Date() }} />);
         fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
         expect(await within(fieldBox("City")).findByText("must not be blank")).toBeTruthy();
 
@@ -126,9 +126,7 @@ describe("registration", () => {
 
         typeInto("Business Name *", "Cafe");
         fireEvent.change(screen.getByLabelText("Enter business phone number"), { target: { value: "+251911000000" } });
-        typeInto("Street Address *", "1 Road");
-        typeInto("City *", "Addis Ababa");
-        typeInto("Region *", "Addis Ababa");
+        typeInto("Google Maps link *", "https://maps.app.goo.gl/AbC123xyz"); // CR1: Ethiopia needs only the link
         fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
         typeInto("Restaurant short name *", "abol-cafe");

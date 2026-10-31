@@ -26,8 +26,8 @@ export function StatusCard({ caption, title, text, actions, embedded = false, he
 
     const card = (
         <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-lg sm:p-8">
-            <p className="text-sm font-bold tracking-wide text-rose-500">AGAFARI MENU</p>
-            {caption && <p className="mt-4 text-xs font-medium uppercase tracking-wide text-gray-400">{caption}</p>}
+            <p className="text-sm font-bold tracking-wide text-rose-600">AGAFARI MENU</p>
+            {caption && <p className="mt-4 text-xs font-medium uppercase tracking-wide text-gray-500">{caption}</p>}
             <Heading ref={headingRef} tabIndex={-1} className="mt-2 text-2xl font-bold text-gray-900 focus:outline-none">
                 {title}
             </Heading>

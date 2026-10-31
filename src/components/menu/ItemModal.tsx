@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import { useFieldErrors } from "../../utils/fieldErrors";
 import { displayCurrency } from "../../utils/currency";
 import { ALLOWED_IMAGE_TYPES, imageFileProblem } from "../../utils/imagePolicy";
@@ -43,6 +43,9 @@ interface Props {
 
     // Presign PUT upload URL for the item
     onPresignImage?: (itemId: string, contentType: string) => Promise<PresignResponse>;
+
+    // AGF-S2-16: remove the item's photo (called after the field save)
+    onRemoveImage?: (itemId: string) => Promise<MenuItem>;
 }
 
 
@@ -50,12 +53,15 @@ interface Props {
 type Draft = {
     name: string;
     description: string;
+    nameAm: string; // AGF-S2-23
+    descriptionAm: string;
     price: string;
     calories: string;
     categoryId: string;
     status: ItemStatus;
     imageFile: File | null;
     imagePreview: string; // blob or public url
+    removeImage: boolean; // AGF-S2-16: remove the current photo on Save
     ingredients: string[];
     ingredientInput: string;
     // AGF-S2-06: details guests see on the item page
@@ -100,12 +106,15 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
         return {
             name: item.name ?? "",
             description: item.description ?? "",
+            nameAm: item.nameAm ?? "",
+            descriptionAm: item.descriptionAm ?? "",
             price: item.price != null ? String(item.price) : "",
             calories: item.calories != null ? String(item.calories) : "",
             categoryId: item.categoryId ?? defaultCategoryId,
             status: ((item.status as any) ?? "AVAILABLE") as Draft["status"],
             imageFile: null,
             imagePreview: item.imageUrl ?? "",
+            removeImage: false,
             ingredients: normalizeIngredients((item as any).ingredients),
             ingredientInput: "",
             allergens: toStringList(item.allergens),
@@ -120,12 +129,15 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
     return {
         name: "",
         description: "",
+        nameAm: "",
+        descriptionAm: "",
         price: "",
         calories: "",
         categoryId: defaultCategoryId,
         status: "AVAILABLE",
         imageFile: null,
         imagePreview: "",
+        removeImage: false,
         ingredients: [],
         ingredientInput: "",
         allergens: [],
@@ -157,6 +169,7 @@ export default function ItemModal({
                                       onUpdate,
                                       onConfirmImage,
                                       onPresignImage,
+                                      onRemoveImage,
                                       currency,
                                   }: Props) {
     const toast = useToast();
@@ -164,6 +177,8 @@ export default function ItemModal({
     const clearServerErrors = serverErrors.clear;
     const applyServerErrors = serverErrors.apply;
 
+    // AGF-S2-34: always update with setDraft((d) => ...). A handler that writes back the copy from its render can
+    // overwrite changes made since then, e.g. the default category set when the form opens (defect F1).
     const [draft, setDraft] = useState<Draft>(() => buildDraft(item, categories));
     const [touched, setTouched] = useState(false);
 
@@ -175,6 +190,17 @@ export default function ItemModal({
 
     const [imgOk, setImgOk] = useState(true);
 
+    // AGF-S2-16: focus Undo after "Remove image", and the Remove button again after Undo
+    const [removeError, setRemoveError] = useState("");
+    const [focusTarget, setFocusTarget] = useState<"undo" | "remove" | null>(null);
+    const undoRef = useRef<HTMLButtonElement>(null);
+    const removeRef = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+        if (focusTarget === "undo") undoRef.current?.focus();
+        if (focusTarget === "remove") removeRef.current?.focus();
+        if (focusTarget) setFocusTarget(null);
+    }, [focusTarget]);
+
     const defaultCategoryId = useMemo(() => categories?.[0]?.id ?? "", [categories]);
 
     // Reset when modal opens
@@ -185,6 +211,7 @@ export default function ItemModal({
         clearServerErrors();
         setStep("idle");
         setImgOk(true);
+        setRemoveError("");
     }, [open, item, categories, clearServerErrors]);
 
     // Ensure category on create
@@ -267,6 +294,11 @@ export default function ItemModal({
             else details.spiceLevel = draft.spiceLevel || null;
         }
         if (!loaded || draft.isFeatured !== loaded.isFeatured) details.isFeatured = draft.isFeatured;
+        // AGF-S2-23: new items send filled translations; edits send changed ones ("" clears)
+        for (const key of ["nameAm", "descriptionAm"] as const) {
+            const value = draft[key].trim();
+            if (loaded ? value !== loaded[key].trim() : value !== "") details[key] = value;
+        }
         if (!loaded || draft.prepTime !== loaded.prepTime) {
             if (draft.prepTime !== "") details.prepTimeMinutes = Number(draft.prepTime);
             else if (loaded) details.clearPrepTime = true;
@@ -335,6 +367,16 @@ export default function ItemModal({
                 await onUpdate(item.id, basePayload);
                 await doImageFlow(item.id);
 
+                // AGF-S2-16: the fields are saved; a failed removal is reported without a false success
+                if (draft.removeImage && !draft.imageFile && onRemoveImage) {
+                    try {
+                        await onRemoveImage(item.id);
+                    } catch {
+                        setRemoveError("Your changes were saved, but the image couldn't be removed. Try again.");
+                        return;
+                    }
+                }
+
                 toast("Item updated");
                 onClose();
                 return;
@@ -355,7 +397,7 @@ export default function ItemModal({
             // AGF-S2-11: field errors go under their fields; anything else keeps the server message
             const banner = applyServerErrors(e, {
                 name: draft.name, categoryId: draft.categoryId, price: draft.price, calories: draft.calories,
-                description: draft.description, ingredients: draft.ingredients,
+                description: draft.description, nameAm: draft.nameAm, descriptionAm: draft.descriptionAm, ingredients: draft.ingredients,
                 allergens: draft.allergens, tags: draft.tags, spiceLevel: draft.spiceLevel,
                 isFeatured: draft.isFeatured, prepTimeMinutes: draft.prepTime,
             }, "Failed to save item");
@@ -373,6 +415,7 @@ export default function ItemModal({
         menuId,
         onClose,
         onCreate,
+        onRemoveImage,
         onUpdate,
         toast,
     ]);
@@ -407,14 +450,14 @@ export default function ItemModal({
                     <Input
                         label="Name"
                         value={draft.name}
-                        onChange={(e) => setDraft({...draft, name: e.target.value})}
+                        onChange={(e) => { const name = e.target.value; setDraft((d) => ({...d, name})); }}
                         error={(touched && !draft.name.trim() ? "Required" : undefined) ?? serverErrors.errorFor("name", draft.name)}
                     />
 
                     <FormSelect
                         label="Category"
                         value={draft.categoryId}
-                        onChange={(e) => setDraft({...draft, categoryId: e.target.value})}
+                        onChange={(e) => { const categoryId = e.target.value; setDraft((d) => ({...d, categoryId})); }}
                         error={(touched && !draft.categoryId ? "Required" : undefined) ?? serverErrors.errorFor("categoryId", draft.categoryId)}
                     >
                         {categories.length === 0 ? (
@@ -433,7 +476,7 @@ export default function ItemModal({
                         value={draft.price}
                         onChange={(e) => {
                             const next = formatMoneyInput(e.target.value);
-                            if (next !== null) setDraft({...draft, price: next});
+                            if (next !== null) setDraft((d) => ({...d, price: next}));
                         }}
                         error={
                             (touched && (!draft.price || Number.isNaN(Number(draft.price)) || Number(draft.price) < 0)
@@ -447,7 +490,7 @@ export default function ItemModal({
                         value={draft.calories}
                         onChange={(e) => {
                             const v = e.target.value;
-                            if (/^\d*$/.test(v)) setDraft({...draft, calories: v});
+                            if (/^\d*$/.test(v)) setDraft((d) => ({...d, calories: v}));
                         }}
                         error={
                             (touched &&
@@ -462,7 +505,7 @@ export default function ItemModal({
                 <FormSelect
                     label="Status"
                     value={draft.status}
-                    onChange={(e) => setDraft({...draft, status: e.target.value as Draft["status"]})}
+                    onChange={(e) => { const status = e.target.value as Draft["status"]; setDraft((d) => ({...d, status})); }}
                 >
                     <option value="AVAILABLE">Available</option>
                     <option value="OUT_OF_STOCK">Out of stock — shown to guests as Sold Out</option>
@@ -475,11 +518,38 @@ export default function ItemModal({
                     rows={3}
                     placeholder="Description"
                     value={draft.description}
-                    onChange={(e) => setDraft({...draft, description: e.target.value})}
+                    onChange={(e) => { const description = e.target.value; setDraft((d) => ({...d, description})); }}
                 />
                 {serverErrors.errorFor("description", draft.description) && (
                     <p className="-mt-2 text-xs text-red-600">{serverErrors.errorFor("description", draft.description)}</p>
                 )}
+
+                {/* AGF-S2-23: shown to guests who choose Amharic; leave empty to show the main text */}
+                <fieldset className="space-y-3 rounded-xl border border-gray-200 p-4">
+                    <legend className="px-1 text-sm font-medium text-gray-700">Amharic (optional)</legend>
+                    <Input
+                        label="Name in Amharic (optional)"
+                        aria-label="Name in Amharic (optional)"
+                        lang="am"
+                        maxLength={255}
+                        value={draft.nameAm}
+                        onChange={(e) => { const nameAm = e.target.value; setDraft((d) => ({...d, nameAm})); }}
+                        error={serverErrors.errorFor("nameAm", draft.nameAm)}
+                    />
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="item-description-am">Description in Amharic (optional)</label>
+                    <textarea
+                        id="item-description-am"
+                        lang="am"
+                        maxLength={255}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-brand focus:border-brand-dark"
+                        rows={2}
+                        value={draft.descriptionAm}
+                        onChange={(e) => { const descriptionAm = e.target.value; setDraft((d) => ({...d, descriptionAm})); }}
+                    />
+                    {serverErrors.errorFor("descriptionAm", draft.descriptionAm) && (
+                        <p className="-mt-2 text-xs text-red-600">{serverErrors.errorFor("descriptionAm", draft.descriptionAm)}</p>
+                    )}
+                </fieldset>
 
                 {/* Image Upload */}
                 <div className="space-y-2">
@@ -504,7 +574,10 @@ export default function ItemModal({
                                 ...d,
                                 imageFile: file,
                                 imagePreview: file ? URL.createObjectURL(file) : item?.imageUrl ?? "",
+                                // a new file replaces the photo instead of removing it (AGF-S2-16)
+                                removeImage: file ? false : d.removeImage,
                             }));
+                            if (file) setRemoveError("");
 
                             setImgOk(true);
 
@@ -514,7 +587,7 @@ export default function ItemModal({
                         }}
                     />
 
-                    {!!draft.imagePreview && (
+                    {!!draft.imagePreview && !draft.removeImage && (
                         <img
                             src={draft.imagePreview}
                             alt="preview"
@@ -524,12 +597,51 @@ export default function ItemModal({
                         />
                     )}
 
-                    {!!draft.imagePreview && !imgOk && (
+                    {!!draft.imagePreview && !draft.removeImage && !imgOk && (
                         <p className="text-xs text-gray-500">Image failed to load. Try a different file.</p>
                     )}
 
-                    {item?.imageUrl && !draft.imageFile && (
-                        <p className="text-xs text-gray-500">Current image will stay unless you select a new file.</p>
+                    {item?.imageUrl && !draft.imageFile && onRemoveImage && !draft.removeImage && (
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-gray-500">Choose a new file to replace the image, or remove it.</p>
+                            <Button
+                                ref={removeRef}
+                                type="button"
+                                variant="secondary"
+                                disabled={submitting}
+                                onClick={() => {
+                                    setDraft((d) => ({...d, removeImage: true}));
+                                    setFocusTarget("undo");
+                                }}
+                            >
+                                Remove image
+                            </Button>
+                        </div>
+                    )}
+
+                    <div aria-live="polite">
+                        {draft.removeImage && (
+                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2">
+                                <p className="text-xs text-gray-700">Image will be removed when you save.</p>
+                                <Button
+                                    ref={undoRef}
+                                    type="button"
+                                    variant="secondary"
+                                    disabled={submitting}
+                                    onClick={() => {
+                                        setDraft((d) => ({...d, removeImage: false}));
+                                        setRemoveError("");
+                                        setFocusTarget("remove");
+                                    }}
+                                >
+                                    Undo
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {removeError && (
+                        <p role="alert" className="text-xs text-red-600">{removeError}</p>
                     )}
 
                     {draft.imageFile && !onPresignImage && (
@@ -547,7 +659,7 @@ export default function ItemModal({
                             className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-brand focus:border-brand-dark"
                             placeholder="Add ingredient"
                             value={draft.ingredientInput}
-                            onChange={(e) => setDraft({...draft, ingredientInput: e.target.value})}
+                            onChange={(e) => { const ingredientInput = e.target.value; setDraft((d) => ({...d, ingredientInput})); }}
                             onKeyDown={handleIngredientKeyDown}
                         />
                         <Button type="button" onClick={addIngredient} disabled={!draft.ingredientInput.trim()}>

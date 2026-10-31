@@ -1,4 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNow } from "../../hooks/useNow";
+import { activeCategorySpecials, activeSpecials, shownPrice, type SpecialFields } from "../../utils/specials";
+import { GuestClockProvider } from "../../components/menu/GuestClock";
+import { SpecialsSection } from "../../components/menu/SpecialsSection";
 import { Outlet, useParams } from "react-router-dom";
 import { usePublicBusinessMenu } from "../../hooks/usePublicBusinessMenu";
 
@@ -17,6 +21,8 @@ import { useToast } from "../../components/ui/ToastContext.tsx";
 import { isGuestVisible, isSoldOut } from "../../utils/itemAvailability.ts";
 import { itemMatches, normalizeSearch, type Searchable } from "../../utils/menuSearch.ts";
 import { featuredItems } from "../../utils/featured.ts";
+import { hasAmharic, initialLanguage, localized, readStoredLanguage, storeLanguage, type GuestLang } from "../../utils/guestLanguage";
+import { GuestLanguageProvider, Localized } from "../../components/menu/Localized";
 import { availableChips, hasActiveFilters, matchesFilters, NO_FILTERS, type DietaryFilters as Filters, type DietKey, type WithDietaryData } from "../../utils/dietary.ts";
 
 
@@ -58,6 +64,15 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
 
     const [isWaiterListOpen, setIsWaiterListOpen] = useState(false);
 
+    // AGF-S2-23: guest language (D-S2-23-3, -4); the switch only appears when the restaurant has Amharic text
+    const [language, setLanguageState] = useState<GuestLang>(() => initialLanguage(readStoredLanguage(), typeof navigator === "undefined" ? "" : navigator.language));
+    const amharicAvailable = useMemo(() => hasAmharic(menus as never), [menus]);
+    const guestLanguage = useMemo(() => ({
+        lang: amharicAvailable ? language : "en" as GuestLang,
+        available: amharicAvailable,
+        setLang: (next: GuestLang) => { setLanguageState(next); storeLanguage(next); },
+    }), [language, amharicAvailable]);
+
     const waiterListItemCount = useMemo(() => {
         return Object.values(waiterList).reduce((sum, e) => sum + e.quantity, 0);
     }, [waiterList]);
@@ -97,10 +112,12 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
         // snapshot: keep it small + stable
         const snapshot = {
             name: String(menuItem.name ?? "Unnamed item"),
+            nameAm: menuItem.nameAm ? String(menuItem.nameAm) : undefined, // AGF-S2-23
             imageUrl: menuItem.imageUrl ? String(menuItem.imageUrl) : undefined,
+            // AGF-S2-25: the price shown when the dish is added (a special stays on the list)
             price:
                 typeof menuItem.price === "number" || typeof menuItem.price === "string"
-                    ? Number(menuItem.price)
+                    ? shownPrice(menuItem, new Date())
                     : undefined,
             currency: menuItem.currency ?? activeMenu?.currency, // item detail carries its own currency (S2-02)
         };
@@ -124,7 +141,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
 
             return { ...prev, [itemId]: next };
         });
-        toast(`Added: ${menuItem.name ?? "Item"}`);
+        toast(`Added: ${localized(menuItem.name, menuItem.nameAm, guestLanguage.lang).text || "Item"}`);
     }
 
     function incrementWaiterListItem(itemId: string) {
@@ -235,6 +252,13 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
 
     // AGF-S2-15: the active menu's featured items, from the same guest-visible groups (not copied)
     const picks = useMemo(() => featuredItems<FeaturedItem>(groups), [groups]);
+    // AGF-S2-25: the active menu's specials now; the clock refreshes so a special ends on time without a reload
+    const now = useNow(15_000);
+    const specials = useMemo(() => activeSpecials(groups as unknown as { items: (FeaturedItem & SpecialFields)[] }[], now), [groups, now]);
+    // AGF-S2-36: one Specials line per category special (D-CS-7)
+    const categorySpecials = useMemo(
+        () => activeCategorySpecials(groups, now).map((g) => ({ id: g.category.id, name: g.category.name, nameAm: g.category.nameAm, special: g.category.special })),
+        [groups, now]);
 
     const tabCategories = narrowing ? displayedGroups.map((g) => g.category) : sortedCategories;
 
@@ -353,6 +377,8 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
     }
 
     return (
+        <GuestLanguageProvider value={guestLanguage}>
+        <GuestClockProvider now={now}>
         <div className="bg-white">
             <MenuHeader
                 businessName={business?.name}
@@ -404,7 +430,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                     key={c.id}
                                     tabId={c.id}
                                     active={activeCategoryId === c.id}
-                                    label={c.name}
+                                    label={<Localized main={c.name} am={c.nameAm} />}
                                     onClick={() => scrollToCategory(c.id)}
                                 />
                             ))}
@@ -467,7 +493,10 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                 )}
                                 {/* AGF-S2-15: hidden while searching or filtering (S2-14), so results aren't listed twice */}
                                 {!narrowing && (
-                                    <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} />
+                                    <>
+                                        <SpecialsSection items={specials} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} categories={categorySpecials} onSelectCategory={scrollToCategory} />
+                                        <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} />
+                                    </>
                                 )}
                                 {displayedGroups.map((g: any) => (
                                     <div
@@ -502,5 +531,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                 onClear={clearWaiterList}
             />
         </div>
+        </GuestClockProvider>
+        </GuestLanguageProvider>
     );
 }

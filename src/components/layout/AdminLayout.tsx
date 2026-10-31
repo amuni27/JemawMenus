@@ -10,6 +10,7 @@ const NAV_ITEMS = [
     {label: "Dashboard", path: "admin", exact: true},
     {label: "Menus", path: "admin/menus", exact: false},
     {label: "QR Code", path: "admin/qrcode", exact: false},
+    {label: "Specials", path: "admin/specials", exact: false}, // AGF-S2-25 (not "Deals", S2-29)
 ];
 
 export default function AdminLayout() {

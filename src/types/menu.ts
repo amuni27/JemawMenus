@@ -1,3 +1,4 @@
+import type { CategorySpecialInfo } from "../utils/specials";
 // Type definitions for menus, categories, items
 export interface MenuType {
   id: string;
@@ -7,6 +8,14 @@ export interface MenuType {
 }
 export type Currency = "USD" | "ETB" | (string & {});
 // Matches the backend MenuResponse (AGF-S1-14 / AGF-DEF-01): menu type fields are flat
+/** AGF-S2-18: response of POST /menus/{id}/duplicate */
+export interface MenuDuplicateResult {
+  menu: Menu;
+  categoriesCopied: number;
+  itemsCopied: number;
+  imagesNotCopied: number;
+}
+
 export interface Menu {
   id: string;
   businessId: string;
@@ -16,6 +25,8 @@ export interface Menu {
   /** @deprecated not sent by the API; kept for older callers */
   menuType?: MenuType;
   description?: string | null;
+  /** AGF-S2-23: optional Amharic name */
+  nameAm?: string | null;
   visibility?: string;
   active?: boolean;
   /** The restaurant's currency (AGF-S2-02) */
@@ -29,6 +40,8 @@ export interface MenuDto {
   name: string;
   menuTypeId: string;
   description?: string;
+  /** AGF-S2-23: optional Amharic name ("" clears on edit) */
+  nameAm?: string;
   /** Omitted when unknown, so an edit never changes the menu's visibility by accident */
   visibility?: string;
   /** Published state (AGF-S1-15). The API reads `isActive` and returns `active`. */
@@ -39,16 +52,21 @@ export interface Category {
   id: string;
   menuId: string;
   name: string;
+  /** AGF-S2-23: optional Amharic name */
+  nameAm?: string | null;
   /** Returned by the API as `active` */
   active?: boolean;
   isActive?: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  /** AGF-S2-36: the active category special on guest responses */
+  special?: CategorySpecialInfo | null;
 }
 
 export type CreateCategoryDTO = {
   name: string;
+  nameAm?: string;
   sortOrder?: number;
   isActive?: boolean;
 };
@@ -66,6 +84,9 @@ export interface MenuItem {
   price: number;
   ingredients: string[];   // ✅ matches backend
   description?: string | null;
+  /** AGF-S2-23: optional Amharic name and description */
+  nameAm?: string | null;
+  descriptionAm?: string | null;
   imageUrl?: string | null;
   calories?: number | null;
   status?: ItemStatus;
@@ -81,6 +102,15 @@ export interface MenuItem {
   isFeatured?: boolean;
   /** The restaurant's currency, on public item responses (AGF-S2-02) */
   currency?: string;
+  /** AGF-S2-25: present only while a special applies (public responses) */
+  specialPrice?: number | null;
+  specialNote?: string | null;
+  specialNoteAm?: string | null;
+  specialEndsAt?: string | null;
+  specialUntil?: string | null;
+  /** AGF-S2-36: DISH or CATEGORY, and the category discount in percent */
+  specialType?: "DISH" | "CATEGORY" | null;
+  specialPercent?: number | null;
 }
 
 export type CreateMenuItemDTO = {
@@ -112,10 +142,15 @@ export type CreateItemPayload = {
   clearPrepTime?: boolean;
   clearSpiceLevel?: boolean;
   status?: ItemStatus;
+  /** AGF-S2-23: sent when filled (create) or changed (edit; "" clears) */
+  nameAm?: string;
+  descriptionAm?: string;
 };
 
 export type WaiterListSnapshot = {
   name: string;
+  /** AGF-S2-23: shown when the guest has chosen Amharic */
+  nameAm?: string;
   imageUrl?: string;
   price?: number;      // snapshot of price at time added
   currency?: string;   // snapshot of currency at time added

@@ -1,5 +1,8 @@
+import { Localized } from "./Localized";
 import React from "react";
 import { MenuItemCard } from "./MenuItemCard";
+import { CategorySpecialBadge } from "./SpecialPrice";
+import { categorySpecialApplies, useGuestNow } from "../../utils/specials";
 
 type Props = {
     category: any;
@@ -11,17 +14,20 @@ type Props = {
 
 export function CategorySection({ category, items, currency, onAddItem, addDisabledLabel }: Props) {
     const itemCount = items?.length ?? 0;
+    // AGF-S2-36: the category special badge until its end time (guest page clock)
+    const special = categorySpecialApplies(category.special, useGuestNow()) ? category.special : null;
 
     return (
         <section className="mb-10 sm:mb-12 p-1">
             <div className="mb-4 flex items-end justify-between gap-3">
                 <div>
                     <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
-                        {category.name}
+                        <Localized main={category.name} am={category.nameAm} />
                     </h2>
                     <p className="mt-1 text-sm text-gray-500">
                         {itemCount} item{itemCount === 1 ? "" : "s"}
                     </p>
+                    {special ? <CategorySpecialBadge special={special} /> : null}
                 </div>
 
                 <div className="hidden sm:block h-px flex-1 bg-gray-200" />

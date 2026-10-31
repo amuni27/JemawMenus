@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useRef, useState} from "react";
+import { Localized } from "./Localized";
 
-type Menu = { id: string; name: string };
+type Menu = { id: string; name: string; nameAm?: string | null }; // AGF-S2-23
 
 type Props = {
     menus: Menu[];
@@ -70,7 +71,7 @@ export function MenuPicker({
                         {/* small dot like modern UI */}
                         <span className="h-2.5 w-2.5 rounded-full bg-emerald-600"/>
                         <span className="truncate text-base font-semibold text-gray-900">
-                        {activeMenu?.name ?? (loading ? "Loading..." : "Select menu")}
+                        {activeMenu ? <Localized main={activeMenu.name} am={activeMenu.nameAm} /> : (loading ? "Loading..." : "Select menu")}
                         </span>
                         <ChevronDownIcon
                             className="h-4 w-4 shrink-0 text-gray-500 transition group-hover:text-gray-700"/>
@@ -166,7 +167,7 @@ export function MenuPicker({
                                         >
                                             <div className="min-w-0">
                                                 <div className="truncate text-sm font-semibold text-gray-900">
-                                                    {m.name}
+                                                    <Localized main={m.name} am={m.nameAm} />
                                                 </div>
                                             </div>
 

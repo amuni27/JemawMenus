@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { displayCurrency } from "../../utils/currency";
 import { formatSubdomain } from "../../utils/subdomain";
-import { buildMenuUrl } from "../../utils/buildMenuUrl";
+import { publicMenuUrl } from "../../utils/publicMenuUrl";
+import { shareUrl } from "../../utils/shareUrl";
 import CopyLinkButton from "../../components/ui/CopyLinkButton";
 import { useAuth } from "../../app/context/AuthContext";
 import UserProfileModal from "../../components/account/UserProfileModal";
 import ChangePasswordModal from "../../components/account/ChangePasswordModal";
 import BusinessProfileModal from "../../components/account/BusinessProfileModal";
+import { countryName, countryOf } from "../../utils/countryRules";
+import { timeZoneLabel } from "../../utils/timeZones";
 import BusinessLogoModal from "../../components/account/BusinessLogoModal";
 import BusinessLogo from "../../components/ui/BusinessLogo";
 import BusinessHoursModal from "../../components/account/BusinessHoursModal";
@@ -49,6 +52,8 @@ export default function AccountPage() {
   const auth = useAuth();
   const user = auth.user;
   const business = auth.business;
+  // AGF-S2-20: the configured guest menu address (null when the configuration is invalid)
+  const guestMenuUrl = business?.id ? publicMenuUrl(business.id) : null;
 
   useEffect(() => { auth.refresh(); }, []);
 
@@ -76,7 +81,8 @@ export default function AccountPage() {
         <h2 className="text-2xl font-bold text-gray-900">Account &amp; Settings</h2>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* AGF-S2-35 (Defect F2): a shrinkable phone column, so long values (e.g. the guest link) can't widen the page */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* User Profile */}
         <Card title="User Profile" onEdit={() => setUserModal(true)}>
           <div className="flex items-center gap-4 mb-4">
@@ -96,27 +102,52 @@ export default function AccountPage() {
         <Card title="Business Profile" onEdit={() => setBusinessModal(true)}>
           <InfoRow label="Name" value={business.name} />
           <InfoRow label="Phone" value={business.businessPhone} />
-          <InfoRow label="Address" value={business.streetAddress} />
-          <InfoRow label="City" value={business.city} />
-          <InfoRow label="Region" value={business.state} />
+          {/* AGF-S2-12 CR1: Ethiopian restaurants have no address rows (location = the Google Maps link) */}
+          <InfoRow label="Country" value={countryName(countryOf(business.country))} />
+          {countryOf(business.country) === "US" && (
+            <>
+              <InfoRow label="Address" value={business.streetAddress} />
+              <InfoRow label="City" value={business.city} />
+              <InfoRow label="State" value={business.state} />
+              <InfoRow label="ZIP Code" value={business.zipcode} />
+              <InfoRow label="Time zone" value={timeZoneLabel(business.timeZone)} />
+            </>
+          )}
           {/* AGF-S2-10: the stored host as-is (no second domain); the guest link is built exactly like the QR code */}
           <InfoRow label="Subdomain" value={formatSubdomain(business.customSubdomain)} />
           {business.id && (
             <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
               <span className="text-sm text-gray-500 shrink-0">Guest menu link</span>
-              <span className="flex min-w-0 items-center gap-2">
-                <a
-                  href={buildMenuUrl(business.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="truncate text-sm font-medium text-blue-600 hover:underline"
-                >
-                  {buildMenuUrl(business.id)}
-                </a>
-                <CopyLinkButton url={buildMenuUrl(business.id)} successMessage="Guest menu link copied" />
-              </span>
+              {guestMenuUrl ? (
+                <span className="flex min-w-0 items-center gap-2">
+                  <a
+                    href={guestMenuUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-sm font-medium text-blue-600 hover:underline"
+                  >
+                    {guestMenuUrl}
+                  </a>
+                  {/* AGF-S2-21: copies the share page (restaurant preview in chat apps); it opens the same guest menu */}
+                  <CopyLinkButton url={shareUrl(business.id)} successMessage="Guest menu link copied" />
+                </span>
+              ) : (
+                // AGF-S2-20: invalid configured address → no link and nothing to copy (fail closed)
+                <span className="text-sm text-gray-500">Guest menu link unavailable</span>
+              )}
             </div>
           )}
+          {/* AGF-S2-12 */}
+          <div className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+            <span className="text-sm text-gray-500 shrink-0">Google Maps link</span>
+            {business.locationUrl ? (
+              <a href={business.locationUrl} target="_blank" rel="noopener noreferrer" className="min-w-0 break-all text-right text-sm font-medium text-blue-600 hover:underline">
+                {business.locationUrl}
+              </a>
+            ) : (
+              <span className="text-sm font-medium text-gray-900">—</span>
+            )}
+          </div>
           <InfoRow label="Currency" value={displayCurrency(business.currency)} />
         </Card>
 

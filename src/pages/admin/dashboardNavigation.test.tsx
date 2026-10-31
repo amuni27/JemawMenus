@@ -29,7 +29,9 @@ const isCurrent = (nav: HTMLElement, name: string) => within(nav).getByRole("lin
 describe("owner navigation", () => {
     it("has a Dashboard link to /{business}/admin, next to Menus and QR Code", () => {
         const nav = renderAt("/biz-1/admin/menus");
-        expect(within(nav).getAllByRole("link").map((l) => l.textContent)).toEqual(["Dashboard", "Menus", "QR Code"]);
+        // AGF-S2-25: Specials added after QR Code
+        expect(within(nav).getAllByRole("link").map((l) => l.textContent)).toEqual(["Dashboard", "Menus", "QR Code", "Specials"]);
+        expect(within(nav).getByRole("link", { name: "Specials" }).getAttribute("href")).toBe("/biz-1/admin/specials");
         expect(within(nav).getByRole("link", { name: "Dashboard" }).getAttribute("href")).toBe("/biz-1/admin");
     });
 

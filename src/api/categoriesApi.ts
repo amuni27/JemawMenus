@@ -22,7 +22,7 @@ class CategoryService {
   // PATCH /apiAuth/categories/:categoryId
   updateCategory(
       categoryId: string,
-      data: Partial<Pick<Category, "name" | "sortOrder" | "isActive">>
+      data: Partial<Pick<Category, "name" | "sortOrder" | "isActive">> & { nameAm?: string } // AGF-S2-23
   ) {
     return apiAuth.patch<Category>(`/categories/${categoryId}`, data);
   }

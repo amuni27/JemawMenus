@@ -1,4 +1,7 @@
-import {useNavigate} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
+import { CardSpecialPrice, SpecialBadge, SpecialNote } from "./SpecialPrice";
+import { specialApplies, useGuestNow } from "../../utils/specials";
+import { useLocalized } from "../../utils/guestLanguage";
 import { displayCurrency } from "../../utils/currency";
 import {isSoldOut} from "../../utils/itemAvailability.ts";
 import { declaredDiets, dietLabel } from "../../utils/dietary.ts";
@@ -9,9 +12,11 @@ type Props = {
     onAddItem?: (item: any) => void;
     /** AGF-S2-17: when set (owner preview), the add button is disabled and announced with this label */
     addDisabledLabel?: string;
+    /** AGF-S2-25: show the special's note (Specials section) */
+    showSpecialNote?: boolean;
 };
 
-export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Props) {
+export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel, showSpecialNote }: Props) {
     const navigate = useNavigate();
 
     const openDetail = () => {
@@ -22,6 +27,12 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
             ? Number(item.price)
             : null;
     const soldOut = isSoldOut(item.status);
+    // AGF-S2-25: an applicable special (ends on time via the guest page clock)
+    const special = specialApplies(item, useGuestNow());
+    // AGF-S2-23: the selected language, field by field
+    const t = useLocalized();
+    const name = t(item.name, item.nameAm);
+    const description = t(item.description, item.descriptionAm);
     const addOff = soldOut || Boolean(addDisabledLabel);
     const diets = declaredDiets(item); // AGF-S2-14: badges for the dietary vocabulary only
 
@@ -35,18 +46,19 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
         >
             {/* Image */}
             <div className="relative rounded-2xl border bg-white">
+                {/* AGF-S2-27: sold out dims the photo only; text keeps full contrast (WCAG 1.4.3) */}
                 <div
                     onClick={openDetail}
-                    className={`relative h-32 sm:h-36 overflow-hidden bg-gray-100 ${soldOut ? "opacity-60 grayscale" : ""}`}>
+                    className="relative h-32 sm:h-36 overflow-hidden bg-gray-100">
                 {item.imageUrl ? (
                     <img
                         src={item.imageUrl}
-                        alt={item.name}
-                        className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105"
+                        alt={name.text}
+                        className={`h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 ${soldOut ? "opacity-60 grayscale" : ""}`}
                         loading="lazy"
                     />
                 ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                    <div className="flex h-full items-center justify-center text-sm text-gray-600">
                         No image
                     </div>
                 )}
@@ -66,7 +78,7 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                         type="button"
                         onClick={() => { if (!addOff) onAddItem?.(item); }}
                         disabled={addOff}
-                        aria-label={addDisabledLabel ?? (soldOut ? `${item.name} is sold out` : `Add ${item.name}`)}
+                        aria-label={addDisabledLabel ?? (soldOut ? `${name.text} is sold out` : `Add ${name.text}`)}
                         className={`
     absolute right-1 top-28 lg:top-32 lg:right-3
     inline-flex h-9 w-9 items-center justify-center
@@ -86,9 +98,16 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
             {/* Content */}
             <div
                 onClick={openDetail}
-                className={`flex flex-1 flex-col p-3 sm:p-4 ${soldOut ? "opacity-60" : ""}`}>
+                className="flex flex-1 flex-col p-3 sm:p-4">
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-1">
-                    {item.name}
+                    {/* AGF-S2-27: the name is the keyboard and screen-reader way to the dish's details (WCAG 2.1.1) */}
+                    <Link
+                        to={`item/${item.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+                    >
+                        <span lang={name.lang}>{name.text}</span>
+                    </Link>
                 </h3>
 
                 {diets.length > 0 ? (
@@ -101,28 +120,37 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                     </div>
                 ) : null}
 
-                {item.description ? (
-                    <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-                        {item.description}
+                {description.text ? (
+                    <p lang={description.lang} className="mt-1 text-sm text-gray-500 line-clamp-2">
+                        {description.text}
                     </p>
                 ) : (
-                    <p className="mt-1 text-sm text-gray-400 italic">No description</p>
+                    <p className="mt-1 text-sm text-gray-500 italic">No description</p>
                 )}
+
+                {special ? (
+                    <div className="mt-2 space-y-1">
+                        <SpecialBadge until={item.specialUntil} />
+                        {showSpecialNote ? <SpecialNote item={item} /> : null}
+                    </div>
+                ) : null}
 
                 <div className="mt-3 flex items-end justify-between">
                     <div className="text-base font-bold text-gray-900">
-                        {price !== null && Number.isFinite(price) ? (
+                        {special ? (
+                            <CardSpecialPrice item={item} currency={currency} />
+                        ) : price !== null && Number.isFinite(price) ? (
                             <>
                                 <span className="text-sm font-semibold text-gray-500">{displayCurrency(currency)}</span>{" "}
                                 {price.toFixed(2)}
                             </>
                         ) : (
-                            <span className="text-sm text-gray-400">Price not set</span>
+                            <span className="text-sm text-gray-500">Price not set</span>
                         )}
                     </div>
 
                     {typeof item.calories === "number" ? (
-                        <span className="text-xs text-gray-400">{item.calories} cal</span>
+                        <span className="text-xs text-gray-500">{item.calories} cal</span>
                     ) : null}
                 </div>
             </div>
