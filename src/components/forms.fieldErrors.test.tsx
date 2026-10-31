@@ -87,11 +87,11 @@ describe("category form", () => {
         const onCreate = vi.fn().mockRejectedValueOnce(fieldErrors([{ field: "name", message: "size must be between 0 and 255" }]))
             .mockRejectedValueOnce({ response: { status: 400, data: { message: "Category has items; delete items first" } } });
         wrap(<CategoryModal open onClose={() => {}} menuId="m1" onCreate={onCreate} onUpdate={vi.fn()} />);
-        fireEvent.change(screen.getByRole("textbox"), { target: { value: "Desserts" } });
+        fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "Desserts" } });
         fireEvent.click(screen.getByRole("button", { name: "Create" }));
         expect(await within(fieldBox("Name")).findByText("size must be between 0 and 255")).toBeTruthy();
 
-        fireEvent.change(screen.getByRole("textbox"), { target: { value: "Drinks" } });
+        fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "Drinks" } });
         expect(within(fieldBox("Name")).queryByText("size must be between 0 and 255")).toBeNull();
         fireEvent.click(screen.getByRole("button", { name: "Create" }));
         expect(await screen.findByText("Category has items; delete items first")).toBeTruthy();

@@ -162,7 +162,7 @@ describe("category reordering", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "+ Add Category" })[0]);
         await screen.findByText("Create category");
-        fireEvent.change(screen.getByRole("textbox"), { target: { value: "Desserts" } });
+        fireEvent.change(screen.getAllByRole("textbox")[0] /* S2-23: Name, then Name in Amharic */, { target: { value: "Desserts" } });
         fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
         await waitFor(() => expect(order()).toEqual(["Starters", "Mains", "Drinks", "Desserts"]));

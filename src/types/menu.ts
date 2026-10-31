@@ -24,6 +24,8 @@ export interface Menu {
   /** @deprecated not sent by the API; kept for older callers */
   menuType?: MenuType;
   description?: string | null;
+  /** AGF-S2-23: optional Amharic name */
+  nameAm?: string | null;
   visibility?: string;
   active?: boolean;
   /** The restaurant's currency (AGF-S2-02) */
@@ -37,6 +39,8 @@ export interface MenuDto {
   name: string;
   menuTypeId: string;
   description?: string;
+  /** AGF-S2-23: optional Amharic name ("" clears on edit) */
+  nameAm?: string;
   /** Omitted when unknown, so an edit never changes the menu's visibility by accident */
   visibility?: string;
   /** Published state (AGF-S1-15). The API reads `isActive` and returns `active`. */
@@ -47,6 +51,8 @@ export interface Category {
   id: string;
   menuId: string;
   name: string;
+  /** AGF-S2-23: optional Amharic name */
+  nameAm?: string | null;
   /** Returned by the API as `active` */
   active?: boolean;
   isActive?: boolean;
@@ -57,6 +63,7 @@ export interface Category {
 
 export type CreateCategoryDTO = {
   name: string;
+  nameAm?: string;
   sortOrder?: number;
   isActive?: boolean;
 };
@@ -74,6 +81,9 @@ export interface MenuItem {
   price: number;
   ingredients: string[];   // ✅ matches backend
   description?: string | null;
+  /** AGF-S2-23: optional Amharic name and description */
+  nameAm?: string | null;
+  descriptionAm?: string | null;
   imageUrl?: string | null;
   calories?: number | null;
   status?: ItemStatus;
@@ -120,6 +130,9 @@ export type CreateItemPayload = {
   clearPrepTime?: boolean;
   clearSpiceLevel?: boolean;
   status?: ItemStatus;
+  /** AGF-S2-23: sent when filled (create) or changed (edit; "" clears) */
+  nameAm?: string;
+  descriptionAm?: string;
 };
 
 export type WaiterListSnapshot = {

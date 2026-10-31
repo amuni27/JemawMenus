@@ -38,17 +38,18 @@ export function useCategories(menuId?: string) {
     };
   }, [menuId]);
 
-  const createCategory = async (name: string) => {
+  const createCategory = async (name: string, nameAm?: string) => {
     if (!menuId) throw new Error("menuId is required");
-    const created = await categoryApi.createCategory(menuId, { name });
+    const created = await categoryApi.createCategory(menuId, nameAm ? { name, nameAm } : { name }); // AGF-S2-23
     const cat = created?.data ?? created;
     // The backend places a new category after the existing ones (AGF-S2-07)
     setCategories((prev) => [...prev, cat]);
     return cat as Category;
   };
 
-  const updateCategory = async (categoryId: string, name: string) => {
-    const updated = await categoryApi.updateCategory(categoryId, { name });
+  // AGF-S2-23: nameAm undefined = unchanged, "" = clear
+  const updateCategory = async (categoryId: string, name: string, nameAm?: string) => {
+    const updated = await categoryApi.updateCategory(categoryId, nameAm === undefined ? { name } : { name, nameAm });
     const cat = updated?.data ?? updated;
     setCategories((prev) => prev.map((c) => (c.id === categoryId ? cat : c)));
     return cat as Category;

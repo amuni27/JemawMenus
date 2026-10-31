@@ -53,6 +53,8 @@ interface Props {
 type Draft = {
     name: string;
     description: string;
+    nameAm: string; // AGF-S2-23
+    descriptionAm: string;
     price: string;
     calories: string;
     categoryId: string;
@@ -104,6 +106,8 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
         return {
             name: item.name ?? "",
             description: item.description ?? "",
+            nameAm: item.nameAm ?? "",
+            descriptionAm: item.descriptionAm ?? "",
             price: item.price != null ? String(item.price) : "",
             calories: item.calories != null ? String(item.calories) : "",
             categoryId: item.categoryId ?? defaultCategoryId,
@@ -125,6 +129,8 @@ function buildDraft(item: MenuItem | undefined, categories: Category[]): Draft {
     return {
         name: "",
         description: "",
+        nameAm: "",
+        descriptionAm: "",
         price: "",
         calories: "",
         categoryId: defaultCategoryId,
@@ -288,6 +294,11 @@ export default function ItemModal({
             else details.spiceLevel = draft.spiceLevel || null;
         }
         if (!loaded || draft.isFeatured !== loaded.isFeatured) details.isFeatured = draft.isFeatured;
+        // AGF-S2-23: new items send filled translations; edits send changed ones ("" clears)
+        for (const key of ["nameAm", "descriptionAm"] as const) {
+            const value = draft[key].trim();
+            if (loaded ? value !== loaded[key].trim() : value !== "") details[key] = value;
+        }
         if (!loaded || draft.prepTime !== loaded.prepTime) {
             if (draft.prepTime !== "") details.prepTimeMinutes = Number(draft.prepTime);
             else if (loaded) details.clearPrepTime = true;
@@ -386,7 +397,7 @@ export default function ItemModal({
             // AGF-S2-11: field errors go under their fields; anything else keeps the server message
             const banner = applyServerErrors(e, {
                 name: draft.name, categoryId: draft.categoryId, price: draft.price, calories: draft.calories,
-                description: draft.description, ingredients: draft.ingredients,
+                description: draft.description, nameAm: draft.nameAm, descriptionAm: draft.descriptionAm, ingredients: draft.ingredients,
                 allergens: draft.allergens, tags: draft.tags, spiceLevel: draft.spiceLevel,
                 isFeatured: draft.isFeatured, prepTimeMinutes: draft.prepTime,
             }, "Failed to save item");
@@ -512,6 +523,33 @@ export default function ItemModal({
                 {serverErrors.errorFor("description", draft.description) && (
                     <p className="-mt-2 text-xs text-red-600">{serverErrors.errorFor("description", draft.description)}</p>
                 )}
+
+                {/* AGF-S2-23: shown to guests who choose Amharic; leave empty to show the main text */}
+                <fieldset className="space-y-3 rounded-xl border border-gray-200 p-4">
+                    <legend className="px-1 text-sm font-medium text-gray-700">Amharic (optional)</legend>
+                    <Input
+                        label="Name in Amharic (optional)"
+                        aria-label="Name in Amharic (optional)"
+                        lang="am"
+                        maxLength={255}
+                        value={draft.nameAm}
+                        onChange={(e) => { const nameAm = e.target.value; setDraft((d) => ({...d, nameAm})); }}
+                        error={serverErrors.errorFor("nameAm", draft.nameAm)}
+                    />
+                    <label className="block text-sm font-medium text-gray-700" htmlFor="item-description-am">Description in Amharic (optional)</label>
+                    <textarea
+                        id="item-description-am"
+                        lang="am"
+                        maxLength={255}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-brand focus:border-brand-dark"
+                        rows={2}
+                        value={draft.descriptionAm}
+                        onChange={(e) => { const descriptionAm = e.target.value; setDraft((d) => ({...d, descriptionAm})); }}
+                    />
+                    {serverErrors.errorFor("descriptionAm", draft.descriptionAm) && (
+                        <p className="-mt-2 text-xs text-red-600">{serverErrors.errorFor("descriptionAm", draft.descriptionAm)}</p>
+                    )}
+                </fieldset>
 
                 {/* Image Upload */}
                 <div className="space-y-2">
