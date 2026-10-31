@@ -94,4 +94,13 @@ describe("specials page", () => {
         fireEvent.click(await screen.findByRole("button", { name: /try again|retry/i }));
         expect(await screen.findByText(/No specials yet/)).toBeTruthy();
     });
+
+    // checkpoint B: PO-approved read-time price guard
+    it("flags a special whose dish now costs the same or less", async () => {
+        api.list.mockResolvedValue({ data: [special({ regularPrice: 340, status: "NOT_A_DISCOUNT" })] });
+        renderPage();
+        const doro = within(await screen.findByRole("heading", { name: "Doro Wat" }).then((h) => h.closest("li") as HTMLElement));
+        expect(doro.getByText("Not a discount")).toBeTruthy();
+        expect(doro.getByText(/regular price \(ETB 340\.00\) is now at or below the special price \(ETB 350\.00\)/)).toBeTruthy();
+    });
 });

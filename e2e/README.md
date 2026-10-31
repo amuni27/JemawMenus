@@ -1,6 +1,6 @@
 # E2E smoke suite (AGF-S2-28)
 
-Thirteen owner → guest journeys in Chromium against the **real backend in its demo profile** (in-memory data, seeded
+Fourteen owner → guest journeys in Chromium against the **real backend in its demo profile** (in-memory data, seeded
 restaurant "Abol Demo Café" and owner `owner@demo.agafari.test`). It complements the unit and integration tests; it
 does not replace real-device or screen-reader checks (S2-27) or production verification.
 
@@ -19,6 +19,7 @@ does not replace real-device or screen-reader checks (S2-27) or production verif
 | J11 | Location by country (S2-12 + CR1): Ethiopian link → "Get Directions", replace but not remove; registration at 375 px (Ethiopia link only, switch to US fields) and desktop (US address, add/remove link); S2-26: US time zone pre-selected from the state, guest "open now" in New York time (fixed clock, winter and summer) |
 | J12 | Account page on phones (AGF-S2-35, Defect F2): no sideways scroll at 375/320 px (phone emulation), Edit buttons and Copy link on-screen, profile editor inside the screen; desktop keeps two columns |
 | J13 | Bilingual menu (AGF-S2-23): owner adds a dish with an Amharic name; guest at 375 px switches to አማርኛ (field-by-field fallback), choice kept after reload, Amharic search, dish detail in Amharic |
+| J14 | Specials (AGF-S2-25): owner adds a special on the Specials page; guest at 375 px sees the Specials section, struck regular price and badge (axe clean); paused → regular price |
 
 ## Run locally
 

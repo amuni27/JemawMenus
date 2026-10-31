@@ -99,6 +99,12 @@ export interface MenuItem {
   isFeatured?: boolean;
   /** The restaurant's currency, on public item responses (AGF-S2-02) */
   currency?: string;
+  /** AGF-S2-25: present only while a special applies (public responses) */
+  specialPrice?: number | null;
+  specialNote?: string | null;
+  specialNoteAm?: string | null;
+  specialEndsAt?: string | null;
+  specialUntil?: string | null;
 }
 
 export type CreateMenuItemDTO = {

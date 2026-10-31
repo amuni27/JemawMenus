@@ -1,5 +1,6 @@
 // AGF-S2-25: owner specials (checkpoint A). Status is computed by the backend in the restaurant's time zone.
-export type SpecialStatus = "ACTIVE" | "SCHEDULED" | "ENDED" | "PAUSED";
+/** NOT_A_DISCOUNT: the dish now costs the same or less than the special (read-time guard, checkpoint B) */
+export type SpecialStatus = "ACTIVE" | "SCHEDULED" | "ENDED" | "PAUSED" | "NOT_A_DISCOUNT";
 
 export const WEEK_DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
 export type WeekDay = (typeof WEEK_DAYS)[number];

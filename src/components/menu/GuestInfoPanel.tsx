@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useNow } from "../../hooks/useNow";
 import { Clock, MapPin, Navigation, Phone } from "lucide-react";
 import clsx from "clsx";
 import { openingStatus, type DayHours } from "../../utils/openingHours";
@@ -14,16 +14,6 @@ export type GuestBusinessInfo = {
   /** AGF-S2-12: the stored, validated Google Maps link */
   locationUrl?: string | null;
 };
-
-/** Re-evaluates "open now" every minute while the menu stays open. */
-function useNow(intervalMs = 60_000): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
 
 /** "+251 11 000 0000" → "+251110000000"; null when there are no digits */
 function telHref(phone?: string | null): string | null {

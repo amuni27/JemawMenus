@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { DetailSpecialPrice, SpecialBadge, SpecialNote } from "../../components/menu/SpecialPrice";
+import { specialApplies, useGuestNow } from "../../utils/specials";
 import { useLocalized } from "../../utils/guestLanguage";
 import { formatPrice } from "../../utils/currency";
 import { useOutletContext, useParams } from "react-router-dom";
@@ -23,6 +25,7 @@ export default function MenuItemDetail() {
     const inPreview = Boolean(outlet?.preview);
     const item = inPreview ? (itemId ? outlet?.preview?.findItem(itemId) ?? null : null) : fetchedItem;
     const t = useLocalized(); // AGF-S2-23
+    const now = useGuestNow(); // AGF-S2-25
     const loading = inPreview ? false : fetching;
 
     useEffect(() => {
@@ -87,6 +90,7 @@ export default function MenuItemDetail() {
     // AGF-S2-33: unknown or hidden dish → friendly screen with a way back to this restaurant's menu
     if (!item) return <NotFound context="item" businessId={tenantSlug ?? ""} />;
     const name = t(item.name, item.nameAm);
+    const special = specialApplies(item, now); // AGF-S2-25
     const description = t(item.description, item.descriptionAm);
 
     return (
@@ -119,7 +123,9 @@ export default function MenuItemDetail() {
 
                             {/* Mobile price beside title */}
                             <div className="text-right lg:hidden">
-                                {priceNumber !== null ? (
+                                {special ? (
+                                    <div className="text-sm font-semibold text-gray-900"><DetailSpecialPrice item={item} currency={item.currency} /></div>
+                                ) : priceNumber !== null ? (
                                     <div className="text-sm font-semibold text-gray-900">
                                         {formatPrice(priceNumber, item.currency)}
                                     </div>
@@ -137,7 +143,9 @@ export default function MenuItemDetail() {
 
                         {/* Desktop price under title (slightly softer color) */}
                         <div className="hidden lg:block">
-                            {priceNumber !== null ? (
+                            {special ? (
+                                <div className="text-xl font-semibold text-gray-700"><DetailSpecialPrice item={item} currency={item.currency} /></div>
+                            ) : priceNumber !== null ? (
                                 <div className="text-xl font-semibold text-gray-700">
                                     {formatPrice(priceNumber, item.currency)}
                                 </div>
@@ -145,6 +153,14 @@ export default function MenuItemDetail() {
                                 <div className="text-sm text-gray-500">Price not set</div>
                             )}
                         </div>
+
+                        {/* AGF-S2-25: shown once for both layouts */}
+                        {special ? (
+                            <div className="space-y-1">
+                                <SpecialBadge until={item.specialUntil} />
+                                <SpecialNote item={item} />
+                            </div>
+                        ) : null}
 
                         {/* Small divider (more “senior” polish) */}
                         <hr className="my-3 border-gray-200" />

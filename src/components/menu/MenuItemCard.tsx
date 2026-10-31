@@ -1,4 +1,6 @@
 import {Link, useNavigate} from "react-router-dom";
+import { CardSpecialPrice, SpecialBadge, SpecialNote } from "./SpecialPrice";
+import { specialApplies, useGuestNow } from "../../utils/specials";
 import { useLocalized } from "../../utils/guestLanguage";
 import { displayCurrency } from "../../utils/currency";
 import {isSoldOut} from "../../utils/itemAvailability.ts";
@@ -10,9 +12,11 @@ type Props = {
     onAddItem?: (item: any) => void;
     /** AGF-S2-17: when set (owner preview), the add button is disabled and announced with this label */
     addDisabledLabel?: string;
+    /** AGF-S2-25: show the special's note (Specials section) */
+    showSpecialNote?: boolean;
 };
 
-export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Props) {
+export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel, showSpecialNote }: Props) {
     const navigate = useNavigate();
 
     const openDetail = () => {
@@ -23,6 +27,8 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
             ? Number(item.price)
             : null;
     const soldOut = isSoldOut(item.status);
+    // AGF-S2-25: an applicable special (ends on time via the guest page clock)
+    const special = specialApplies(item, useGuestNow());
     // AGF-S2-23: the selected language, field by field
     const t = useLocalized();
     const name = t(item.name, item.nameAm);
@@ -122,9 +128,18 @@ export function MenuItemCard({ item, currency, onAddItem, addDisabledLabel }: Pr
                     <p className="mt-1 text-sm text-gray-500 italic">No description</p>
                 )}
 
+                {special ? (
+                    <div className="mt-2 space-y-1">
+                        <SpecialBadge until={item.specialUntil} />
+                        {showSpecialNote ? <SpecialNote item={item} /> : null}
+                    </div>
+                ) : null}
+
                 <div className="mt-3 flex items-end justify-between">
                     <div className="text-base font-bold text-gray-900">
-                        {price !== null && Number.isFinite(price) ? (
+                        {special ? (
+                            <CardSpecialPrice item={item} currency={currency} />
+                        ) : price !== null && Number.isFinite(price) ? (
                             <>
                                 <span className="text-sm font-semibold text-gray-500">{displayCurrency(currency)}</span>{" "}
                                 {price.toFixed(2)}

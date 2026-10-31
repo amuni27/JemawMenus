@@ -19,6 +19,7 @@ const STATUS: Record<SpecialStatus, { label: string; className: string }> = {
     SCHEDULED: { label: "Scheduled", className: "bg-blue-50 text-blue-800" },
     ENDED: { label: "Ended", className: "bg-gray-100 text-gray-700" },
     PAUSED: { label: "Paused", className: "bg-amber-50 text-amber-800" },
+    NOT_A_DISCOUNT: { label: "Not a discount", className: "bg-red-50 text-red-800" },
 };
 
 const DAY_SHORT: Record<string, string> = {
@@ -144,6 +145,12 @@ export default function SpecialsPage() {
                             </p>
                             <p className="mt-1 text-sm text-gray-700">{scheduleOf(s)}</p>
                             {s.note && <p className="mt-1 text-sm text-gray-600">{s.note}</p>}
+                            {/* checkpoint B: read-time guard; guests see the regular price until this is fixed */}
+                            {s.status === "NOT_A_DISCOUNT" && (
+                                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+                                    The regular price ({formatPrice(s.regularPrice, s.currency ?? currency)}) is now at or below the special price ({formatPrice(s.specialPrice, s.currency ?? currency)}). Edit the special or the dish price.
+                                </p>
+                            )}
                             <div className="mt-4 flex flex-wrap gap-2">
                                 <Button variant="secondary" onClick={() => setEditing(s)}>Edit</Button>
                                 <Button variant="secondary" onClick={() => setPaused(s, !s.paused)}>{s.paused ? "Resume" : "Pause"}</Button>
