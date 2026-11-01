@@ -68,4 +68,11 @@ describe("Super Admin console layout", () => {
         expect(localStorage.getItem("adminToken")).toBeNull();
         expect(localStorage.getItem("token")).toBe("owner-token");
     });
+
+    it("links to the monetization settings (AGF E4-M2)", async () => {
+        localStorage.setItem("adminToken", "admin-token");
+        renderConsole();
+        const link = await screen.findByRole("link", { name: "Monetization" });
+        expect(link.getAttribute("href")).toBe("/super-admin/monetization");
+    });
 });

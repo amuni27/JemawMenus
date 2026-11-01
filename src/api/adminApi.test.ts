@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { ADMIN_TOKEN_KEY, adminClient } from "./adminApi";
+import { ADMIN_TOKEN_KEY, adminApi, adminClient } from "./adminApi";
 
 // AGF E4-M1 (SC5): the Super Admin console has its own client and token key. It never sends or clears the owner's
 // token, and a 401 on an admin call ends only the admin session.
@@ -41,4 +41,26 @@ describe("admin API client", () => {
         expect(localStorage.getItem(ADMIN_TOKEN_KEY)).toBeNull();
         expect(localStorage.getItem("token")).toBe("owner-token");
     });
+
+    it("reads, saves and pages the monetization configuration under /admin (AGF E4-M2)", async () => {
+        localStorage.setItem(ADMIN_TOKEN_KEY, "admin-token");
+        const calls: { method?: string; url?: string; data?: unknown; params?: unknown }[] = [];
+        const original = adminClient.defaults.adapter;
+        adminClient.defaults.adapter = (async (config: { method?: string; url?: string; data?: unknown; params?: unknown }) => {
+            calls.push({ method: config.method, url: config.url, data: config.data, params: config.params });
+            return { data: {}, status: 200, statusText: "OK", headers: {}, config };
+        }) as never;
+        try {
+            await adminApi.monetizationConfig();
+            await adminApi.saveMonetizationConfig({ setting: "SETTING_2", models: ["MODEL_2"], expectedVersion: 3 });
+            await adminApi.monetizationHistory(1, 10);
+        } finally {
+            adminClient.defaults.adapter = original;
+        }
+        expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+            "get /admin/monetization-config", "put /admin/monetization-config", "get /admin/monetization-config/history"]);
+        expect(JSON.parse(calls[1].data as string)).toEqual({ setting: "SETTING_2", models: ["MODEL_2"], expectedVersion: 3 });
+        expect(calls[2].params).toEqual({ page: 1, size: 10 });
+    });
 });
+

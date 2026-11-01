@@ -12,6 +12,16 @@ export type AdminAuditItem = {
 };
 export type AdminAuditPage = { items: AdminAuditItem[]; page: number; size: number; total: number };
 
+// AGF E4-M2: the platform monetization configuration (Setting 1 = Model 1 only; Setting 2 = Models 2-4, at least one).
+export type MonetizationSetting = 'SETTING_1' | 'SETTING_2';
+export type MonetizationModel = 'MODEL_1' | 'MODEL_2' | 'MODEL_3' | 'MODEL_4';
+export type MonetizationConfig = {
+  configured: boolean; version?: number; setting?: MonetizationSetting; models?: MonetizationModel[];
+  effectiveFrom?: string; changedAt?: string; changedBy?: string;
+};
+export type MonetizationConfigChange = { setting: MonetizationSetting; models: MonetizationModel[]; expectedVersion: number };
+export type MonetizationHistoryPage = { items: MonetizationConfig[]; page: number; size: number; total: number };
+
 export const adminClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'https://jemaw-menu-backend-spring.onrender.com'}/api`,
 });
@@ -38,4 +48,8 @@ export const adminApi = {
     adminClient.post<{ token: string; admin: AdminSummary }>('/admin/auth/login', { email, password }),
   me: () => adminClient.get<AdminSummary>('/admin/me'),
   auditEvents: (page: number, size: number) => adminClient.get<AdminAuditPage>('/admin/audit-events', { params: { page, size } }),
+  monetizationConfig: () => adminClient.get<MonetizationConfig>('/admin/monetization-config'),
+  saveMonetizationConfig: (change: MonetizationConfigChange) => adminClient.put<MonetizationConfig>('/admin/monetization-config', change),
+  monetizationHistory: (page: number, size: number) =>
+    adminClient.get<MonetizationHistoryPage>('/admin/monetization-config/history', { params: { page, size } }),
 };
