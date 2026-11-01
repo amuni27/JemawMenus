@@ -21,6 +21,10 @@ import AccountPage from "../pages/admin/AccountPage.tsx";
 import MenuPreviewPage from "../pages/menus/MenuPreviewPage.tsx";
 import NotFound from "../components/NotFound.tsx";
 import RouteError from "../components/RouteError.tsx";
+import SuperAdminLogin from "../pages/superadmin/SuperAdminLogin.tsx";
+import SuperAdminLayout from "../pages/superadmin/SuperAdminLayout.tsx";
+import SuperAdminOverview from "../pages/superadmin/SuperAdminOverview.tsx";
+import SuperAdminAuditLog from "../pages/superadmin/SuperAdminAuditLog.tsx";
 
 // The app's route table, in its own module so route tests can use it (AGF-S2-29)
 export const routes: RouteObject[] = [
@@ -56,6 +60,19 @@ export const routes: RouteObject[] = [
             {
                 path: '/auth/register',
                 element: <RegisterWizard/>,
+            },
+            // AGF E4-M1: the platform Super Admin console (fixed paths outrank /:tenantSlug)
+            {
+                path: '/super-admin/login',
+                element: <SuperAdminLogin/>,
+            },
+            {
+                path: '/super-admin',
+                element: <SuperAdminLayout/>,
+                children: [
+                    {index: true, element: <SuperAdminOverview/>},
+                    {path: 'audit', element: <SuperAdminAuditLog/>},
+                ],
             },
             // Tenant routes (simulate subdomain with :tenantSlug)
             {

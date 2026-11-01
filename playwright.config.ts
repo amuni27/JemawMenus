@@ -10,6 +10,9 @@ process.env.E2E_OWNER_PASSWORD ||= randomSecret(24);
 process.env.E2E_JWT_SECRET ||= randomSecret(64);
 process.env.E2E_RESET_SECRET ||= randomSecret(64);
 process.env.E2E_VERIFY_SECRET ||= randomSecret(64); // AGF-S2-22
+// AGF E4-M1: the first Super Admin for J18, random per run (never committed)
+process.env.E2E_ADMIN_EMAIL ||= `root-${randomSecret(8).toLowerCase().replace(/[^a-z0-9]/g, "x")}@admin.agafari.test`;
+process.env.E2E_ADMIN_PASSWORD ||= `Aa1!${randomSecret(24)}`;
 
 const BACKEND_PORT = 8081;
 const FRONTEND = "http://127.0.0.1:5176";
@@ -60,6 +63,9 @@ export default defineConfig({
                 APP_EMAIL_VERIFICATION_SECRET: process.env.E2E_VERIFY_SECRET,
                 APP_EMAIL_VERIFICATION_LINK_BASE_URL: `${FRONTEND}/auth/verify-email`,
                 APP_EMAIL_VERIFICATION_ENFORCE: "true",
+                // AGF E4-M1: bootstrap the first Super Admin (the demo profile authorizes it; values random per run)
+                APP_ADMIN_BOOTSTRAP_EMAIL: process.env.E2E_ADMIN_EMAIL,
+                APP_ADMIN_BOOTSTRAP_PASSWORD: process.env.E2E_ADMIN_PASSWORD,
                 DEMO_OWNER_PASSWORD: process.env.E2E_OWNER_PASSWORD,
                 // AGF-S2-21: share pages redirect to the frontend under test
                 APP_PUBLIC_MENU_BASE_URL: FRONTEND,
