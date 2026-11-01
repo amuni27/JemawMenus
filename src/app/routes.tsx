@@ -4,6 +4,7 @@ import Login from '../pages/public/Login';
 import RegisterWizard from '../pages/public/RegisterWizard';
 import ForgotPassword from '../pages/public/ForgotPassword';
 import ResetPassword from '../pages/public/ResetPassword';
+import VerifyEmail from '../pages/public/VerifyEmail';
 import AdminLayout from '../components/layout/AdminLayout.tsx';
 import RequireAuth from '../components/auth/RequireAuth.tsx';
 import CustomerMenu from '../pages/customer/CustomerMenu.tsx';
@@ -47,6 +48,10 @@ export const routes: RouteObject[] = [
             {
                 path: '/auth/reset-password',
                 element: <ResetPassword/>,
+            },
+            {
+                path: '/auth/verify-email', // AGF-S2-22
+                element: <VerifyEmail/>,
             },
             {
                 path: '/auth/register',
