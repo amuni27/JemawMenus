@@ -8,6 +8,11 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 vi.mock("../../app/context/AuthContext", () => ({ useAuth: () => ({ business: null, user: null, logout: vi.fn() }) }));
 vi.mock("../../pages/superadmin/SuperAdminLogin.tsx", () => ({ default: () => <p>Super Admin sign-in page</p> }));
 vi.mock("../../pages/customer/CustomerMenu.tsx", () => ({ default: () => <p>Guest menu page</p> }));
+vi.mock("../../pages/superadmin/SuperAdminLayout.tsx", async () => {
+    const { Outlet } = await import("react-router-dom");
+    return { default: () => <Outlet /> };
+});
+vi.mock("../../pages/superadmin/SuperAdminMonetization.tsx", () => ({ default: () => <p>Monetization settings page</p> }));
 
 const { routes } = await import("../routes.tsx");
 
@@ -19,4 +24,11 @@ describe("Super Admin routes", () => {
         expect(await screen.findByText("Super Admin sign-in page")).toBeTruthy();
         expect(screen.queryByText("Guest menu page")).toBeNull();
     });
+
+    it("serves the monetization settings at /super-admin/monetization (AGF E4-M2)", async () => {
+        render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/super-admin/monetization"] })} />);
+        expect(await screen.findByText("Monetization settings page")).toBeTruthy();
+        expect(screen.queryByText("Guest menu page")).toBeNull();
+    });
 });
+

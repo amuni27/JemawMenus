@@ -24,6 +24,7 @@ does not replace real-device or screen-reader checks (S2-27) or production verif
 | J16 | Menu views (AGF-S2-24): a guest opening the menu raises today's count on the owner dashboard; the guest menu footer's "Privacy" link opens the menu-views notice (Escape closes) |
 | J17 | Email verification (AGF-S2-22, gate on for the suite backend): a new owner signs in, a draft can't be published, the demo-outbox link verifies the email, then publishing works |
 | J18 | Super Admin console (AGF E4-M1): the bootstrapped admin (random per run) signs in at `/super-admin/login`, sees its own sign-in in the audit log, signs out (admin token cleared); an owner token gets 403 on `/api/admin/me` and stays untouched; axe clean at 375 px |
+| J19 | Monetization configuration (AGF E4-M2): the admin saves Setting 2 (Models 2 and 4), then Setting 1, each after a confirmation showing old and new; versions appear in the history and `MONETIZATION_CONFIG_CHANGED` in the audit log; Setting 2 needs at least one model; owner tokens get 403 on read and change; axe clean at 375 px |
 
 ## Run locally
 
