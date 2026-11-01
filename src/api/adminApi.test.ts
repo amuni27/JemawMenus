@@ -62,5 +62,31 @@ describe("admin API client", () => {
         expect(JSON.parse(calls[1].data as string)).toEqual({ setting: "SETTING_2", models: ["MODEL_2"], expectedVersion: 3 });
         expect(calls[2].params).toEqual({ page: 1, size: 10 });
     });
+
+    it("calls the plan, restaurant and subscription APIs under /admin (AGF E4-M3)", async () => {
+        localStorage.setItem(ADMIN_TOKEN_KEY, "admin-token");
+        const calls: { method?: string; url?: string; data?: unknown; params?: unknown }[] = [];
+        const original = adminClient.defaults.adapter;
+        adminClient.defaults.adapter = (async (config: { method?: string; url?: string; data?: unknown; params?: unknown }) => {
+            calls.push({ method: config.method, url: config.url, data: config.data, params: config.params });
+            return { data: {}, status: 200, statusText: "OK", headers: {}, config };
+        }) as never;
+        try {
+            await adminApi.plans();
+            await adminApi.businesses("cafe", 0, 20);
+            await adminApi.businessSubscription("b1");
+            await adminApi.subscriptionHistory("b1");
+            await adminApi.recordSubscription("b1", { planCode: "MODEL_4", expectedConfigVersion: 2 });
+            await adminApi.endSubscription("b1", 3);
+        } finally {
+            adminClient.defaults.adapter = original;
+        }
+        expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+            "get /admin/plans", "get /admin/businesses", "get /admin/businesses/b1/subscription", "get /admin/businesses/b1/subscriptions",
+            "post /admin/businesses/b1/subscription", "patch /admin/businesses/b1/subscription"]);
+        expect(calls[1].params).toEqual({ query: "cafe", page: 0, size: 20 });
+        expect(JSON.parse(calls[4].data as string)).toEqual({ planCode: "MODEL_4", expectedConfigVersion: 2 });
+        expect(JSON.parse(calls[5].data as string)).toEqual({ status: "EXPIRED", rowVersion: 3 });
+    });
 });
 

@@ -22,6 +22,23 @@ export type MonetizationConfig = {
 export type MonetizationConfigChange = { setting: MonetizationSetting; models: MonetizationModel[]; expectedVersion: number };
 export type MonetizationHistoryPage = { items: MonetizationConfig[]; page: number; size: number; total: number };
 
+// AGF E4-M3: plans, a read-only restaurant list and manual subscription records (no payment verified).
+export type SubscriptionPlan = { code: MonetizationModel; model: MonetizationModel; setting: MonetizationSetting;
+  adSource: 'NONE' | 'AGAFARI' | 'RESTAURANT'; paid: boolean; enabledByCurrentConfiguration: boolean };
+export type AdminBusiness = { id: string; name: string; slug: string; createdAt: string; subscriptionStatus: string | null; planCode: string | null };
+export type AdminBusinessPage = { items: AdminBusiness[]; page: number; size: number; total: number };
+export type Subscription = {
+  id: string; businessId: string; planCode: MonetizationModel; status: 'TRIAL' | 'ACTIVE' | 'GRANDFATHERED' | 'EXPIRED';
+  configVersion: number; periodEnd: string | null; transitionDate: string | null; source: 'MANUAL' | 'PROVIDER';
+  paymentVerified: boolean; sourceLabel: string | null; createdAt: string; createdBy: string; updatedAt: string;
+  endedAt: string | null; rowVersion: number; outsideCurrentConfiguration: boolean;
+};
+export type Entitlements = { mode: 'INACTIVE' | 'ACTIVE'; planCode: string | null; status: string | null;
+  adSource: 'NONE' | 'AGAFARI' | 'RESTAURANT'; restaurantAdManager: boolean; limits: Record<string, number>; source: string | null; degraded: boolean };
+export type BusinessSubscriptionView = { businessId: string; businessName: string; current?: Subscription;
+  entitlements: Entitlements; monetizationActive: boolean };
+export type SubscriptionRecord = { planCode: MonetizationModel; periodEnd?: string; expectedConfigVersion: number };
+
 export const adminClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'https://jemaw-menu-backend-spring.onrender.com'}/api`,
 });
@@ -52,4 +69,13 @@ export const adminApi = {
   saveMonetizationConfig: (change: MonetizationConfigChange) => adminClient.put<MonetizationConfig>('/admin/monetization-config', change),
   monetizationHistory: (page: number, size: number) =>
     adminClient.get<MonetizationHistoryPage>('/admin/monetization-config/history', { params: { page, size } }),
+  plans: () => adminClient.get<SubscriptionPlan[]>('/admin/plans'),
+  businesses: (query: string, page: number, size: number) =>
+    adminClient.get<AdminBusinessPage>('/admin/businesses', { params: { query, page, size } }),
+  businessSubscription: (businessId: string) => adminClient.get<BusinessSubscriptionView>(`/admin/businesses/${businessId}/subscription`),
+  subscriptionHistory: (businessId: string) => adminClient.get<Subscription[]>(`/admin/businesses/${businessId}/subscriptions`),
+  recordSubscription: (businessId: string, record: SubscriptionRecord) =>
+    adminClient.post<Subscription>(`/admin/businesses/${businessId}/subscription`, record),
+  endSubscription: (businessId: string, rowVersion: number) =>
+    adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { status: 'EXPIRED', rowVersion }),
 };

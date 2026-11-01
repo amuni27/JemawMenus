@@ -26,6 +26,7 @@ import SuperAdminLayout from "../pages/superadmin/SuperAdminLayout.tsx";
 import SuperAdminOverview from "../pages/superadmin/SuperAdminOverview.tsx";
 import SuperAdminAuditLog from "../pages/superadmin/SuperAdminAuditLog.tsx";
 import SuperAdminMonetization from "../pages/superadmin/SuperAdminMonetization.tsx";
+import SuperAdminSubscriptions from "../pages/superadmin/SuperAdminSubscriptions.tsx";
 
 // The app's route table, in its own module so route tests can use it (AGF-S2-29)
 export const routes: RouteObject[] = [
@@ -73,6 +74,7 @@ export const routes: RouteObject[] = [
                 children: [
                     {index: true, element: <SuperAdminOverview/>},
                     {path: 'monetization', element: <SuperAdminMonetization/>},
+                    {path: 'subscriptions', element: <SuperAdminSubscriptions/>},
                     {path: 'audit', element: <SuperAdminAuditLog/>},
                 ],
             },
