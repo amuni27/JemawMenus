@@ -9,6 +9,7 @@ import { randomSecret } from "./e2e/support/runEnv.mjs";
 process.env.E2E_OWNER_PASSWORD ||= randomSecret(24);
 process.env.E2E_JWT_SECRET ||= randomSecret(64);
 process.env.E2E_RESET_SECRET ||= randomSecret(64);
+process.env.E2E_VERIFY_SECRET ||= randomSecret(64); // AGF-S2-22
 
 const BACKEND_PORT = 8081;
 const FRONTEND = "http://127.0.0.1:5176";
@@ -55,6 +56,10 @@ export default defineConfig({
             env: {
                 APP_JWT_SECRET: process.env.E2E_JWT_SECRET,
                 APP_PASSWORD_RESET_SECRET: process.env.E2E_RESET_SECRET,
+                // AGF-S2-22: verification works through the demo outbox, and the publish gate is on for J17
+                APP_EMAIL_VERIFICATION_SECRET: process.env.E2E_VERIFY_SECRET,
+                APP_EMAIL_VERIFICATION_LINK_BASE_URL: `${FRONTEND}/auth/verify-email`,
+                APP_EMAIL_VERIFICATION_ENFORCE: "true",
                 DEMO_OWNER_PASSWORD: process.env.E2E_OWNER_PASSWORD,
                 // AGF-S2-21: share pages redirect to the frontend under test
                 APP_PUBLIC_MENU_BASE_URL: FRONTEND,

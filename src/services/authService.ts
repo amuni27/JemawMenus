@@ -14,6 +14,8 @@ export interface UserDTO {
     fullName?: string;
     updatedAt: Date
     createdAt: Date
+    /** AGF-S2-22: available = links can be delivered; publishGateEnabled = publishing needs a verified email */
+    emailVerification?: { verified: boolean; available: boolean; publishGateEnabled: boolean };
 }
 
 export interface BusinessDTO {
