@@ -60,6 +60,22 @@ describe("verify email page", () => {
         expect(refresh).toHaveBeenCalled();
     });
 
+    it("sends a signed-in owner to their menus, not to the sign-in form", async () => {
+        auth.value = { user: { email: "owner@example.com" }, business: { id: "biz-1" }, refresh };
+        verify.mockResolvedValue({ data: { status: "VERIFIED" } });
+        renderAt(`/auth/verify-email#token=${TOKEN}`);
+        const link = await screen.findByRole("link", { name: "Go to your menus" });
+        expect(link.getAttribute("href")).toBe("/biz-1/admin/menus");
+    });
+
+    it("offers sign-in to someone who isn't signed in, with an AA-contrast button", async () => {
+        verify.mockResolvedValue({ data: { status: "VERIFIED" } });
+        renderAt(`/auth/verify-email#token=${TOKEN}`);
+        const link = await screen.findByRole("link", { name: "Sign in" });
+        expect(link.getAttribute("href")).toBe("/auth/login");
+        expect(link.className.split(/\s+/)).toContain("bg-brand-dark"); // white on brand-dark is 4.7:1 (axe: brand is 3.5:1)
+    });
+
     it("explains an expired or invalid link and how to get a new one", async () => {
         verify.mockRejectedValue({ response: { status: 400, data: { code: "VERIFY_LINK_INVALID" } } });
         renderAt(`/auth/verify-email#token=${TOKEN}`);

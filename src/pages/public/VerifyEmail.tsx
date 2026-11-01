@@ -17,7 +17,7 @@ function tokenFrom(hash: string): string {
 export default function VerifyEmail() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, refresh } = useAuth();
+  const { user, business, refresh } = useAuth();
   const [token] = useState(() => tokenFrom(location.hash));
   const [state, setState] = useState<State>(() => (token ? 'verifying' : 'invalid'));
   const submitted = useRef(false);
@@ -42,9 +42,13 @@ export default function VerifyEmail() {
     );
   }, [token, user, refresh]);
 
+  // A signed-in owner goes back to their menus; /auth/login doesn't redirect signed-in users. brand-dark keeps AA contrast.
   const signIn = (
-    <Link to="/auth/login" className="block w-full rounded-md bg-brand px-4 py-2 text-center text-sm font-medium text-white hover:bg-brand-dark">
-      {user ? 'Continue' : 'Sign in'}
+    <Link
+      to={user && business?.id ? `/${business.id}/admin/menus` : '/auth/login'}
+      className="block w-full rounded-md bg-brand-dark px-4 py-2 text-center text-sm font-medium text-white hover:bg-rose-700"
+    >
+      {user && business?.id ? 'Go to your menus' : 'Sign in'}
     </Link>
   );
 
@@ -65,7 +69,7 @@ export default function VerifyEmail() {
           <>
             <h1 className="text-2xl font-bold">Verify your email</h1>
             <p className="rounded bg-amber-50 p-3 text-sm text-amber-800">This verification link has expired or is invalid.</p>
-            <p className="text-sm text-gray-600">Links expire after 24 hours. Sign in and choose "Resend link" to get a new one.</p>
+            <p className="text-sm text-gray-600">Links expire after 24 hours. {user ? 'Choose "Resend link" in your restaurant area to get a new one.' : 'Sign in and choose "Resend link" to get a new one.'}</p>
             {signIn}
           </>
         )}
