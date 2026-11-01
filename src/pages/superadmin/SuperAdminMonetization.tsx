@@ -5,6 +5,7 @@ import {
 import Modal from '../../components/ui/Modal';
 import ModalHeader from '../../components/ui/ModalHeader';
 import { errorMessage } from '../../utils/errorMessage';
+import { PRIMARY, SECONDARY } from './consoleButtons';
 
 // AGF E4-M2: the platform monetization configuration. Setting 1 = Model 1 only; Setting 2 = at least one of Models 2-4.
 // Every save is a new version (the backend validates again and answers 409 if someone else saved first). Nothing changes
@@ -18,9 +19,6 @@ const MODEL_LABELS: Record<MonetizationModel, string> = {
   MODEL_3: 'Model 3: paid, with restaurant ads on its own menus',
   MODEL_4: 'Model 4: lower-cost paid plan, no ads',
 };
-// Console buttons: dark on white (the shared brand Button is below AA contrast, a known pre-existing defect)
-const PRIMARY = 'rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400';
-const SECONDARY = 'rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 disabled:opacity-50';
 const short = (m: MonetizationModel) => `Model ${m.slice(-1)}`;
 const settingName = (s: MonetizationSetting) => (s === 'SETTING_1' ? 'Setting 1' : 'Setting 2');
 const describe = (c: MonetizationConfig | null) =>

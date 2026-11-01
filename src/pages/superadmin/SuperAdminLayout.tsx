@@ -49,6 +49,7 @@ export default function SuperAdminLayout() {
         <nav aria-label="Super Admin" className="flex gap-2 md:w-48 md:flex-col">
           <NavLink to="/super-admin" end className={link}>Overview</NavLink>
           <NavLink to="/super-admin/monetization" className={link}>Monetization</NavLink>
+          <NavLink to="/super-admin/subscriptions" className={link}>Subscriptions</NavLink>
           <NavLink to="/super-admin/audit" className={link}>Audit log</NavLink>
         </nav>
         <main className="min-w-0 flex-1"><Outlet context={admin} /></main>

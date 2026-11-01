@@ -13,6 +13,7 @@ vi.mock("../../pages/superadmin/SuperAdminLayout.tsx", async () => {
     return { default: () => <Outlet /> };
 });
 vi.mock("../../pages/superadmin/SuperAdminMonetization.tsx", () => ({ default: () => <p>Monetization settings page</p> }));
+vi.mock("../../pages/superadmin/SuperAdminSubscriptions.tsx", () => ({ default: () => <p>Subscriptions page</p> }));
 
 const { routes } = await import("../routes.tsx");
 
@@ -28,6 +29,12 @@ describe("Super Admin routes", () => {
     it("serves the monetization settings at /super-admin/monetization (AGF E4-M2)", async () => {
         render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/super-admin/monetization"] })} />);
         expect(await screen.findByText("Monetization settings page")).toBeTruthy();
+        expect(screen.queryByText("Guest menu page")).toBeNull();
+    });
+
+    it("serves subscriptions at /super-admin/subscriptions (AGF E4-M3)", async () => {
+        render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/super-admin/subscriptions"] })} />);
+        expect(await screen.findByText("Subscriptions page")).toBeTruthy();
         expect(screen.queryByText("Guest menu page")).toBeNull();
     });
 });
