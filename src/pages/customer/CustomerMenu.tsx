@@ -12,6 +12,7 @@ import { CategorySection } from "../../components/menu/CategorySection";
 import { FeaturedSection, type FeaturedItem } from "../../components/menu/FeaturedSection";
 import { DietaryFilters } from "../../components/menu/DietaryFilters";
 import NotFound, { StatusCard } from "../../components/NotFound";
+import PrivacyNotice from "./PrivacyNotice";
 import { statusPrimaryClass } from "../../components/statusStyles";
 import { CategoryTab } from "../../components/menu/CategoryTab.tsx";
 import {useStorageState} from "../../hooks/useStorageState.ts";
@@ -518,6 +519,10 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                             </>
                         )}
                     </main>
+                    {/* AGF-S2-24: menu-views privacy notice */}
+                    <footer className="mt-10 border-t border-gray-100 py-4 text-center">
+                        <PrivacyNotice />
+                    </footer>
                 </div>
             </div>
             <WaiterListDrawer
