@@ -11,6 +11,8 @@ const listMenus = vi.fn();
 vi.mock("../../api/menuApi", () => ({ default: { listMenus } }));
 const listSoldOut = vi.fn();
 vi.mock("../../api/itemsApi.ts", () => ({ default: { listSoldOut } }));
+const getViews = vi.fn(); // AGF-S2-24
+vi.mock("../../api/menuViewsApi", () => ({ default: { get: getViews } }));
 
 const { default: Dashboard } = await import("./Dashboard.tsx");
 
@@ -18,8 +20,9 @@ const menu = (id: string, name: string, active: boolean, visibility = "PUBLIC") 
 const soldOut = (id: string, name: string, menuId: string) => ({ id, name, menuId, categoryId: "c", status: "OUT_OF_STOCK" });
 
 beforeEach(() => {
-    [listMenus, listSoldOut].forEach((m) => m.mockReset());
+    [listMenus, listSoldOut, getViews].forEach((m) => m.mockReset());
     listSoldOut.mockResolvedValue({ data: [] });
+    getViews.mockResolvedValue({ data: { timeZone: "Africa/Addis_Ababa", today: 0, days: [] } });
 });
 afterEach(() => cleanup());
 
@@ -142,5 +145,22 @@ describe("owner dashboard", () => {
         expect(alert.textContent).toContain("Could not reach the server.");
         fireEvent.click(within(alert).getByRole("button", { name: "Retry" }));
         expect(await screen.findByText("No items sold out")).toBeTruthy();
+    });
+
+    // AGF-S2-24
+    it("shows the Menu views card for the owner's restaurant", async () => {
+        listMenus.mockResolvedValue({ data: [menu("m1", "All-Day", true)] });
+        renderDashboard();
+        expect(await screen.findByRole("heading", { name: "Menu views" })).toBeTruthy();
+        expect(getViews).toHaveBeenCalledWith("biz-1", 30);
+    });
+
+    it("keeps the rest of the dashboard when the views can't be loaded", async () => {
+        listMenus.mockResolvedValue({ data: [menu("m1", "All-Day", true)] });
+        getViews.mockRejectedValue(new Error("down"));
+        renderDashboard();
+        expect(await screen.findByText("Views unavailable")).toBeTruthy();
+        expect(count("Live")).toBe("1");
+        expect(screen.getByRole("heading", { name: "Quick actions" })).toBeTruthy();
     });
 });
