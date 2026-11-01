@@ -13,6 +13,7 @@ import { timeZoneLabel } from "../../utils/timeZones";
 import BusinessLogoModal from "../../components/account/BusinessLogoModal";
 import BusinessLogo from "../../components/ui/BusinessLogo";
 import BusinessHoursModal from "../../components/account/BusinessHoursModal";
+import PlanSection from "../../components/plan/PlanSection";
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -171,6 +172,9 @@ export default function AccountPage() {
             <p className="text-sm text-gray-400 py-2">Click Edit to view &amp; update hours.</p>
           )}
         </Card>
+
+        {/* AGF E4-M4: hidden unless plans are visible */}
+        <PlanSection />
       </div>
 
       {/* Security */}

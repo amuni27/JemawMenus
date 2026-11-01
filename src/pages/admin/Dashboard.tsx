@@ -5,6 +5,7 @@ import menuApi from "../../api/menuApi";
 import itemApi from "../../api/itemsApi.ts";
 import LoadError from "../../components/ui/LoadError";
 import MenuViewsCard from "../../components/dashboard/MenuViewsCard";
+import PlanCard from "../../components/plan/PlanCard";
 import { MENU_STATUS_CLASSES, menuStatus, type MenuStatus } from "../../utils/menuStatus";
 import { publicMenuUrl } from "../../utils/publicMenuUrl";
 import { errorMessage } from "../../utils/errorMessage";
@@ -137,6 +138,7 @@ export default function Dashboard() {
 
                     {/* AGF-S2-24 */}
                     {tenantSlug && <MenuViewsCard businessId={tenantSlug} />}
+                    {tenantSlug && <PlanCard accountHref={`/${tenantSlug}/admin/account`} />}
 
                     <section aria-labelledby="dash-actions" className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                         <h3 id="dash-actions" className="text-sm font-semibold text-gray-700">Quick actions</h3>

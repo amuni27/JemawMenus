@@ -6,6 +6,7 @@ import Modal from '../../components/ui/Modal';
 import ModalHeader from '../../components/ui/ModalHeader';
 import { errorMessage } from '../../utils/errorMessage';
 import { PRIMARY, SECONDARY } from './consoleButtons';
+import PlanRequestActions from './PlanRequestActions';
 
 // AGF E4-M3: manual subscription records (E4-Q7: no payment taken or verified). Record only when a restaurant has no
 // current subscription and only for plans the current configuration enables; end it as a separate action. Plans never
@@ -157,7 +158,25 @@ export default function SuperAdminSubscriptions() {
                 )}
               </div>
 
-              {!current && (
+              {!current && view.pendingRequest && (
+                <div className="mt-4 rounded-xl border border-gray-200 p-4 text-sm">
+                  <p className="font-semibold text-gray-900">Plan request: {model(view.pendingRequest.planCode)}</p>
+                  <p className="mt-1 text-gray-700">Requested {date(view.pendingRequest.requestedAt)} by the owner. A manual record is possible only by fulfilling or declining it.</p>
+                  {view.pendingRequest.outsideCurrentConfiguration && (
+                    <p className="mt-1 inline-block rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-900">Outside current configuration</p>
+                  )}
+                  <div className="mt-3">
+                    <PlanRequestActions request={view.pendingRequest} restaurant={selected.name} configVersion={configVersion}
+                                        onDone={(failure) => {
+                                          setError(failure ? errorMessage(failure, "Couldn't save the change.") : '');
+                                          loadRestaurant(selected.id).catch(() => undefined);
+                                          search(query);
+                                        }} />
+                  </div>
+                </div>
+              )}
+
+              {!current && !view.pendingRequest && (
                 <div className="mt-4 flex flex-wrap items-end gap-2">
                   <label className="flex flex-col text-sm text-gray-800">
                     Plan

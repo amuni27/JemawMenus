@@ -10,12 +10,15 @@ const plans = vi.fn();
 const monetizationConfig = vi.fn();
 const businesses = vi.fn();
 const businessSubscription = vi.fn();
+const fulfilPlanRequest = vi.fn();
+const declinePlanRequest = vi.fn();
 const subscriptionHistory = vi.fn();
 const recordSubscription = vi.fn();
 const endSubscription = vi.fn();
 vi.mock("../../api/adminApi", async (orig) => ({
     ...(await orig<typeof import("../../api/adminApi")>()),
-    adminApi: { plans, monetizationConfig, businesses, businessSubscription, subscriptionHistory, recordSubscription, endSubscription },
+    adminApi: { plans, monetizationConfig, businesses, businessSubscription, subscriptionHistory, recordSubscription, endSubscription,
+        fulfilPlanRequest, declinePlanRequest },
 }));
 
 const { default: SuperAdminSubscriptions } = await import("./SuperAdminSubscriptions.tsx");
@@ -145,4 +148,17 @@ describe("Super Admin subscriptions", () => {
         await waitFor(() => expect(recordSubscription).toHaveBeenCalled());
         expect(localStorage.getItem("token")).toBe("owner-token");
     });
+
+    it("shows a pending plan request with fulfil and decline instead of the record form (AGF E4-M4)", async () => {
+        businessSubscription.mockResolvedValue({ data: { businessId: "b1", businessName: "Cafe One", entitlements: inactive, monetizationActive: false,
+            pendingRequest: { id: "r1", planCode: "MODEL_4", configVersion: 2, requestedAt: "2026-11-01T10:00:00Z", rowVersion: 0, outsideCurrentConfiguration: false } } });
+        fulfilPlanRequest.mockResolvedValue({ data: {} });
+        const detail = await openCafe();
+        expect(detail.textContent).toContain("Plan request: Model 4");
+        expect(screen.queryByLabelText("Plan")).toBeNull();
+        fireEvent.click(within(detail).getByRole("button", { name: "Fulfil request from Cafe One" }));
+        fireEvent.click(within(screen.getByRole("dialog", { name: "Fulfil plan request" })).getByRole("button", { name: "Fulfil" }));
+        await waitFor(() => expect(fulfilPlanRequest).toHaveBeenCalledWith("r1", 2, 0));
+    });
 });
+
