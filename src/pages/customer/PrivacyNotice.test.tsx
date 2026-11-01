@@ -34,6 +34,12 @@ describe("guest privacy notice", () => {
         expect(document.activeElement).toBe(link);
     });
 
+    it("reads left-aligned even inside the centred footer", () => {
+        render(<footer className="text-center"><PrivacyNotice /></footer>);
+        fireEvent.click(screen.getByRole("button", { name: "Privacy" }));
+        expect(screen.getByRole("dialog").className).toContain("text-left");
+    });
+
     it("closes with the Close button", () => {
         render(<PrivacyNotice />);
         fireEvent.click(screen.getByRole("button", { name: "Privacy" }));

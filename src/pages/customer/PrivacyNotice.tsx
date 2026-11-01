@@ -50,7 +50,7 @@ export default function PrivacyNotice() {
                         aria-modal="true"
                         aria-labelledby={titleId}
                         onKeyDown={onKeyDown}
-                        className="relative w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+                        className="relative w-full max-w-sm rounded-2xl bg-white p-5 text-left shadow-xl"
                     >
                         <div className="flex items-start justify-between gap-3">
                             <h2 id={titleId} className="text-base font-bold text-gray-900">Menu views</h2>
