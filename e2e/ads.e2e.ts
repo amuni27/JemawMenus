@@ -78,7 +78,7 @@ test.describe("J24 Agafari ads", () => {
                 data: { planCode: plan, expectedConfigVersion: version } })).status()).toBe(201);
         }
 
-        await admin.getByRole("link", { name: "Ads" }).click();
+        await admin.getByRole("link", { name: "Ads", exact: true }).click();
         await admin.getByRole("button", { name: "New ad" }).click();
         const dialog = admin.getByRole("dialog", { name: "New ad" });
         await dialog.getByLabel("Title", { exact: true }).fill("Coffee week");

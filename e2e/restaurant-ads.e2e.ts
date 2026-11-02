@@ -99,7 +99,7 @@ test.describe("J25 restaurant ads", () => {
         await owner.getByPlaceholder("********").fill(a.password);
         await owner.getByRole("button", { name: "Sign in" }).click();
         await expect(owner).toHaveURL(/\/admin/);
-        await owner.getByRole("link", { name: "Ads" }).click();
+        await owner.getByRole("link", { name: "Ads", exact: true }).click();
         await owner.getByRole("button", { name: "New ad" }).click();
         const dialog = owner.getByRole("dialog", { name: "New ad" });
         await expect(dialog.getByLabel("Time zone")).toHaveCount(0); // the restaurant's own zone
