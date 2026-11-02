@@ -138,7 +138,7 @@ export default function Dashboard() {
 
                     {/* AGF-S2-24 */}
                     {tenantSlug && <MenuViewsCard businessId={tenantSlug} />}
-                    {tenantSlug && <PlanCard accountHref={`/${tenantSlug}/admin/account`} />}
+                    {tenantSlug && <PlanCard plansHref={`/${tenantSlug}/admin/plans`} />}
 
                     <section aria-labelledby="dash-actions" className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                         <h3 id="dash-actions" className="text-sm font-semibold text-gray-700">Quick actions</h3>

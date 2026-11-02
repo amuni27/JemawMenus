@@ -13,7 +13,7 @@ import { timeZoneLabel } from "../../utils/timeZones";
 import BusinessLogoModal from "../../components/account/BusinessLogoModal";
 import BusinessLogo from "../../components/ui/BusinessLogo";
 import BusinessHoursModal from "../../components/account/BusinessHoursModal";
-import PlanSection from "../../components/plan/PlanSection";
+import PlanLink from "../../components/plan/PlanLink";
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -173,8 +173,8 @@ export default function AccountPage() {
           )}
         </Card>
 
-        {/* AGF E4-M4: hidden unless plans are visible */}
-        <PlanSection />
+        {/* ONB Phase 1: plans are managed in Subscription & Plans (hidden unless plans are visible) */}
+        <PlanLink plansHref={`/${business.id}/admin/plans`} />
       </div>
 
       {/* Security */}

@@ -10,6 +10,29 @@ export const PLAN_DESCRIPTIONS: Record<string, string> = {
 
 export const FEATURES_NOTE = "All features stay available while plans are being introduced.";
 
+// ONB Phase 1 (ON-UX-5): customer-facing names; internal ids (MODEL_2…4) stay unchanged. Model 1 keeps its name (it is
+// never offered as a choice, and a converted Model 1 subscription isn't a free trial).
+export const PLAN_NAMES: Record<string, string> = { MODEL_2: "Free with Ads", MODEL_3: "Business Ads", MODEL_4: "Ad-Free" };
+export const planName = (code: string) => PLAN_NAMES[code] ?? modelName(code);
+
+// ONB Phase 1: only approved facts (R4–R6, E4-M7, E4-M8); no prices, billing terms or invented features
+export const PLAN_BENEFITS: Record<string, string[]> = {
+    MODEL_2: ["Free", "Agafari shows one sponsored item on your guest menu, chosen by Agafari", "Your menu, QR code and features stay the same"],
+    MODEL_3: ["Paid", "Show your own sponsored items on your own menu, managed in Ads", "No Agafari ads; you keep your advertising revenue"],
+    MODEL_4: ["Lower-cost paid plan", "No ads on your guest menu"],
+};
+
+export const PLAN_COMPARISON: { label: string; values: Record<string, string> }[] = [
+    { label: "Ads on your guest menu", values: { MODEL_2: "One sponsored item", MODEL_3: "Your own sponsored items", MODEL_4: "None" } },
+    { label: "Who chooses the ads", values: { MODEL_2: "Agafari", MODEL_3: "You", MODEL_4: "—" } },
+    { label: "Cost", values: { MODEL_2: "Free", MODEL_3: "Paid", MODEL_4: "Lower-cost paid" } },
+    { label: "Ads page to manage your own ads", values: { MODEL_2: "—", MODEL_3: "Yes", MODEL_4: "—" } },
+];
+
+export const PRICING_NOTE = "Pricing will be announced.";
+export const ACTIVATION_NOTE = "Requesting a plan doesn't charge you; the Agafari team activates it.";
+export const CHANGE_NOTE = "To change your plan, contact the Agafari team.";
+
 // AGF E4-M5: in-app trial notices (emails wait for D5)
 export const TRIAL_NOTICE_DAYS = 7;
 export const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;

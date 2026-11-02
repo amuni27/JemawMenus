@@ -6,6 +6,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 // AGF E4-M8 (Q-M8-9): the owner's "Ads" item appears when the restaurant can manage ads (current Model 3, ads enabled) or
 // still has ads to view or archive; otherwise (and if the check fails) the owner navigation is unchanged.
 
+// ONB Phase 1: the owner layout asks whether to show "Subscription & Plans"; no network in tests
+vi.mock("../../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 vi.mock("../../app/context/AuthContext", () => ({
     useAuth: () => ({ user: { fullName: "Demo Owner", email: "owner@example.com" }, business: { id: "own-biz", name: "Cafe" }, logout: vi.fn() }),
 }));

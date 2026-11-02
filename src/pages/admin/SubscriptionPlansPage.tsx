@@ -1,0 +1,230 @@
+import { useCallback, useEffect, useState } from "react";
+import { Navigate, useParams } from "react-router-dom";
+import planApi, { type OwnerGrandfathering, type OwnerPlanView } from "../../api/planApi";
+import Modal from "../../components/ui/Modal";
+import ModalHeader from "../../components/ui/ModalHeader";
+import { errorMessage } from "../../utils/errorMessage";
+import { trialEndDate } from "../../utils/trialDate";
+import {
+    ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS, PRICING_NOTE,
+    TRIAL_NOTICE_DAYS, days, planName, statusLabel,
+} from "../../components/plan/planText";
+
+// ONB Phase 1: the owner's Subscription & Plans page (moved from the account page's Plan section, AGF E4-M4). Only while
+// the backend says plans are visible. Current plan and status with the existing trial, grandfathering, ended-plan and
+// pending-request notices; under Setting 2 one card per enabled plan (approved names and benefits) and a comparison; a
+// request is never a subscription and there is no change action (E4-M4-Q4). No prices; every feature stays available.
+
+type Dialog = { kind: "request"; planCode: string } | { kind: "withdraw" } | null;
+
+export default function SubscriptionPlansPage() {
+    const { tenantSlug } = useParams();
+    const [view, setView] = useState<OwnerPlanView | null>(null);
+    const [dialog, setDialog] = useState<Dialog>(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState("");
+
+    const load = useCallback(() => planApi.get().then((res) => setView(res.data), () => setView({ visible: false })), []);
+    useEffect(() => { load(); }, [load]);
+
+    if (!view) return <p className="text-sm text-gray-700">Loading…</p>;
+    if (!view.visible) return <Navigate to={`/${tenantSlug}/admin`} replace />;
+
+    const run = async (action: () => Promise<unknown>) => {
+        setBusy(true);
+        setError("");
+        try {
+            await action();
+        } catch (err) {
+            setError(errorMessage(err, "Couldn't send your request. Please try again."));
+        } finally {
+            setDialog(null);
+            setBusy(false);
+            await load();
+        }
+    };
+
+    const pending = view.pendingRequest;
+    const current = view.current;
+    const trial = view.trial;
+    const setting2 = view.setting === "SETTING_2";
+    const plans = view.plans ?? [];
+    const canRequest = Boolean(view.canRequest) && !current && !pending;
+
+    return (
+        <section id="plan" aria-labelledby="plans-heading" className="space-y-6">
+            <div>
+                <h1 id="plans-heading" className="text-2xl font-bold text-gray-900">Subscription &amp; Plans</h1>
+                <p className="mt-1 text-sm text-gray-700">{setting2 ? "Compare the plans available for your restaurant." : "Your restaurant's plan."}</p>
+            </div>
+            {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+
+            <section aria-labelledby="current-plan" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <h2 id="current-plan" className="text-base font-semibold text-gray-900">Current plan</h2>
+
+                {current && (
+                    <div className="mt-3 text-sm text-gray-800">
+                        <p className="font-semibold">{planName(current.planCode)} · {statusLabel(current.status)}</p>
+                        <p className="text-gray-700">{PLAN_DESCRIPTIONS[current.planCode]}</p>
+                        {current.sourceLabel && <p className="mt-1 text-xs text-gray-700">{current.sourceLabel}</p>}
+                        {current.periodEnd && <p className="mt-1 text-gray-700">Current period ends {new Date(current.periodEnd).toLocaleDateString()}</p>}
+                        {current.outsideCurrentConfiguration && !current.grandfathering && <p className="mt-1 text-gray-700">Your plan stays as it is for now.</p>}
+                        {current.grandfathering && <GrandfatheringNotice planCode={current.planCode} g={current.grandfathering} setting1={view.setting === "SETTING_1"} />}
+                        <p className="mt-3 text-gray-700">{CHANGE_NOTE}</p>
+                    </div>
+                )}
+
+                {!current && view.endedPlan && (
+                    <p className="mt-3 text-sm font-semibold text-gray-800">
+                        Your previous plan ({planName(view.endedPlan.planCode)}) ended on {trialEndDate(view.endedPlan.endedAt, view.endedPlan.timeZone)}.{" "}
+                        {view.setting === "SETTING_1" ? "Contact the Agafari team to continue with Model 1." : "Choose a plan to continue."}
+                    </p>
+                )}
+
+                {!current && trial && trial.effectiveStatus === "TRIAL" && (
+                    <div className="mt-3 text-sm text-gray-800">
+                        <p className="font-semibold">Free trial: {days(trial.daysLeft)} left (ends {trialEndDate(trial.endsAt, trial.timeZone)}).</p>
+                        {trial.daysLeft <= TRIAL_NOTICE_DAYS && (
+                            <p role="status" className="mt-2 rounded-lg bg-amber-50 p-3 text-amber-900">
+                                Your free trial ends in {days(trial.daysLeft)}. The Agafari team will contact you about your plan.
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {!current && trial && trial.effectiveStatus === "EXPIRED" && (
+                    <div className="mt-3 text-sm text-gray-800">
+                        <p className="font-semibold">Your free trial ended on {trialEndDate(trial.endsAt, trial.timeZone)}.</p>
+                        <p className="mt-1">All features stay available for now. The Agafari team will contact you.</p>
+                    </div>
+                )}
+
+                {!current && !trial && view.setting === "SETTING_1" && (
+                    <div className="mt-3 text-sm text-gray-800">
+                        <p>Your plan model: free trial, then a paid subscription.</p>
+                        <p className="mt-1 text-gray-700">Trial details aren't available yet.</p>
+                    </div>
+                )}
+
+                {!current && pending && (
+                    <div className="mt-3 text-sm text-gray-800">
+                        <p>Request for {planName(pending.planCode)} sent on {new Date(pending.requestedAt).toLocaleDateString()}. The Agafari team will contact you.</p>
+                        <button type="button" className={`${OWNER_SECONDARY} mt-3`} onClick={() => setDialog({ kind: "withdraw" })} disabled={busy}>
+                            Withdraw request
+                        </button>
+                    </div>
+                )}
+
+                {!current && !pending && !trial && !view.endedPlan && setting2 && (
+                    <p className="mt-3 text-sm text-gray-800">You don't have a plan yet. Choose one below.</p>
+                )}
+            </section>
+
+            {setting2 && plans.length > 0 && (
+                <section aria-labelledby="available-plans" className="space-y-4">
+                    <h2 id="available-plans" className="text-base font-semibold text-gray-900">Available plans</h2>
+                    {pending && <p className="text-sm text-gray-700">You have a pending request. Withdraw it to request another plan.</p>}
+                    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {plans.map((p) => {
+                            const isCurrent = current?.planCode === p.code;
+                            const isRequested = !current && pending?.planCode === p.code;
+                            return (
+                                <li key={p.code} className="flex">
+                                    <article aria-labelledby={`plan-${p.code}`}
+                                             className={`flex w-full flex-col rounded-2xl border bg-white p-5 shadow-sm ${isCurrent || isRequested ? "border-gray-900 ring-1 ring-gray-900" : "border-gray-200"}`}>
+                                        <div className="flex items-start justify-between gap-2">
+                                            <h3 id={`plan-${p.code}`} className="text-lg font-semibold text-gray-900">{planName(p.code)}</h3>
+                                            {isCurrent && <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-semibold text-white">Current plan</span>}
+                                            {isRequested && <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">Requested</span>}
+                                        </div>
+                                        <ul className="mt-3 flex-1 space-y-2 text-sm text-gray-800">
+                                            {(PLAN_BENEFITS[p.code] ?? [PLAN_DESCRIPTIONS[p.code]]).map((b) => (
+                                                <li key={b} className="flex gap-2"><span aria-hidden="true" className="text-emerald-700">✓</span><span>{b}</span></li>
+                                            ))}
+                                        </ul>
+                                        {canRequest && (
+                                            <button type="button" className={`${OWNER_PRIMARY} mt-4 w-full`} onClick={() => setDialog({ kind: "request", planCode: p.code })}
+                                                    disabled={busy}>
+                                                Request {planName(p.code)}
+                                            </button>
+                                        )}
+                                    </article>
+                                </li>
+                            );
+                        })}
+                    </ul>
+
+                    <div className="hidden overflow-x-auto rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:block">
+                        <table aria-label="Plan comparison" className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="border-b text-gray-700">
+                                    <th scope="col" className="py-2 pr-4 font-semibold"><span className="sr-only">Feature</span></th>
+                                    {plans.map((p) => <th key={p.code} scope="col" className="py-2 pr-4 font-semibold text-gray-900">{planName(p.code)}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {PLAN_COMPARISON.map((row) => (
+                                    <tr key={row.label} className="border-b last:border-0">
+                                        <th scope="row" className="py-2 pr-4 font-medium text-gray-700">{row.label}</th>
+                                        {plans.map((p) => <td key={p.code} className="py-2 pr-4 text-gray-900">{row.values[p.code] ?? "—"}</td>)}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            )}
+
+            <div className="space-y-1 text-xs text-gray-700">
+                {setting2 && <p>{PRICING_NOTE}</p>}
+                {setting2 && <p>{ACTIVATION_NOTE}</p>}
+                <p>{FEATURES_NOTE}</p>
+            </div>
+
+            <Modal open={dialog?.kind === "request"} onClose={() => !busy && setDialog(null)} className="max-w-md">
+                <div role="dialog" aria-modal="true" aria-label="Request a plan">
+                    <ModalHeader title="Request a plan" onClose={() => !busy && setDialog(null)} />
+                    <p className="text-sm text-gray-800">{dialog?.kind === "request" ? `${planName(dialog.planCode)}: ${PLAN_DESCRIPTIONS[dialog.planCode]}` : ""}</p>
+                    <p className="mt-3 text-sm text-gray-800">This is a request, not a purchase. The Agafari team will contact you.</p>
+                    <div className="mt-6 flex justify-end gap-2">
+                        <button type="button" className={OWNER_SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+                        <button type="button" className={OWNER_PRIMARY} disabled={busy}
+                                onClick={() => dialog?.kind === "request" && run(() => planApi.request(dialog.planCode, view.configVersion ?? 0))}>
+                            {busy ? "Sending…" : "Send request"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal open={dialog?.kind === "withdraw"} onClose={() => !busy && setDialog(null)} className="max-w-md">
+                <div role="dialog" aria-modal="true" aria-label="Withdraw request">
+                    <ModalHeader title="Withdraw request" onClose={() => !busy && setDialog(null)} />
+                    <p className="text-sm text-gray-800">Withdraw your request for {pending ? planName(pending.planCode) : ""}?</p>
+                    <div className="mt-6 flex justify-end gap-2">
+                        <button type="button" className={OWNER_SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+                        <button type="button" className={OWNER_PRIMARY} disabled={busy} onClick={() => pending && run(() => planApi.withdraw(pending.rowVersion))}>
+                            {busy ? "Withdrawing…" : "Withdraw"}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+        </section>
+    );
+}
+
+// AGF E4-M6 (Q7): grandfathering notices. No promise of outreach or emails; the last-week warning only when transitions are
+// on (only then does the plan actually end).
+function GrandfatheringNotice({ planCode, g, setting1 }: { planCode: string; g: OwnerGrandfathering; setting1: boolean }) {
+    const plan = `Your plan (${planName(planCode)})`;
+    const end = g.until ? trialEndDate(g.until, g.timeZone) : null;
+    return (
+        <div className="mt-2">
+            <p className="text-gray-800">{plan} is no longer offered. {end ? `It stays active until ${end}.` : "It stays active for now."}</p>
+            {end && g.transitionsEnabled && g.daysLeft !== undefined && g.daysLeft <= TRIAL_NOTICE_DAYS && (
+                <p role="status" className="mt-2 rounded-lg bg-amber-50 p-3 text-amber-900">
+                    {plan} ends in {days(g.daysLeft)}, on {end}. {setting1 ? "After that, contact the Agafari team to continue." : "After that you can choose one of the available plans."}
+                </p>
+            )}
+        </div>
+    );
+}

@@ -8,6 +8,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 // AGF E4-M8: the owner layout asks whether to show "Ads"; no network in tests
 vi.mock("../../api/restaurantAdsApi", () => ({ default: { list: () => Promise.resolve({ data: { canManage: false, nonArchivedCount: 0, ads: [] } }) } }));
+// ONB Phase 1: the owner layout asks whether to show "Subscription & Plans"; no network in tests
+vi.mock("../../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 vi.mock("../../app/context/AuthContext", () => ({
     useAuth: () => ({ user: { fullName: "Demo Owner", email: "owner@example.com" }, business: { id: "own-biz", name: "Cafe" }, logout: vi.fn() }),
 }));

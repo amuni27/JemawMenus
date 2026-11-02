@@ -28,6 +28,7 @@ import SuperAdminAuditLog from "../pages/superadmin/SuperAdminAuditLog.tsx";
 import SuperAdminAds from "../pages/superadmin/SuperAdminAds.tsx";
 import SuperAdminRestaurantAds from "../pages/superadmin/SuperAdminRestaurantAds.tsx";
 import RestaurantAdsPage from "../pages/admin/RestaurantAdsPage.tsx";
+import SubscriptionPlansPage from "../pages/admin/SubscriptionPlansPage.tsx";
 import SuperAdminMonetization from "../pages/superadmin/SuperAdminMonetization.tsx";
 import SuperAdminSubscriptions from "../pages/superadmin/SuperAdminSubscriptions.tsx";
 import SuperAdminPlanRequests from "../pages/superadmin/SuperAdminPlanRequests.tsx";
@@ -115,6 +116,7 @@ export const routes: RouteObject[] = [
                             {path: 'qrcode', element: <QRPage/>},
                             {path: 'specials', element: <SpecialsPage/>}, // AGF-S2-25
                             {path: 'ads', element: <RestaurantAdsPage/>}, // AGF E4-M8: the owner's own ads (Model 3)
+                            {path: 'plans', element: <SubscriptionPlansPage/>}, // ONB Phase 1: Subscription & Plans
                             {
                                 path: 'menus',
                                 children: [

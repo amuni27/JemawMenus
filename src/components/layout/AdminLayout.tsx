@@ -5,6 +5,7 @@ import {useAuth} from "../../app/context/AuthContext.tsx";
 import NotFound from "../NotFound.tsx";
 import EmailVerificationBanner from "../auth/EmailVerificationBanner";
 import restaurantAdsApi from "../../api/restaurantAdsApi";
+import planApi from "../../api/planApi";
 
 
 // AGF-S2-09: Dashboard added; login still lands on Menus (D4)
@@ -16,6 +17,8 @@ const NAV_ITEMS = [
 ];
 // AGF E4-M8: shown only when the restaurant can manage its own ads (current Model 3, ads on) or still has ads to view or archive
 const ADS_ITEM = {label: "Ads", path: "admin/ads", exact: false};
+// ONB Phase 1: shown only while the owner plan view is visible (owner-plans-visible)
+const PLANS_ITEM = {label: "Subscription & Plans", path: "admin/plans", exact: false};
 
 export default function AdminLayout() {
     const auth = useAuth();
@@ -25,6 +28,7 @@ export default function AdminLayout() {
     const tenantSlug = pathname.split("/")[1]; // crude extract
     const [accountOpen, setAccountOpen] = useState(false);
     const [showAds, setShowAds] = useState(false);
+    const [showPlans, setShowPlans] = useState(false);
     const accountRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -32,6 +36,7 @@ export default function AdminLayout() {
         restaurantAdsApi.list().then(
             (res) => alive && setShowAds(res.data.canManage || res.data.nonArchivedCount > 0),
             () => alive && setShowAds(false)); // any failure: the navigation stays as before
+        planApi.get().then((res) => alive && setShowPlans(Boolean(res.data.visible)), () => alive && setShowPlans(false));
         return () => { alive = false; };
     }, []);
 
@@ -74,7 +79,7 @@ export default function AdminLayout() {
                 className={`flex flex-col fixed inset-y-0 left-0 z-40 w-64 transform bg-gray-50 border-r border-gray-200 px-6 py-8 transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
                 <h1 className="text-xl font-bold mb-6 mt-6 lg:mt-0">Venue</h1>
                 <nav className="space-y-2">
-                    {(showAds ? [...NAV_ITEMS, ADS_ITEM] : NAV_ITEMS).map((item) => {
+                    {[...NAV_ITEMS, ...(showAds ? [ADS_ITEM] : []), ...(showPlans ? [PLANS_ITEM] : [])].map((item) => {
                         const active = item.exact
                             ? pathname.replace(/\/+$/, "") === `/${tenantSlug}/${item.path}`
                             : pathname.includes(item.path);

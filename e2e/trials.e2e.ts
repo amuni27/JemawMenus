@@ -66,7 +66,7 @@ test.describe("J22 Trials", () => {
 
         await page.goto(`/${businessId}/admin`);
         await expect(page.getByRole("region", { name: "Plan" })).toContainText("Free trial: 30 days left");
-        await page.goto(`/${businessId}/admin/account`);
+        await page.goto(`/${businessId}/admin/plans`); // ONB Phase 1: plans live on Subscription & Plans
         const section = page.locator("#plan");
         await expect(section).toContainText("Free trial: 30 days left (ends");
         await expect(section).toContainText("All features stay available while plans are being introduced.");

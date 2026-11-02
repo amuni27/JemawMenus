@@ -116,21 +116,21 @@ test.describe("J23 Grandfathering", () => {
         await page.getByPlaceholder("********").fill(dated.password);
         await page.getByRole("button", { name: "Sign in" }).click();
         await expect(page).toHaveURL(/\/admin/);
-        await page.goto(`/${dated.businessId}/admin/account`);
+        await page.goto(`/${dated.businessId}/admin/plans`); // ONB Phase 1: plans live on Subscription & Plans
         const section = page.locator("#plan");
-        await expect(section).toContainText("Your plan (Model 3) is no longer offered.");
-        await expect(section).toContainText("Your plan (Model 3) ends in 1 day");
+        await expect(section).toContainText("Your plan (Business Ads) is no longer offered.");
+        await expect(section).toContainText("Your plan (Business Ads) ends in 1 day");
 
         // the period end passes; the job (every few seconds in the demo) ends it
         await expect(async () => {
             await page.reload();
-            await expect(section).toContainText("Your previous plan (Model 3) ended on", { timeout: 2_000 });
+            await expect(section).toContainText("Your previous plan (Business Ads) ended on", { timeout: 2_000 });
         }).toPass({ timeout: 60_000, intervals: [3_000] });
         await expect(section).toContainText("Choose a plan to continue.");
         expect(await seriousViolations(page, "#plan")).toEqual([]);
-        await section.getByRole("button", { name: "Request Model 4" }).click();
+        await section.getByRole("button", { name: "Request Ad-Free" }).click();
         await page.getByRole("dialog", { name: "Request a plan" }).getByRole("button", { name: "Send request" }).click();
-        await expect(section).toContainText("Request for Model 4 sent");
+        await expect(section).toContainText("Request for Ad-Free sent");
 
         detail = await openRestaurant(admin, dated.name);
         await detail.getByRole("button", { name: `Fulfil request from ${dated.name}` }).click();
@@ -140,6 +140,6 @@ test.describe("J23 Grandfathering", () => {
         await expect(history).toContainText("EXPIRED");
 
         await page.reload();
-        await expect(section).toContainText("Model 4 · Active");
+        await expect(section).toContainText("Ad-Free · Active");
     });
 });
