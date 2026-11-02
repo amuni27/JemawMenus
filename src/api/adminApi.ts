@@ -39,7 +39,8 @@ export type Entitlements = { mode: 'INACTIVE' | 'ACTIVE'; planCode: string | nul
 export type PlanRequestSummary = { id: string; planCode: MonetizationModel; configVersion: number; requestedAt: string;
   rowVersion: number; outsideCurrentConfiguration: boolean };
 export type BusinessSubscriptionView = { businessId: string; businessName: string; current?: Subscription;
-  entitlements: Entitlements; monetizationActive: boolean; pendingRequest?: PlanRequestSummary; trialIntent?: TrialIntentSummary };
+  entitlements: Entitlements; monetizationActive: boolean; pendingRequest?: PlanRequestSummary; trialIntent?: TrialIntentSummary;
+  timeZone?: string }; // AGF E4-M5: the restaurant's time zone, in which trial end dates are shown
 // AGF E4-M5 recovery: a registration's trial intent; PENDING until the trial is created (after commit or by the daily retry)
 export type TrialIntentSummary = { businessId: string; businessName?: string; status: 'PENDING' | 'STARTED' | 'NOT_STARTED';
   resolution?: string; configVersion: number; failedAttempts: number; lastAttemptAt?: string; lastError?: string; createdAt: string;
@@ -94,8 +95,9 @@ export const adminApi = {
   // AGF E4-M5: trials (extend and end use the subscription PATCH)
   startTrial: (businessId: string, expectedConfigVersion: number) =>
     adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial`, { expectedConfigVersion }),
-  extendSubscription: (businessId: string, periodEnd: string, rowVersion: number) =>
-    adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { periodEnd, rowVersion }),
+  // the trial runs through this calendar day (YYYY-MM-DD) in the restaurant's time zone; the backend converts it
+  extendTrial: (businessId: string, periodEndDate: string, rowVersion: number) =>
+    adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { periodEndDate, rowVersion }),
   convertTrial: (businessId: string, expectedConfigVersion: number, rowVersion: number) =>
     adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial/convert`, { expectedConfigVersion, rowVersion }),
   trialIntents: () => adminClient.get<TrialIntentOverview>('/admin/trial-intents'),

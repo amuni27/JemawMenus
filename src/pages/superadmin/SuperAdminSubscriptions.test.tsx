@@ -13,7 +13,7 @@ const businessSubscription = vi.fn();
 const fulfilPlanRequest = vi.fn();
 const declinePlanRequest = vi.fn();
 const startTrial = vi.fn();
-const extendSubscription = vi.fn();
+const extendTrial = vi.fn();
 const convertTrial = vi.fn();
 const subscriptionHistory = vi.fn();
 const recordSubscription = vi.fn();
@@ -21,7 +21,7 @@ const endSubscription = vi.fn();
 vi.mock("../../api/adminApi", async (orig) => ({
     ...(await orig<typeof import("../../api/adminApi")>()),
     adminApi: { plans, monetizationConfig, businesses, businessSubscription, subscriptionHistory, recordSubscription, endSubscription,
-        fulfilPlanRequest, declinePlanRequest, startTrial, extendSubscription, convertTrial },
+        fulfilPlanRequest, declinePlanRequest, startTrial, extendTrial, convertTrial },
 }));
 
 const { default: SuperAdminSubscriptions } = await import("./SuperAdminSubscriptions.tsx");
@@ -170,7 +170,7 @@ describe("Super Admin subscriptions", () => {
             periodEnd: "2026-12-01T10:00:00Z", effectiveStatus: "TRIAL", rowVersion: 4 });
         businessSubscription.mockResolvedValue(view(trial));
         convertTrial.mockResolvedValue({ data: sub({ planCode: "MODEL_1" }) });
-        extendSubscription.mockResolvedValue({ data: trial });
+        extendTrial.mockResolvedValue({ data: trial });
         const detail = await openCafe();
         expect(detail.textContent).toContain("Model 1 · Trial");
         expect(detail.textContent).toContain("Trial (automatic), no payment involved");
@@ -179,7 +179,7 @@ describe("Super Admin subscriptions", () => {
         const extend = screen.getByRole("dialog", { name: "Extend trial" });
         fireEvent.change(within(extend).getByLabelText("New end date"), { target: { value: "2026-12-31" } });
         fireEvent.click(within(extend).getByRole("button", { name: "Extend" }));
-        await waitFor(() => expect(extendSubscription).toHaveBeenCalledWith("b1", "2026-12-31T00:00:00.000Z", 4));
+        await waitFor(() => expect(extendTrial).toHaveBeenCalledWith("b1", "2026-12-31", 4)); // the calendar date; the backend converts it
 
         fireEvent.click(within(await screen.findByRole("region", { name: "Cafe One subscription" })).getByRole("button", { name: "Convert to manual Model 1 record" }));
         const convert = screen.getByRole("dialog", { name: "Convert trial" });
@@ -187,6 +187,21 @@ describe("Super Admin subscriptions", () => {
         expect(convert.textContent).toContain("The trial is kept in the history.");
         fireEvent.click(within(convert).getByRole("button", { name: "Convert" }));
         await waitFor(() => expect(convertTrial).toHaveBeenCalledWith("b1", 1, 4));
+    });
+
+    it("shows trial end dates as the last day in the restaurant's time zone, not the browser's (AGF E4-M5)", async () => {
+        const chicago = (current: unknown) => ({ data: { ...view(current).data, timeZone: "America/Chicago" } });
+        businessSubscription.mockResolvedValue(chicago(sub({ planCode: "MODEL_1", status: "TRIAL", source: "TRIAL", effectiveStatus: "TRIAL",
+            sourceLabel: "Trial (automatic), no payment involved", periodEnd: "2027-01-01T06:00:00Z" })));
+        let detail = await openCafe();
+        expect(detail.textContent).toContain("Model 1 · Trial · ends 12/31/2026");
+
+        cleanup();
+        businessSubscription.mockResolvedValue({ data: { ...view(sub({ planCode: "MODEL_1", status: "TRIAL", source: "TRIAL", effectiveStatus: "EXPIRED",
+            sourceLabel: "Trial (automatic), no payment involved", periodEnd: "2026-12-31T21:00:00Z", effectiveEnd: "2026-12-31T21:00:00Z" })).data,
+            timeZone: "Africa/Addis_Ababa" } });
+        detail = await openCafe();
+        expect(detail.textContent).toContain("Trial ended 12/31/2026 (status update pending)");
     });
 
     it("marks an effectively ended trial as pending a status update without an extend action (AGF E4-M5)", async () => {

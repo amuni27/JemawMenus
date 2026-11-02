@@ -5,6 +5,7 @@ import {
 import Modal from '../../components/ui/Modal';
 import ModalHeader from '../../components/ui/ModalHeader';
 import { errorMessage } from '../../utils/errorMessage';
+import { trialEndDate } from '../../utils/trialDate';
 import { PRIMARY, SECONDARY } from './consoleButtons';
 import PlanRequestActions from './PlanRequestActions';
 
@@ -91,7 +92,7 @@ export default function SuperAdminSubscriptions() {
   const record = () => run(() => adminApi.recordSubscription(selected!.id, { planCode: planCode as MonetizationModel, expectedConfigVersion: configVersion }));
   const end = () => run(() => adminApi.endSubscription(selected!.id, view!.current!.rowVersion));
   // AGF E4-M5: trials
-  const extend = () => run(() => adminApi.extendSubscription(selected!.id, new Date(`${extendTo}T00:00:00.000Z`).toISOString(), view!.current!.rowVersion));
+  const extend = () => run(() => adminApi.extendTrial(selected!.id, extendTo, view!.current!.rowVersion));
   const convert = () => run(() => adminApi.convertTrial(selected!.id, configVersion, view!.current!.rowVersion));
   const startTrial = () => run(() => adminApi.startTrial(selected!.id, configVersion));
   const enabledPlans = plans.filter((p) => p.enabledByCurrentConfiguration);
@@ -163,8 +164,8 @@ export default function SuperAdminSubscriptions() {
                 {current ? (
                   <>
                     <p className="font-semibold text-gray-900">
-                      {isTrial ? (trialEnded ? `${model(current.planCode)} · Trial ended ${date(current.effectiveEnd)} (status update pending)`
-                        : `${model(current.planCode)} · Trial · ends ${date(current.periodEnd)}`) : `${model(current.planCode)} · ${current.status}`}
+                      {isTrial ? (trialEnded ? `${model(current.planCode)} · Trial ended ${trialEndDate(current.effectiveEnd, view.timeZone)} (status update pending)`
+                        : `${model(current.planCode)} · Trial · ends ${trialEndDate(current.periodEnd, view.timeZone)}`) : `${model(current.planCode)} · ${current.status}`}
                     </p>
                     <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{current.sourceLabel}</p>
                     {current.outsideCurrentConfiguration && (

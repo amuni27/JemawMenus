@@ -10,7 +10,7 @@ export type OwnerPlanView = {
     trial?: OwnerTrial;
 };
 // AGF E4-M5: the restaurant's trial in its effective state (ended as soon as its end date has passed)
-export type OwnerTrial = { startedAt: string; endsAt: string; daysLeft: number; effectiveStatus: "TRIAL" | "EXPIRED" };
+export type OwnerTrial = { startedAt: string; endsAt: string; daysLeft: number; effectiveStatus: "TRIAL" | "EXPIRED"; timeZone?: string };
 
 const planApi = {
     get() {

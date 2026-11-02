@@ -86,8 +86,13 @@ test.describe("J22 Trials", () => {
         const extend = admin.getByRole("dialog", { name: "Extend trial" });
         await extend.getByLabel("New end date").fill(newEnd);
         await extend.getByRole("button", { name: "Extend" }).click();
+        // Option A: the trial runs through the chosen day in the restaurant's time zone (Ethiopia: the end is 21:00 UTC that day),
+        // and the owner sees that day, whatever the browser's time zone
         await page.reload();
-        await expect(section).toContainText(/Free trial: 4[45] days left/);
+        const daysLeft = Math.ceil((Date.parse(`${newEnd}T21:00:00Z`) - Date.now()) / 86_400_000);
+        const [y, m, d] = newEnd.split("-").map(Number);
+        await expect(section).toContainText(new RegExp(`Free trial: (${daysLeft}|${daysLeft - 1}) days left \\(ends ${m}/${d}/${y}\\)`));
+        await expect(detail).toContainText(`Model 1 · Trial · ends ${m}/${d}/${y}`);
 
         await detail.getByRole("button", { name: "Convert to manual Model 1 record" }).click();
         const convert = admin.getByRole("dialog", { name: "Convert trial" });

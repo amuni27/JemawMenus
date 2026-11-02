@@ -127,5 +127,20 @@ describe("owner Plan section", () => {
         expect(section.textContent).toContain("All features stay available for now. The Agafari team will contact you.");
         expect(within(section).queryByRole("button")).toBeNull();
     });
+
+    it("shows the trial's last day in the restaurant's time zone, whatever the browser's is (AGF E4-M5)", async () => {
+        const trial = (over: Record<string, unknown>) => ({ data: { visible: true, setting: "SETTING_1", configVersion: 1, plans: [], canRequest: false,
+            trialAvailable: true, featuresUnaffected: true, trial: { startedAt: "2026-11-01T10:00:00Z", ...over } } });
+        get.mockResolvedValue(trial({ endsAt: "2027-01-01T06:00:00Z", daysLeft: 20, effectiveStatus: "TRIAL", timeZone: "America/Chicago" }));
+        render(<PlanSection />);
+        let section = await screen.findByRole("region", { name: "Plan" });
+        expect(section.textContent).toContain("Free trial: 20 days left (ends 12/31/2026).");
+        cleanup();
+
+        get.mockResolvedValue(trial({ endsAt: "2026-12-31T21:00:00Z", daysLeft: 0, effectiveStatus: "EXPIRED", timeZone: "Africa/Addis_Ababa" }));
+        render(<PlanSection />);
+        section = await screen.findByRole("region", { name: "Plan" });
+        expect(section.textContent).toContain("Your free trial ended on 12/31/2026.");
+    });
 });
 

@@ -120,7 +120,7 @@ describe("admin API client", () => {
         }) as never;
         try {
             await adminApi.startTrial("b1", 1);
-            await adminApi.extendSubscription("b1", "2026-12-31T00:00:00.000Z", 2);
+            await adminApi.extendTrial("b1", "2026-12-31", 2);
             await adminApi.convertTrial("b1", 1, 3);
         } finally {
             adminClient.defaults.adapter = original;
@@ -128,7 +128,7 @@ describe("admin API client", () => {
         expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["post /admin/businesses/b1/trial", "patch /admin/businesses/b1/subscription",
             "post /admin/businesses/b1/trial/convert"]);
         expect(JSON.parse(calls[0].data as string)).toEqual({ expectedConfigVersion: 1 });
-        expect(JSON.parse(calls[1].data as string)).toEqual({ periodEnd: "2026-12-31T00:00:00.000Z", rowVersion: 2 });
+        expect(JSON.parse(calls[1].data as string)).toEqual({ periodEndDate: "2026-12-31", rowVersion: 2 }); // a calendar date, no instant
         expect(JSON.parse(calls[2].data as string)).toEqual({ expectedConfigVersion: 1, rowVersion: 3 });
     });
 });

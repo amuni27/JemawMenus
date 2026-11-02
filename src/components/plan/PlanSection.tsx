@@ -3,6 +3,7 @@ import planApi, { type OwnerPlanView } from "../../api/planApi";
 import Modal from "../ui/Modal";
 import ModalHeader from "../ui/ModalHeader";
 import { errorMessage } from "../../utils/errorMessage";
+import { trialEndDate } from "../../utils/trialDate";
 import { FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_DESCRIPTIONS, TRIAL_NOTICE_DAYS, days, modelName, statusLabel } from "./planText";
 
 // AGF E4-M4: the owner's Plan section on the account page. Hidden unless the backend says plans are visible. Under
@@ -57,7 +58,7 @@ export default function PlanSection() {
 
             {!current && trial && trial.effectiveStatus === "TRIAL" && (
                 <div className="mt-3 text-sm text-gray-800">
-                    <p className="font-semibold">Free trial: {days(trial.daysLeft)} left (ends {new Date(trial.endsAt).toLocaleDateString()}).</p>
+                    <p className="font-semibold">Free trial: {days(trial.daysLeft)} left (ends {trialEndDate(trial.endsAt, trial.timeZone)}).</p>
                     {trial.daysLeft <= TRIAL_NOTICE_DAYS && (
                         <p role="status" className="mt-2 rounded-lg bg-amber-50 p-3 text-amber-900">
                             Your free trial ends in {days(trial.daysLeft)}. The Agafari team will contact you about your plan.
@@ -68,7 +69,7 @@ export default function PlanSection() {
 
             {!current && trial && trial.effectiveStatus === "EXPIRED" && (
                 <div className="mt-3 text-sm text-gray-800">
-                    <p className="font-semibold">Your free trial ended on {new Date(trial.endsAt).toLocaleDateString()}.</p>
+                    <p className="font-semibold">Your free trial ended on {trialEndDate(trial.endsAt, trial.timeZone)}.</p>
                     <p className="mt-1">All features stay available for now. The Agafari team will contact you.</p>
                 </div>
             )}
