@@ -14,8 +14,10 @@ import {
 // the backend says plans are visible. Current plan and status with the existing trial, grandfathering, ended-plan and
 // pending-request notices; under Setting 2 one card per enabled plan (approved names and benefits) and a comparison; a
 // request is never a subscription and there is no change action (E4-M4-Q4). No prices; every feature stays available.
+// AGF Self-Service Phase A: while self-service is on, a free plan shows "Start free" (approved wording, SS-9); a pending
+// request is withdrawn only after the owner confirms it in the dialog (SS-3); paid plans keep "Request".
 
-type Dialog = { kind: "request"; planCode: string } | { kind: "withdraw" } | null;
+type Dialog = { kind: "request"; planCode: string } | { kind: "withdraw" } | { kind: "start"; planCode: string } | null;
 
 export default function SubscriptionPlansPage() {
     const { tenantSlug } = useParams();
@@ -50,6 +52,8 @@ export default function SubscriptionPlansPage() {
     const setting2 = view.setting === "SETTING_2";
     const plans = view.plans ?? [];
     const canRequest = Boolean(view.canRequest) && !current && !pending;
+    const selfService = view.selfService;
+    const canStartFree = Boolean(selfService?.available) && !current;
 
     return (
         <section id="plan" aria-labelledby="plans-heading" className="space-y-6">
@@ -143,7 +147,20 @@ export default function SubscriptionPlansPage() {
                                                 <li key={b} className="flex gap-2"><span aria-hidden="true" className="text-emerald-700">✓</span><span>{b}</span></li>
                                             ))}
                                         </ul>
-                                        {canRequest && (
+                                        {!p.paid && canStartFree ? (
+                                            <div className="mt-4">
+                                                {pending && (
+                                                    <p className="mb-2 text-sm text-gray-800">
+                                                        You have a pending request for {planName(pending.planCode)}. Starting {planName(p.code)} will withdraw it.
+                                                    </p>
+                                                )}
+                                                {selfService?.verificationRequired && <p className="mb-2 text-sm text-gray-800">Verify your email to start {planName(p.code)}.</p>}
+                                                <button type="button" className={`${OWNER_PRIMARY} w-full`} onClick={() => setDialog({ kind: "start", planCode: p.code })}
+                                                        disabled={busy || selfService?.verificationRequired}>
+                                                    Start free
+                                                </button>
+                                            </div>
+                                        ) : canRequest && (p.paid || !selfService) && (
                                             <button type="button" className={`${OWNER_PRIMARY} mt-4 w-full`} onClick={() => setDialog({ kind: "request", planCode: p.code })}
                                                     disabled={busy}>
                                                 Request {planName(p.code)}
@@ -195,6 +212,37 @@ export default function SubscriptionPlansPage() {
                         </button>
                     </div>
                 </div>
+            </Modal>
+
+            <Modal open={dialog?.kind === "start"} onClose={() => !busy && setDialog(null)} className="max-w-md">
+                {dialog?.kind === "start" && (pending ? (
+                    <div role="dialog" aria-modal="true" aria-label={`Start ${planName(dialog.planCode)} and withdraw your request for ${planName(pending.planCode)}?`}>
+                        <ModalHeader title={`Start ${planName(dialog.planCode)} and withdraw your request for ${planName(pending.planCode)}?`} onClose={() => !busy && setDialog(null)} />
+                        <p className="text-sm text-gray-800">
+                            Your request for {planName(pending.planCode)} will be withdrawn. Agafari will show one sponsored item on your guest menu. There's no charge.
+                        </p>
+                        <div className="mt-6 flex justify-end gap-2">
+                            {/* the safe choice has the initial focus (SS-3) */}
+                            <button type="button" className={OWNER_SECONDARY} onClick={() => setDialog(null)} disabled={busy} autoFocus>Keep my request</button>
+                            <button type="button" className={OWNER_PRIMARY} disabled={busy}
+                                    onClick={() => run(() => planApi.activate(dialog.planCode, view.configVersion ?? 0, { id: pending.id, rowVersion: pending.rowVersion }))}>
+                                {busy ? "Starting…" : "Withdraw request and start free"}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div role="dialog" aria-modal="true" aria-label={`Start ${planName(dialog.planCode)}?`}>
+                        <ModalHeader title={`Start ${planName(dialog.planCode)}?`} onClose={() => !busy && setDialog(null)} />
+                        <p className="text-sm text-gray-800">Agafari will show one sponsored item on your guest menu. There's no charge.</p>
+                        <p className="mt-2 text-sm text-gray-800">To change your plan later, contact the Agafari team.</p>
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button type="button" className={OWNER_SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+                            <button type="button" className={OWNER_PRIMARY} disabled={busy} onClick={() => run(() => planApi.activate(dialog.planCode, view.configVersion ?? 0, undefined))}>
+                                {busy ? "Starting…" : "Start free"}
+                            </button>
+                        </div>
+                    </div>
+                ))}
             </Modal>
 
             <Modal open={dialog?.kind === "withdraw"} onClose={() => !busy && setDialog(null)} className="max-w-md">

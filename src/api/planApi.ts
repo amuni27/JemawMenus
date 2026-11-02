@@ -12,6 +12,8 @@ export type OwnerPlanView = {
     visible: boolean; setting?: "SETTING_1" | "SETTING_2"; configVersion?: number; plans?: OwnerPlan[]; current?: OwnerSubscription;
     pendingRequest?: OwnerPlanRequest; canRequest?: boolean; trialAvailable?: boolean; featuresUnaffected?: boolean;
     trial?: OwnerTrial; endedPlan?: OwnerEndedPlan;
+    // AGF Self-Service Phase A: present only while self-service is on
+    selfService?: { available: boolean; verificationRequired: boolean };
 };
 // AGF E4-M5: the restaurant's trial in its effective state (ended as soon as its end date has passed)
 export type OwnerTrial = { startedAt: string; endsAt: string; daysLeft: number; effectiveStatus: "TRIAL" | "EXPIRED"; timeZone?: string };
@@ -22,6 +24,11 @@ const planApi = {
     },
     request(planCode: string, expectedConfigVersion: number) {
         return apiAuth.post("/plan/requests", { planCode, expectedConfigVersion });
+    },
+    // AGF Self-Service Phase A: start a free plan; a pending request is withdrawn only when named here (explicit confirmation)
+    activate(planCode: string, expectedConfigVersion: number, withdrawPending?: { id: string; rowVersion: number }) {
+        return apiAuth.post("/plan/activations", { planCode, expectedConfigVersion,
+            ...(withdrawPending ? { withdrawPendingRequestId: withdrawPending.id, withdrawPendingRequestRowVersion: withdrawPending.rowVersion } : {}) });
     },
     withdraw(rowVersion: number) {
         return apiAuth.patch("/plan/requests/current", { status: "WITHDRAWN", rowVersion });

@@ -11,7 +11,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 const get = vi.fn();
 const request = vi.fn();
 const withdraw = vi.fn();
-vi.mock("../../api/planApi", () => ({ default: { get, request, withdraw } }));
+const activate = vi.fn();
+vi.mock("../../api/planApi", () => ({ default: { get, request, withdraw, activate } }));
 
 const { default: SubscriptionPlansPage } = await import("./SubscriptionPlansPage.tsx");
 
@@ -32,7 +33,7 @@ const setting2 = (over: Record<string, unknown> = {}) => ({ data: { visible: tru
 const pending = { id: "r1", planCode: "MODEL_4", configVersion: 3, requestedAt: "2026-11-01T10:00:00Z", rowVersion: 0, outsideCurrentConfiguration: false };
 
 beforeEach(() => {
-    for (const fn of [get, request, withdraw]) fn.mockReset();
+    for (const fn of [get, request, withdraw, activate]) fn.mockReset();
     get.mockResolvedValue(setting2());
     request.mockResolvedValue({ data: { id: "r1", status: "PENDING" } });
     withdraw.mockResolvedValue({ data: { id: "r1", status: "WITHDRAWN" } });
@@ -269,6 +270,85 @@ describe("owner Subscription & Plans page", () => {
             await screen.findByRole("region", { name: "Subscription & Plans" });
             expect(screen.queryByRole("region", { name: "Available plans" })).toBeNull();
             expect(screen.getByRole("heading", { level: 2, name: "Subscription & Plans" })).toBeTruthy();
+        });
+    });
+
+    describe("Start free (Self-Service Phase A)", () => {
+        const all = [{ code: "MODEL_2", model: "MODEL_2", adSource: "AGAFARI", paid: false }, { code: "MODEL_3", model: "MODEL_3", adSource: "RESTAURANT", paid: true },
+            { code: "MODEL_4", model: "MODEL_4", adSource: "NONE", paid: true }];
+        const card = async (name: string) => within(await screen.findByRole("region", { name: "Available plans" })).getAllByRole("article")
+            .find((c) => within(c).getByRole("heading").textContent === name)!;
+
+        it("offers Start free on the free plan only while self-service is available; paid plans keep Request", async () => {
+            get.mockResolvedValue(setting2({ plans: all, selfService: { available: true, verificationRequired: false } }));
+            render(<PlansPage />);
+            const free = await card("Free with Ads");
+            expect(within(free).getByRole("button", { name: "Start free" })).toBeTruthy();
+            expect(within(free).queryByRole("button", { name: /^Request / })).toBeNull();
+            expect(within(await card("Ad-Free")).getByRole("button", { name: "Request Ad-Free" })).toBeTruthy();
+            cleanup();
+
+            get.mockResolvedValue(setting2({ plans: all })); // self-service off: today's request flow
+            render(<PlansPage />);
+            expect(within(await card("Free with Ads")).getByRole("button", { name: "Request Free with Ads" })).toBeTruthy();
+            expect(screen.queryByRole("button", { name: "Start free" })).toBeNull();
+        });
+
+        it("starts Free with Ads after the approved confirmation and reloads", async () => {
+            get.mockResolvedValue(setting2({ plans: all, selfService: { available: true, verificationRequired: false } }));
+            activate.mockResolvedValue({ data: { subscriptionId: "s1", planCode: "MODEL_2", status: "ACTIVE", created: true } });
+            render(<PlansPage />);
+            fireEvent.click(within(await card("Free with Ads")).getByRole("button", { name: "Start free" }));
+            const dialog = screen.getByRole("dialog", { name: "Start Free with Ads?" });
+            expect(dialog.textContent).toContain("Agafari will show one sponsored item on your guest menu. There's no charge.");
+            expect(dialog.textContent).toContain("To change your plan later, contact the Agafari team.");
+            expect(activate).not.toHaveBeenCalled();
+            get.mockResolvedValue(setting2({ plans: all, canRequest: false, selfService: { available: false, verificationRequired: false },
+                current: { planCode: "MODEL_2", status: "ACTIVE", periodEnd: null, sourceLabel: "Started by you", outsideCurrentConfiguration: false } }));
+            fireEvent.click(within(dialog).getByRole("button", { name: "Start free" }));
+            await waitFor(() => expect(activate).toHaveBeenCalledWith("MODEL_2", 3, undefined));
+            const section = await screen.findByRole("region", { name: "Subscription & Plans" });
+            await waitFor(() => expect(section.textContent).toContain("Free with Ads · Active"));
+            expect(section.textContent).toContain("Started by you");
+        });
+
+        it("with a pending request, names it on the card and asks to withdraw it explicitly (Keep my request first)", async () => {
+            get.mockResolvedValue(setting2({ plans: all, canRequest: false, pendingRequest: pending, selfService: { available: true, verificationRequired: false } }));
+            activate.mockResolvedValue({ data: { subscriptionId: "s1", planCode: "MODEL_2", status: "ACTIVE", created: true, withdrawnRequestId: "r1" } });
+            render(<PlansPage />);
+            const free = await card("Free with Ads");
+            expect(free.textContent).toContain("You have a pending request for Ad-Free. Starting Free with Ads will withdraw it.");
+            fireEvent.click(within(free).getByRole("button", { name: "Start free" }));
+            let dialog = screen.getByRole("dialog", { name: "Start Free with Ads and withdraw your request for Ad-Free?" });
+            expect(dialog.textContent).toContain("Your request for Ad-Free will be withdrawn. Agafari will show one sponsored item on your guest menu. There's no charge.");
+            const keep = within(dialog).getByRole("button", { name: "Keep my request" });
+            expect(document.activeElement).toBe(keep);
+            fireEvent.click(keep);
+            expect(activate).not.toHaveBeenCalled();
+            expect(screen.queryByRole("dialog", { name: /withdraw your request/ })).toBeNull();
+
+            fireEvent.click(within(await card("Free with Ads")).getByRole("button", { name: "Start free" }));
+            dialog = screen.getByRole("dialog", { name: "Start Free with Ads and withdraw your request for Ad-Free?" });
+            fireEvent.click(within(dialog).getByRole("button", { name: "Withdraw request and start free" }));
+            await waitFor(() => expect(activate).toHaveBeenCalledWith("MODEL_2", 3, { id: "r1", rowVersion: 0 }));
+        });
+
+        it("asks for a verified email first when verification is required", async () => {
+            get.mockResolvedValue(setting2({ plans: all, selfService: { available: true, verificationRequired: true } }));
+            render(<PlansPage />);
+            const free = await card("Free with Ads");
+            expect(free.textContent).toContain("Verify your email to start Free with Ads.");
+            expect((within(free).getByRole("button", { name: "Start free" }) as HTMLButtonElement).disabled).toBe(true);
+        });
+
+        it("shows the server's message when starting fails and reloads", async () => {
+            get.mockResolvedValue(setting2({ plans: all, selfService: { available: true, verificationRequired: false } }));
+            activate.mockRejectedValue({ response: { status: 409, data: { code: "PLAN_REQUEST_CHANGED", message: "Your plan request changed. Reload and try again." } } });
+            render(<PlansPage />);
+            fireEvent.click(within(await card("Free with Ads")).getByRole("button", { name: "Start free" }));
+            fireEvent.click(within(screen.getByRole("dialog", { name: "Start Free with Ads?" })).getByRole("button", { name: "Start free" }));
+            expect((await screen.findByRole("alert")).textContent).toContain("Your plan request changed. Reload and try again.");
+            await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
         });
     });
 });

@@ -18,7 +18,8 @@ const BACKEND_PORT = 8081;
 const FRONTEND = "http://127.0.0.1:5176";
 // AGF E4-M7: J24 runs against its own demo backend and frontend with entitlements and Agafari ads on, so J1–J23 keep their
 // flags (J20 checks that monetization stays inactive). AGF E4-M8: J25 (restaurant ads) runs there too, after J24, with
-// restaurant ads also on. Local in-memory demo only.
+// restaurant ads also on. AGF Self-Service Phase A: J26 runs there last, with owner plans and self-service also on.
+// Local in-memory demo only.
 const ADS_BACKEND_PORT = 8082;
 const ADS_FRONTEND = "http://127.0.0.1:5177";
 const backendDir = resolve(process.env.E2E_BACKEND_DIR ?? "../jemaw-menu-backend-spring");
@@ -45,13 +46,13 @@ export default defineConfig({
         { name: "setup", testMatch: /auth\.setup\.e2e\.ts$/ },
         {
             name: "smoke",
-            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)(restaurant-)?ads\.e2e\.ts$/],
+            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service)\.e2e\.ts$/],
             dependencies: ["setup"],
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined },
         },
         {
             name: "ads",
-            testMatch: /(^|\/)(restaurant-)?ads\.e2e\.ts$/, // J24, then J25
+            testMatch: /(^|\/)((restaurant-)?ads|self-service)\.e2e\.ts$/, // J24, J25, then J26
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: ADS_FRONTEND },
         },
     ],
@@ -119,6 +120,8 @@ export default defineConfig({
                 APP_MONETIZATION_ENTITLEMENTS_ENABLED: "true", // AGF E4-M7: on only in this J24 demo backend
                 APP_MONETIZATION_AGAFARI_ADS_ENABLED: "true", // AGF E4-M7: on only in this J24 demo backend; default false everywhere else
                 APP_MONETIZATION_RESTAURANT_ADS_ENABLED: "true", // AGF E4-M8: on only in this demo backend (J25); default false everywhere else
+                APP_MONETIZATION_OWNER_PLANS_VISIBLE: "true", // AGF Self-Service Phase A (J26): owner plans in this demo backend
+                APP_MONETIZATION_SELF_SERVICE_ENABLED: "true", // AGF Self-Service Phase A: on only in this demo backend (J26); default false everywhere else
                 DEMO_OWNER_PASSWORD: process.env.E2E_OWNER_PASSWORD,
                 APP_PUBLIC_MENU_BASE_URL: ADS_FRONTEND,
             },
