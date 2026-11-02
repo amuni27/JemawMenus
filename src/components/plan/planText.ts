@@ -10,6 +10,10 @@ export const PLAN_DESCRIPTIONS: Record<string, string> = {
 
 export const FEATURES_NOTE = "All features stay available while plans are being introduced.";
 
+// AGF E4-M5: in-app trial notices (emails wait for D5)
+export const TRIAL_NOTICE_DAYS = 7;
+export const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
+
 export const statusLabel = (status: string) => status.charAt(0) + status.slice(1).toLowerCase();
 
 // AA contrast on white (the shared brand Button is below AA, a known deferred defect)

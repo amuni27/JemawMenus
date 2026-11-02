@@ -42,4 +42,17 @@ describe("dashboard Plan card", () => {
         show();
         expect((await screen.findByRole("region", { name: "Plan" })).textContent).toContain("Model 4 · Active");
     });
+
+    it("summarizes a running or ended trial (AGF E4-M5)", async () => {
+        get.mockResolvedValue({ data: { visible: true, setting: "SETTING_1", configVersion: 1, plans: [], canRequest: false,
+            trial: { startedAt: "2026-11-01T10:00:00Z", endsAt: "2026-12-01T10:00:00Z", daysLeft: 12, effectiveStatus: "TRIAL" } } });
+        show();
+        expect((await screen.findByRole("region", { name: "Plan" })).textContent).toContain("Free trial: 12 days left");
+        cleanup();
+        get.mockResolvedValue({ data: { visible: true, setting: "SETTING_1", configVersion: 1, plans: [], canRequest: false,
+            trial: { startedAt: "2026-11-01T10:00:00Z", endsAt: "2026-12-01T10:00:00Z", daysLeft: 0, effectiveStatus: "EXPIRED" } } });
+        show();
+        expect((await screen.findByRole("region", { name: "Plan" })).textContent).toContain("Free trial ended");
+    });
 });
+

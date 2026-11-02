@@ -29,16 +29,23 @@ export type AdminBusiness = { id: string; name: string; slug: string; createdAt:
 export type AdminBusinessPage = { items: AdminBusiness[]; page: number; size: number; total: number };
 export type Subscription = {
   id: string; businessId: string; planCode: MonetizationModel; status: 'TRIAL' | 'ACTIVE' | 'GRANDFATHERED' | 'EXPIRED';
-  configVersion: number; periodEnd: string | null; transitionDate: string | null; source: 'MANUAL' | 'PROVIDER';
+  configVersion: number; periodEnd: string | null; transitionDate: string | null; source: 'MANUAL' | 'PROVIDER' | 'TRIAL';
   paymentVerified: boolean; sourceLabel: string | null; createdAt: string; createdBy: string; updatedAt: string;
   endedAt: string | null; rowVersion: number; outsideCurrentConfiguration: boolean;
+  effectiveStatus?: 'TRIAL' | 'ACTIVE' | 'GRANDFATHERED' | 'EXPIRED'; effectiveEnd?: string | null; // AGF E4-M5
 };
 export type Entitlements = { mode: 'INACTIVE' | 'ACTIVE'; planCode: string | null; status: string | null;
   adSource: 'NONE' | 'AGAFARI' | 'RESTAURANT'; restaurantAdManager: boolean; limits: Record<string, number>; source: string | null; degraded: boolean };
 export type PlanRequestSummary = { id: string; planCode: MonetizationModel; configVersion: number; requestedAt: string;
   rowVersion: number; outsideCurrentConfiguration: boolean };
 export type BusinessSubscriptionView = { businessId: string; businessName: string; current?: Subscription;
-  entitlements: Entitlements; monetizationActive: boolean; pendingRequest?: PlanRequestSummary };
+  entitlements: Entitlements; monetizationActive: boolean; pendingRequest?: PlanRequestSummary; trialIntent?: TrialIntentSummary;
+  timeZone?: string }; // AGF E4-M5: the restaurant's time zone, in which trial end dates are shown
+// AGF E4-M5 recovery: a registration's trial intent; PENDING until the trial is created (after commit or by the daily retry)
+export type TrialIntentSummary = { businessId: string; businessName?: string; status: 'PENDING' | 'STARTED' | 'NOT_STARTED';
+  resolution?: string; configVersion: number; failedAttempts: number; lastAttemptAt?: string; lastError?: string; createdAt: string;
+  resolvedAt?: string; needsAttention: boolean };
+export type TrialIntentOverview = { pending: number; needsAttention: number; items: TrialIntentSummary[] };
 // AGF E4-M4: owner plan requests; fulfilling records the E4-M3 manual subscription (no payment verified).
 export type PlanRequest = { id: string; businessId: string; businessName?: string; planCode: MonetizationModel; configVersion: number;
   status: 'PENDING' | 'FULFILLED' | 'DECLINED' | 'WITHDRAWN'; requestedAt: string; requestedBy?: string; resolvedAt?: string;
@@ -85,6 +92,15 @@ export const adminApi = {
     adminClient.post<Subscription>(`/admin/businesses/${businessId}/subscription`, record),
   endSubscription: (businessId: string, rowVersion: number) =>
     adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { status: 'EXPIRED', rowVersion }),
+  // AGF E4-M5: trials (extend and end use the subscription PATCH)
+  startTrial: (businessId: string, expectedConfigVersion: number) =>
+    adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial`, { expectedConfigVersion }),
+  // the trial runs through this calendar day (YYYY-MM-DD) in the restaurant's time zone; the backend converts it
+  extendTrial: (businessId: string, periodEndDate: string, rowVersion: number) =>
+    adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { periodEndDate, rowVersion }),
+  convertTrial: (businessId: string, expectedConfigVersion: number, rowVersion: number) =>
+    adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial/convert`, { expectedConfigVersion, rowVersion }),
+  trialIntents: () => adminClient.get<TrialIntentOverview>('/admin/trial-intents'),
   planRequests: (status: string, page: number, size: number) =>
     adminClient.get<PlanRequestPage>('/admin/plan-requests', { params: { status, page, size } }),
   fulfilPlanRequest: (id: string, expectedConfigVersion: number, rowVersion: number) =>

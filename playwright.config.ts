@@ -67,6 +67,7 @@ export default defineConfig({
                 APP_ADMIN_BOOTSTRAP_EMAIL: process.env.E2E_ADMIN_EMAIL,
                 APP_ADMIN_BOOTSTRAP_PASSWORD: process.env.E2E_ADMIN_PASSWORD,
                 APP_MONETIZATION_OWNER_PLANS_VISIBLE: "true", // AGF E4-M4: on for the local in-memory E2E demo (J21 needs it, J1–J17 prove no regression); default false everywhere else
+                APP_MONETIZATION_TRIALS_ENABLED: "true", // AGF E4-M5: on for the local in-memory E2E demo (J22 needs it); default false everywhere else
                 DEMO_OWNER_PASSWORD: process.env.E2E_OWNER_PASSWORD,
                 // AGF-S2-21: share pages redirect to the frontend under test
                 APP_PUBLIC_MENU_BASE_URL: FRONTEND,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import planApi, { type OwnerPlanView } from "../../api/planApi";
-import { FEATURES_NOTE, modelName, statusLabel } from "./planText";
+import { FEATURES_NOTE, days, modelName, statusLabel } from "./planText";
 
 // AGF E4-M4: dashboard summary of the owner's plan, linking to the Plan section on the account page. Hidden unless the
 // backend says plans are visible; a failure hides it without touching the rest of the dashboard.
@@ -19,6 +19,7 @@ export default function PlanCard({ accountHref }: { accountHref: string }) {
 
     const summary = view.current ? `${modelName(view.current.planCode)} · ${statusLabel(view.current.status)}`
         : view.pendingRequest ? `Request for ${modelName(view.pendingRequest.planCode)} pending`
+        : view.trial ? (view.trial.effectiveStatus === "TRIAL" ? `Free trial: ${days(view.trial.daysLeft)} left` : "Free trial ended")
         : view.setting === "SETTING_1" ? "Free trial, then a paid subscription"
         : "Choose a plan for your restaurant";
 

@@ -5,6 +5,7 @@ import {
 import Modal from '../../components/ui/Modal';
 import ModalHeader from '../../components/ui/ModalHeader';
 import { errorMessage } from '../../utils/errorMessage';
+import { trialEndDate } from '../../utils/trialDate';
 import { PRIMARY, SECONDARY } from './consoleButtons';
 import PlanRequestActions from './PlanRequestActions';
 
@@ -16,13 +17,21 @@ const PAGE_SIZE = 20;
 const model = (code: string | null | undefined) => (code ? `Model ${code.slice(-1)}` : '');
 const date = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString() : '');
 
-type Dialog = 'record' | 'end' | null;
+type Dialog = 'record' | 'end' | 'extend' | 'convert' | 'start' | null;
+
+// AGF E4-M5 recovery: a registration's trial wasn't created yet; the daily job keeps retrying it
+const recoveryText = (failed: number, needsAttention: boolean) => {
+  const attempts = `${failed} failed attempt${failed === 1 ? '' : 's'}`;
+  return needsAttention ? `Trial pending recovery: needs attention (${attempts})` : `Trial pending recovery (${attempts})`;
+};
 
 export default function SuperAdminSubscriptions() {
   const [query, setQuery] = useState('');
   const [list, setList] = useState<AdminBusinessPage | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [configVersion, setConfigVersion] = useState(0);
+  const [setting1, setSetting1] = useState(false);
+  const [extendTo, setExtendTo] = useState('');
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
   const [view, setView] = useState<BusinessSubscriptionView | null>(null);
   const [history, setHistory] = useState<Subscription[]>([]);
@@ -40,6 +49,7 @@ export default function SuperAdminSubscriptions() {
     const [p, c] = await Promise.all([adminApi.plans(), adminApi.monetizationConfig()]);
     setPlans(p.data);
     setConfigVersion(c.data.version ?? 0);
+    setSetting1(c.data.setting === 'SETTING_1');
   }, []);
 
   const loadRestaurant = useCallback(async (id: string) => {
@@ -81,8 +91,15 @@ export default function SuperAdminSubscriptions() {
 
   const record = () => run(() => adminApi.recordSubscription(selected!.id, { planCode: planCode as MonetizationModel, expectedConfigVersion: configVersion }));
   const end = () => run(() => adminApi.endSubscription(selected!.id, view!.current!.rowVersion));
+  // AGF E4-M5: trials
+  const extend = () => run(() => adminApi.extendTrial(selected!.id, extendTo, view!.current!.rowVersion));
+  const convert = () => run(() => adminApi.convertTrial(selected!.id, configVersion, view!.current!.rowVersion));
+  const startTrial = () => run(() => adminApi.startTrial(selected!.id, configVersion));
   const enabledPlans = plans.filter((p) => p.enabledByCurrentConfiguration);
   const current = view?.current;
+  const isTrial = current?.source === 'TRIAL';
+  const trialEnded = isTrial && current?.effectiveStatus === 'EXPIRED';
+  const hadTrial = history.some((s) => s.source === 'TRIAL');
 
   return (
     <div className="flex flex-col gap-6">
@@ -138,10 +155,18 @@ export default function SuperAdminSubscriptions() {
               {!view.monetizationActive && (
                 <p className="mt-2 text-sm text-gray-600">Monetization is inactive: every restaurant keeps today's features.</p>
               )}
+              {view.trialIntent?.status === 'PENDING' && (
+                <p className={`mt-3 inline-block rounded px-2 py-0.5 text-xs font-medium ${view.trialIntent.needsAttention ? 'bg-red-100 text-red-900' : 'bg-amber-100 text-amber-900'}`}>
+                  {recoveryText(view.trialIntent.failedAttempts, view.trialIntent.needsAttention)}
+                </p>
+              )}
               <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm">
                 {current ? (
                   <>
-                    <p className="font-semibold text-gray-900">{model(current.planCode)} · {current.status}</p>
+                    <p className="font-semibold text-gray-900">
+                      {isTrial ? (trialEnded ? `${model(current.planCode)} · Trial ended ${trialEndDate(current.effectiveEnd, view.timeZone)} (status update pending)`
+                        : `${model(current.planCode)} · Trial · ends ${trialEndDate(current.periodEnd, view.timeZone)}`) : `${model(current.planCode)} · ${current.status}`}
+                    </p>
                     <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{current.sourceLabel}</p>
                     {current.outsideCurrentConfiguration && (
                       <p className="ml-2 mt-1 inline-block rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-900">Outside current configuration</p>
@@ -151,10 +176,23 @@ export default function SuperAdminSubscriptions() {
                       {current.periodEnd ? ` · period ends ${date(current.periodEnd)}` : ''}
                     </p>
                     <p className="mt-1 text-gray-700">Ads: {view.entitlements.adSource === 'NONE' ? 'none' : view.entitlements.adSource.toLowerCase()}</p>
-                    <button type="button" className={`${SECONDARY} mt-3`} onClick={() => setDialog('end')} disabled={busy}>End subscription</button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {isTrial && !trialEnded && (
+                        <button type="button" className={SECONDARY} onClick={() => { setExtendTo(''); setDialog('extend'); }} disabled={busy}>Extend trial</button>
+                      )}
+                      {isTrial && setting1 && (
+                        <button type="button" className={SECONDARY} onClick={() => setDialog('convert')} disabled={busy}>Convert to manual Model 1 record</button>
+                      )}
+                      <button type="button" className={SECONDARY} onClick={() => setDialog('end')} disabled={busy}>End subscription</button>
+                    </div>
                   </>
                 ) : (
-                  <p className="font-semibold text-gray-900">No subscription</p>
+                  <>
+                    <p className="font-semibold text-gray-900">No subscription</p>
+                    {setting1 && !hadTrial && !view.pendingRequest && (
+                      <button type="button" className={`${SECONDARY} mt-3`} onClick={() => setDialog('start')} disabled={busy}>Start trial</button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -235,6 +273,43 @@ export default function SuperAdminSubscriptions() {
           <div className="mt-6 flex justify-end gap-2">
             <button type="button" className={SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
             <button type="button" className={PRIMARY} onClick={record} disabled={busy}>{busy ? 'Saving…' : 'Record'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={dialog === 'extend'} onClose={() => !busy && setDialog(null)} className="max-w-md">
+        <div role="dialog" aria-modal="true" aria-label="Extend trial">
+          <ModalHeader title="Extend trial" onClose={() => !busy && setDialog(null)} />
+          <label className="flex flex-col text-sm text-gray-800">
+            New end date
+            <input type="date" value={extendTo} onChange={(e) => setExtendTo(e.target.value)} className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          </label>
+          <div className="mt-6 flex justify-end gap-2">
+            <button type="button" className={SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+            <button type="button" className={PRIMARY} onClick={extend} disabled={busy || !extendTo}>{busy ? 'Saving…' : 'Extend'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={dialog === 'convert'} onClose={() => !busy && setDialog(null)} className="max-w-md">
+        <div role="dialog" aria-modal="true" aria-label="Convert trial">
+          <ModalHeader title="Convert trial" onClose={() => !busy && setDialog(null)} />
+          <p className="text-sm text-gray-800">Ends the trial for {selected?.name} and records a Model 1 subscription. The trial is kept in the history.</p>
+          <p className="mt-3 text-sm font-medium text-amber-900">Manual record. No payment is taken or verified.</p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button type="button" className={SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+            <button type="button" className={PRIMARY} onClick={convert} disabled={busy}>{busy ? 'Saving…' : 'Convert'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={dialog === 'start'} onClose={() => !busy && setDialog(null)} className="max-w-md">
+        <div role="dialog" aria-modal="true" aria-label="Start trial">
+          <ModalHeader title="Start trial" onClose={() => !busy && setDialog(null)} />
+          <p className="text-sm text-gray-800">Starts a free Model 1 trial for {selected?.name}. A restaurant can have one trial only.</p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button type="button" className={SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+            <button type="button" className={PRIMARY} onClick={startTrial} disabled={busy}>{busy ? 'Starting…' : 'Start'}</button>
           </div>
         </div>
       </Modal>

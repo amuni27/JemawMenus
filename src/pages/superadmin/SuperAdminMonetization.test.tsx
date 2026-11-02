@@ -8,9 +8,10 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 const monetizationConfig = vi.fn();
 const saveMonetizationConfig = vi.fn();
 const monetizationHistory = vi.fn();
+const trialIntents = vi.fn();
 vi.mock("../../api/adminApi", async (orig) => ({
     ...(await orig<typeof import("../../api/adminApi")>()),
-    adminApi: { monetizationConfig, saveMonetizationConfig, monetizationHistory },
+    adminApi: { monetizationConfig, saveMonetizationConfig, monetizationHistory, trialIntents },
 }));
 
 const { default: SuperAdminMonetization } = await import("./SuperAdminMonetization.tsx");
@@ -28,6 +29,8 @@ beforeEach(() => {
     monetizationConfig.mockResolvedValue({ data: { configured: false } });
     saveMonetizationConfig.mockResolvedValue({ data: config(1, "SETTING_1", ["MODEL_1"]) });
     monetizationHistory.mockResolvedValue(emptyHistory);
+    trialIntents.mockReset();
+    trialIntents.mockResolvedValue({ data: { pending: 0, needsAttention: 0, items: [] } });
 });
 afterEach(() => { cleanup(); localStorage.clear(); });
 
@@ -35,6 +38,22 @@ const model = (name: RegExp) => screen.getByRole("checkbox", { name });
 const save = () => screen.getByRole("button", { name: "Save configuration" });
 
 describe("Super Admin monetization settings", () => {
+    it("shows how many trials are pending recovery and how many need attention (AGF E4-M5 recovery)", async () => {
+        trialIntents.mockResolvedValue({ data: { pending: 2, needsAttention: 1, items: [] } });
+        render(<SuperAdminMonetization />);
+        expect(await screen.findByText("Trials pending recovery: 2 (1 needs attention)")).toBeTruthy();
+    });
+
+    it("says when no trial is pending recovery and still shows the page when the count can't be loaded (AGF E4-M5 recovery)", async () => {
+        render(<SuperAdminMonetization />);
+        expect(await screen.findByText("Trials pending recovery: none")).toBeTruthy();
+        cleanup();
+        trialIntents.mockRejectedValue(new Error("down"));
+        render(<SuperAdminMonetization />);
+        expect(await screen.findByText("Not configured")).toBeTruthy();
+        expect(screen.queryByText(/Trials pending recovery/)).toBeNull();
+    });
+
     it("says when monetization is not configured yet and waits for a choice", async () => {
         render(<SuperAdminMonetization />);
         expect(await screen.findByText("Not configured")).toBeTruthy();
