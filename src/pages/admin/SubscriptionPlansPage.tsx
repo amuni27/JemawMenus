@@ -54,13 +54,14 @@ export default function SubscriptionPlansPage() {
     return (
         <section id="plan" aria-labelledby="plans-heading" className="space-y-6">
             <div>
-                <h1 id="plans-heading" className="text-2xl font-bold text-gray-900">Subscription &amp; Plans</h1>
+                {/* the owner layout already has the page h1; owner pages title themselves with h2 (as Account & Settings) */}
+                <h2 id="plans-heading" className="text-2xl font-bold text-gray-900">Subscription &amp; Plans</h2>
                 <p className="mt-1 text-sm text-gray-700">{setting2 ? "Compare the plans available for your restaurant." : "Your restaurant's plan."}</p>
             </div>
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
             <section aria-labelledby="current-plan" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                <h2 id="current-plan" className="text-base font-semibold text-gray-900">Current plan</h2>
+                <h3 id="current-plan" className="text-base font-semibold text-gray-900">Current plan</h3>
 
                 {current && (
                     <div className="mt-3 text-sm text-gray-800">
@@ -122,7 +123,7 @@ export default function SubscriptionPlansPage() {
 
             {setting2 && plans.length > 0 && (
                 <section aria-labelledby="available-plans" className="space-y-4">
-                    <h2 id="available-plans" className="text-base font-semibold text-gray-900">Available plans</h2>
+                    <h3 id="available-plans" className="text-base font-semibold text-gray-900">Available plans</h3>
                     {pending && <p className="text-sm text-gray-700">You have a pending request. Withdraw it to request another plan.</p>}
                     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {plans.map((p) => {
@@ -133,7 +134,7 @@ export default function SubscriptionPlansPage() {
                                     <article aria-labelledby={`plan-${p.code}`}
                                              className={`flex w-full flex-col rounded-2xl border bg-white p-5 shadow-sm ${isCurrent || isRequested ? "border-gray-900 ring-1 ring-gray-900" : "border-gray-200"}`}>
                                         <div className="flex items-start justify-between gap-2">
-                                            <h3 id={`plan-${p.code}`} className="text-lg font-semibold text-gray-900">{planName(p.code)}</h3>
+                                            <h4 id={`plan-${p.code}`} className="text-lg font-semibold text-gray-900">{planName(p.code)}</h4>
                                             {isCurrent && <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-semibold text-white">Current plan</span>}
                                             {isRequested && <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">Requested</span>}
                                         </div>

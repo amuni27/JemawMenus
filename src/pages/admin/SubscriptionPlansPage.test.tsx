@@ -268,7 +268,7 @@ describe("owner Subscription & Plans page", () => {
             render(<PlansPage />);
             await screen.findByRole("region", { name: "Subscription & Plans" });
             expect(screen.queryByRole("region", { name: "Available plans" })).toBeNull();
-            expect(screen.getByRole("heading", { level: 1, name: "Subscription & Plans" })).toBeTruthy();
+            expect(screen.getByRole("heading", { level: 2, name: "Subscription & Plans" })).toBeTruthy();
         });
     });
 });
