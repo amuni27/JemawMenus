@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   adminApi, type MonetizationConfig, type MonetizationHistoryPage, type MonetizationModel, type MonetizationSetting,
-  type TrialIntentOverview,
+  type GrandfatheringPreview, type TrialIntentOverview,
 } from '../../api/adminApi';
 import Modal from '../../components/ui/Modal';
 import ModalHeader from '../../components/ui/ModalHeader';
@@ -34,6 +34,7 @@ export default function SuperAdminMonetization() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [recovery, setRecovery] = useState<TrialIntentOverview | null>(null);
+  const [preview, setPreview] = useState<GrandfatheringPreview | null>(null);
 
   const load = useCallback(async () => {
     const [config, versions] = await Promise.all([adminApi.monetizationConfig(), adminApi.monetizationHistory(0, HISTORY_SIZE)]);
@@ -58,6 +59,13 @@ export default function SuperAdminMonetization() {
   const needsModel = setting === 'SETTING_2' && chosen.length === 0;
   const canSave = !!setting && !needsModel && !busy;
   const toggle = (m: MonetizationModel) => setModels((ms) => (ms.includes(m) ? ms.filter((x) => x !== m) : [...ms, m]));
+
+  // AGF E4-M6: read-only preview of what the change would grandfather (optional; the dialog works without it)
+  const openConfirm = () => {
+    setPreview(null);
+    setConfirming(true);
+    if (setting) adminApi.grandfatheringPreview(setting, chosen).then((res) => setPreview(res.data)).catch(() => undefined);
+  };
 
   const submit = async () => {
     if (!setting) return;
@@ -142,7 +150,7 @@ export default function SuperAdminMonetization() {
         </fieldset>
 
         <div className="mt-5">
-          <button type="button" className={PRIMARY} onClick={() => setConfirming(true)} disabled={!canSave}>Save configuration</button>
+          <button type="button" className={PRIMARY} onClick={openConfirm} disabled={!canSave}>Save configuration</button>
         </div>
       </section>
 
@@ -191,12 +199,26 @@ export default function SuperAdminMonetization() {
             Existing subscriptions keep their terms until their renewal or transition date. Nothing changes for restaurants
             until plan features are released.
           </p>
+          {preview && <GrandfatheringSummary preview={preview} />}
           <div className="mt-6 flex justify-end gap-2">
             <button type="button" className={SECONDARY} onClick={() => setConfirming(false)} disabled={busy}>Cancel</button>
             <button type="button" className={PRIMARY} onClick={submit} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function GrandfatheringSummary({ preview }: { preview: GrandfatheringPreview }) {
+  if (preview.grandfathered === 0) return <p className="mt-3 text-sm text-gray-800">This change grandfathers no subscriptions.</p>;
+  const plans = Object.entries(preview.byPlan).map(([code, n]) => `${short(code as MonetizationModel)}: ${n}`).join(', ');
+  return (
+    <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-800">
+      <p>This change grandfathers {preview.grandfathered} subscription{preview.grandfathered === 1 ? '' : 's'} ({plans}). Their plans and end dates stay as they are.</p>
+      {preview.overdue > 0 && <p className="mt-1">Already past their end date: {preview.overdue}.</p>}
+      {preview.openEndedWithoutDate > 0 && <p className="mt-1">No end date: {preview.openEndedWithoutDate}.</p>}
+      {preview.transitionDatesNotApplying > 0 && <p className="mt-1">Transition dates that won't apply: {preview.transitionDatesNotApplying}.</p>}
     </div>
   );
 }

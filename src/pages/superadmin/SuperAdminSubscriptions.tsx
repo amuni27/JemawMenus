@@ -1,6 +1,6 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import {
-  adminApi, type AdminBusinessPage, type BusinessSubscriptionView, type MonetizationModel, type Subscription, type SubscriptionPlan,
+  adminApi, type AdminBusinessPage, type BusinessSubscriptionView, type GrandfatheringInfo, type MonetizationModel, type Subscription, type SubscriptionPlan,
 } from '../../api/adminApi';
 import Modal from '../../components/ui/Modal';
 import ModalHeader from '../../components/ui/ModalHeader';
@@ -17,13 +17,18 @@ const PAGE_SIZE = 20;
 const model = (code: string | null | undefined) => (code ? `Model ${code.slice(-1)}` : '');
 const date = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString() : '');
 
-type Dialog = 'record' | 'end' | 'extend' | 'convert' | 'start' | null;
+type Dialog = 'record' | 'end' | 'extend' | 'convert' | 'start' | 'transition' | 'clearTransition' | null;
 
 // AGF E4-M5 recovery: a registration's trial wasn't created yet; the daily job keeps retrying it
 const recoveryText = (failed: number, needsAttention: boolean) => {
   const attempts = `${failed} failed attempt${failed === 1 ? '' : 's'}`;
   return needsAttention ? `Trial pending recovery: needs attention (${attempts})` : `Trial pending recovery (${attempts})`;
 };
+
+// AGF E4-M6: a grandfathered subscription's approved end, shown as its last day in the restaurant's time zone
+const grandfatheringText = (g: GrandfatheringInfo, timeZone?: string) =>
+  g.untilSource === 'NONE' ? 'Grandfathered: no end date'
+    : `Grandfathered until ${trialEndDate(g.until, timeZone)} (${g.untilSource === 'PERIOD_END' ? 'period end' : 'transition date'})`;
 
 export default function SuperAdminSubscriptions() {
   const [query, setQuery] = useState('');
@@ -32,6 +37,9 @@ export default function SuperAdminSubscriptions() {
   const [configVersion, setConfigVersion] = useState(0);
   const [setting1, setSetting1] = useState(false);
   const [extendTo, setExtendTo] = useState('');
+  const [transitionTo, setTransitionTo] = useState('');
+  const [grandfatheredOnly, setGrandfatheredOnly] = useState(false);
+  const grandfatheredOnlyRef = useRef(false);
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
   const [view, setView] = useState<BusinessSubscriptionView | null>(null);
   const [history, setHistory] = useState<Subscription[]>([]);
@@ -41,7 +49,8 @@ export default function SuperAdminSubscriptions() {
   const [error, setError] = useState('');
 
   const search = useCallback((q: string) => {
-    adminApi.businesses(q, 0, PAGE_SIZE).then((res) => setList(res.data),
+    const request = grandfatheredOnlyRef.current ? adminApi.businesses(q, 0, PAGE_SIZE, true) : adminApi.businesses(q, 0, PAGE_SIZE);
+    request.then((res) => setList(res.data),
       (err) => setError(errorMessage(err, "Couldn't load the restaurants.")));
   }, []);
 
@@ -95,6 +104,9 @@ export default function SuperAdminSubscriptions() {
   const extend = () => run(() => adminApi.extendTrial(selected!.id, extendTo, view!.current!.rowVersion));
   const convert = () => run(() => adminApi.convertTrial(selected!.id, configVersion, view!.current!.rowVersion));
   const startTrial = () => run(() => adminApi.startTrial(selected!.id, configVersion));
+  // AGF E4-M6: transition dates (open-ended grandfathered subscriptions only)
+  const setTransition = () => run(() => adminApi.setTransitionDate(selected!.id, transitionTo, view!.current!.rowVersion));
+  const clearTransition = () => run(() => adminApi.clearTransitionDate(selected!.id, view!.current!.rowVersion));
   const enabledPlans = plans.filter((p) => p.enabledByCurrentConfiguration);
   const current = view?.current;
   const isTrial = current?.source === 'TRIAL';
@@ -113,6 +125,11 @@ export default function SuperAdminSubscriptions() {
                    className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </label>
           <button type="submit" className={SECONDARY}>Search</button>
+          <label className="flex items-center gap-2 text-sm text-gray-800">
+            <input type="checkbox" checked={grandfatheredOnly}
+                   onChange={(e) => { grandfatheredOnlyRef.current = e.target.checked; setGrandfatheredOnly(e.target.checked); search(query); }} />
+            Grandfathered only
+          </label>
         </form>
         {list && list.items.length === 0 && <p className="mt-3 text-sm text-gray-600">No restaurants found.</p>}
         {list && list.items.length > 0 && (
@@ -132,7 +149,8 @@ export default function SuperAdminSubscriptions() {
                   <tr key={b.id} className="border-b last:border-0">
                     <td className="py-2 pr-4">{b.name}</td>
                     <td className="py-2 pr-4 text-gray-600">{b.slug}</td>
-                    <td className="py-2 pr-4 whitespace-nowrap">{b.subscriptionStatus ? `${b.subscriptionStatus} · ${model(b.planCode)}` : 'No subscription'}</td>
+                    <td className="py-2 pr-4 whitespace-nowrap">{b.subscriptionStatus ? `${b.subscriptionStatus} · ${model(b.planCode)}` : 'No subscription'}
+                      {b.grandfathered && <span className="ml-2 rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-900">Grandfathered</span>}</td>
                     <td className="py-2 pr-4">
                       <button type="button" className={SECONDARY} aria-label={`Open ${b.name}`} onClick={() => open(b.id, b.name)}>Open</button>
                     </td>
@@ -168,8 +186,31 @@ export default function SuperAdminSubscriptions() {
                         : `${model(current.planCode)} · Trial · ends ${trialEndDate(current.periodEnd, view.timeZone)}`) : `${model(current.planCode)} · ${current.status}`}
                     </p>
                     <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{current.sourceLabel}</p>
-                    {current.outsideCurrentConfiguration && (
+                    {current.outsideCurrentConfiguration && !current.grandfathering && (
                       <p className="ml-2 mt-1 inline-block rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-900">Outside current configuration</p>
+                    )}
+                    {current.grandfathering && (
+                      <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3">
+                        <p className="font-medium text-gray-900">{grandfatheringText(current.grandfathering, view.timeZone)}</p>
+                        {current.grandfathering.transitionDateIgnored && (
+                          <p className="mt-1 text-gray-700">The earlier transition date no longer applies; set a new one.</p>
+                        )}
+                        {!current.grandfathering.transitionsEnabled && (
+                          <p className="mt-1 text-gray-700">
+                            {current.grandfathering.overdue ? 'End date passed (transitions are off).' : 'Transitions are off: information only.'}
+                          </p>
+                        )}
+                        {!current.periodEnd && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button type="button" className={SECONDARY} onClick={() => { setTransitionTo(''); setDialog('transition'); }} disabled={busy}>
+                              Set transition date
+                            </button>
+                            {current.transitionDate && (
+                              <button type="button" className={SECONDARY} onClick={() => setDialog('clearTransition')} disabled={busy}>Clear transition date</button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                     <p className="mt-2 text-gray-700">
                       Configuration version {current.configVersion} · recorded {date(current.createdAt)} by {current.createdBy}
@@ -310,6 +351,33 @@ export default function SuperAdminSubscriptions() {
           <div className="mt-6 flex justify-end gap-2">
             <button type="button" className={SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
             <button type="button" className={PRIMARY} onClick={startTrial} disabled={busy}>{busy ? 'Starting…' : 'Start'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={dialog === 'transition'} onClose={() => !busy && setDialog(null)} className="max-w-md">
+        <div role="dialog" aria-modal="true" aria-label="Set transition date">
+          <ModalHeader title="Set transition date" onClose={() => !busy && setDialog(null)} />
+          <p className="text-sm text-gray-800">{selected?.name}: {model(current?.planCode)}, no end date.</p>
+          <label className="mt-3 flex flex-col text-sm text-gray-800">
+            Transition date
+            <input type="date" value={transitionTo} onChange={(e) => setTransitionTo(e.target.value)} className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          </label>
+          <p className="mt-3 text-xs text-gray-600">The subscription ends at the end of this day in the restaurant's time zone, once transitions are on.</p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button type="button" className={SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+            <button type="button" className={PRIMARY} onClick={setTransition} disabled={busy || !transitionTo}>{busy ? 'Saving…' : 'Set'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={dialog === 'clearTransition'} onClose={() => !busy && setDialog(null)} className="max-w-md">
+        <div role="dialog" aria-modal="true" aria-label="Clear transition date">
+          <ModalHeader title="Clear transition date" onClose={() => !busy && setDialog(null)} />
+          <p className="text-sm text-gray-800">{selected?.name}: the subscription stays grandfathered with no end date.</p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button type="button" className={SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+            <button type="button" className={PRIMARY} onClick={clearTransition} disabled={busy}>{busy ? 'Clearing…' : 'Clear'}</button>
           </div>
         </div>
       </Modal>

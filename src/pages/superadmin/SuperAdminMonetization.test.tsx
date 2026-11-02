@@ -9,9 +9,10 @@ const monetizationConfig = vi.fn();
 const saveMonetizationConfig = vi.fn();
 const monetizationHistory = vi.fn();
 const trialIntents = vi.fn();
+const grandfatheringPreview = vi.fn();
 vi.mock("../../api/adminApi", async (orig) => ({
     ...(await orig<typeof import("../../api/adminApi")>()),
-    adminApi: { monetizationConfig, saveMonetizationConfig, monetizationHistory, trialIntents },
+    adminApi: { monetizationConfig, saveMonetizationConfig, monetizationHistory, trialIntents, grandfatheringPreview },
 }));
 
 const { default: SuperAdminMonetization } = await import("./SuperAdminMonetization.tsx");
@@ -31,6 +32,8 @@ beforeEach(() => {
     monetizationHistory.mockResolvedValue(emptyHistory);
     trialIntents.mockReset();
     trialIntents.mockResolvedValue({ data: { pending: 0, needsAttention: 0, items: [] } });
+    grandfatheringPreview.mockReset();
+    grandfatheringPreview.mockResolvedValue({ data: { grandfathered: 0, byPlan: {}, overdue: 0, openEndedWithoutDate: 0, transitionDatesNotApplying: 0 } });
 });
 afterEach(() => { cleanup(); localStorage.clear(); });
 
@@ -38,6 +41,34 @@ const model = (name: RegExp) => screen.getByRole("checkbox", { name });
 const save = () => screen.getByRole("button", { name: "Save configuration" });
 
 describe("Super Admin monetization settings", () => {
+    it("previews in the save dialog what the change would grandfather, without changing anything (AGF E4-M6)", async () => {
+        monetizationConfig.mockResolvedValue({ data: config(3, "SETTING_2", ["MODEL_2", "MODEL_3", "MODEL_4"]) });
+        grandfatheringPreview.mockResolvedValue({ data: { grandfathered: 2, byPlan: { MODEL_2: 1, MODEL_3: 1 }, overdue: 1, openEndedWithoutDate: 1,
+            transitionDatesNotApplying: 1 } });
+        render(<SuperAdminMonetization />);
+        await screen.findByRole("region", { name: "Current configuration" });
+        fireEvent.click(model(/Model 2/));
+        fireEvent.click(model(/Model 3/));
+        fireEvent.click(save());
+        const dialog = screen.getByRole("dialog", { name: "Change monetization configuration" });
+        await waitFor(() => expect(dialog.textContent).toContain("This change grandfathers 2 subscriptions (Model 2: 1, Model 3: 1)."));
+        expect(dialog.textContent).toContain("Their plans and end dates stay as they are.");
+        expect(dialog.textContent).toContain("Already past their end date: 1.");
+        expect(dialog.textContent).toContain("No end date: 1.");
+        expect(dialog.textContent).toContain("Transition dates that won't apply: 1.");
+        expect(grandfatheringPreview).toHaveBeenCalledWith("SETTING_2", ["MODEL_4"]);
+        expect(saveMonetizationConfig).not.toHaveBeenCalled();
+    });
+
+    it("says when a change grandfathers no subscriptions (AGF E4-M6)", async () => {
+        render(<SuperAdminMonetization />);
+        await screen.findByText("Not configured");
+        fireEvent.click(screen.getByRole("radio", { name: /Setting 1/ }));
+        fireEvent.click(save());
+        const dialog = screen.getByRole("dialog", { name: "Change monetization configuration" });
+        await waitFor(() => expect(dialog.textContent).toContain("This change grandfathers no subscriptions."));
+    });
+
     it("shows how many trials are pending recovery and how many need attention (AGF E4-M5 recovery)", async () => {
         trialIntents.mockResolvedValue({ data: { pending: 2, needsAttention: 1, items: [] } });
         render(<SuperAdminMonetization />);

@@ -18,10 +18,12 @@ const convertTrial = vi.fn();
 const subscriptionHistory = vi.fn();
 const recordSubscription = vi.fn();
 const endSubscription = vi.fn();
+const setTransitionDate = vi.fn();
+const clearTransitionDate = vi.fn();
 vi.mock("../../api/adminApi", async (orig) => ({
     ...(await orig<typeof import("../../api/adminApi")>()),
     adminApi: { plans, monetizationConfig, businesses, businessSubscription, subscriptionHistory, recordSubscription, endSubscription,
-        fulfilPlanRequest, declinePlanRequest, startTrial, extendTrial, convertTrial },
+        fulfilPlanRequest, declinePlanRequest, startTrial, extendTrial, convertTrial, setTransitionDate, clearTransitionDate },
 }));
 
 const { default: SuperAdminSubscriptions } = await import("./SuperAdminSubscriptions.tsx");
@@ -240,5 +242,59 @@ describe("Super Admin subscriptions", () => {
         fireEvent.click(within(screen.getByRole("dialog", { name: "Start trial" })).getByRole("button", { name: "Start" }));
         await waitFor(() => expect(startTrial).toHaveBeenCalledWith("b1", 1));
     });
-});
 
+    describe("grandfathering (AGF E4-M6)", () => {
+        const gf = (grandfathering: Record<string, unknown>, over: Record<string, unknown> = {}) => ({ data: { ...view(sub({ planCode: "MODEL_3",
+            rowVersion: 2, outsideCurrentConfiguration: true, grandfathering: { transitionDateIgnored: false, transitionsEnabled: true, overdue: false, ...grandfathering },
+            ...over })).data, timeZone: "America/Chicago" } });
+
+        it("shows a grandfathered subscription's end in the restaurant's time zone and offers no transition date when it has a period end", async () => {
+            businessSubscription.mockResolvedValue(gf({ until: "2027-01-01T06:00:00Z", untilSource: "PERIOD_END" }, { periodEnd: "2027-01-01T06:00:00Z" }));
+            const detail = await openCafe();
+            expect(detail.textContent).toContain("Grandfathered until 12/31/2026 (period end)");
+            expect(within(detail).queryByRole("button", { name: "Set transition date" })).toBeNull();
+            expect(within(detail).getByRole("button", { name: "End subscription" })).toBeTruthy(); // the M3 action stays
+        });
+
+        it("sets a transition date on an open-ended subscription and says when transitions are off or an earlier date no longer applies", async () => {
+            businessSubscription.mockResolvedValue(gf({ untilSource: "NONE", transitionsEnabled: false, transitionDateIgnored: true }));
+            setTransitionDate.mockResolvedValue({ data: {} });
+            const detail = await openCafe();
+            expect(detail.textContent).toContain("Grandfathered: no end date");
+            expect(detail.textContent).toContain("Transitions are off: information only");
+            expect(detail.textContent).toContain("The earlier transition date no longer applies; set a new one");
+            fireEvent.click(within(detail).getByRole("button", { name: "Set transition date" }));
+            const dialog = screen.getByRole("dialog", { name: "Set transition date" });
+            expect(dialog.textContent).toContain("The subscription ends at the end of this day in the restaurant's time zone");
+            fireEvent.change(within(dialog).getByLabelText("Transition date"), { target: { value: "2026-12-31" } });
+            fireEvent.click(within(dialog).getByRole("button", { name: "Set" }));
+            await waitFor(() => expect(setTransitionDate).toHaveBeenCalledWith("b1", "2026-12-31", 2));
+        });
+
+        it("clears a transition date and marks a passed end while transitions are off", async () => {
+            businessSubscription.mockResolvedValue(gf({ until: "2027-01-01T06:00:00Z", untilSource: "TRANSITION_DATE" }, { transitionDate: "2027-01-01T06:00:00Z" }));
+            clearTransitionDate.mockResolvedValue({ data: {} });
+            const detail = await openCafe();
+            expect(detail.textContent).toContain("Grandfathered until 12/31/2026 (transition date)");
+            fireEvent.click(within(detail).getByRole("button", { name: "Clear transition date" }));
+            fireEvent.click(within(screen.getByRole("dialog", { name: "Clear transition date" })).getByRole("button", { name: "Clear" }));
+            await waitFor(() => expect(clearTransitionDate).toHaveBeenCalledWith("b1", 2));
+
+            cleanup();
+            businessSubscription.mockResolvedValue(gf({ until: "2026-10-01T05:00:00Z", untilSource: "PERIOD_END", transitionsEnabled: false, overdue: true },
+                { periodEnd: "2026-10-01T05:00:00Z" }));
+            const passed = await openCafe();
+            expect(passed.textContent).toContain("End date passed (transitions are off)");
+        });
+
+        it("filters the list to grandfathered restaurants and marks them", async () => {
+            businesses.mockResolvedValue({ data: { items: [{ id: "b1", name: "Cafe One", slug: "cafe-one", createdAt: "2026-10-01T10:00:00Z",
+                subscriptionStatus: "ACTIVE", planCode: "MODEL_3", grandfathered: true }], page: 0, size: 20, total: 1 } });
+            render(<SuperAdminSubscriptions />);
+            const table = await screen.findByRole("table", { name: "Restaurants" });
+            expect(table.textContent).toContain("Grandfathered");
+            fireEvent.click(screen.getByRole("checkbox", { name: "Grandfathered only" }));
+            await waitFor(() => expect(businesses).toHaveBeenCalledWith("", 0, 20, true));
+        });
+    });
+});

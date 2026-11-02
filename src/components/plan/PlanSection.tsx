@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import planApi, { type OwnerPlanView } from "../../api/planApi";
+import planApi, { type OwnerGrandfathering, type OwnerPlanView } from "../../api/planApi";
 import Modal from "../ui/Modal";
 import ModalHeader from "../ui/ModalHeader";
 import { errorMessage } from "../../utils/errorMessage";
@@ -52,8 +52,16 @@ export default function PlanSection() {
                     <p className="text-gray-700">{PLAN_DESCRIPTIONS[current.planCode]}</p>
                     {current.sourceLabel && <p className="mt-1 text-xs text-gray-700">{current.sourceLabel}</p>}
                     {current.periodEnd && <p className="mt-1 text-gray-700">Current period ends {new Date(current.periodEnd).toLocaleDateString()}</p>}
-                    {current.outsideCurrentConfiguration && <p className="mt-1 text-gray-700">Your plan stays as it is for now.</p>}
+                    {current.outsideCurrentConfiguration && !current.grandfathering && <p className="mt-1 text-gray-700">Your plan stays as it is for now.</p>}
+                    {current.grandfathering && <GrandfatheringNotice planCode={current.planCode} g={current.grandfathering} setting1={view.setting === "SETTING_1"} />}
                 </div>
+            )}
+
+            {!current && view.endedPlan && (
+                <p className="mt-3 text-sm font-semibold text-gray-800">
+                    Your previous plan ({modelName(view.endedPlan.planCode)}) ended on {trialEndDate(view.endedPlan.endedAt, view.endedPlan.timeZone)}.{" "}
+                    {view.setting === "SETTING_1" ? "Contact the Agafari team to continue with Model 1." : "Choose a plan to continue."}
+                </p>
             )}
 
             {!current && trial && trial.effectiveStatus === "TRIAL" && (
@@ -140,5 +148,22 @@ export default function PlanSection() {
                 </div>
             </Modal>
         </section>
+    );
+}
+
+// AGF E4-M6 (Q7): grandfathering notices. No promise of outreach or emails; the last-week warning only when transitions are
+// on (only then does the plan actually end).
+function GrandfatheringNotice({ planCode, g, setting1 }: { planCode: string; g: OwnerGrandfathering; setting1: boolean }) {
+    const plan = `Your plan (${modelName(planCode)})`;
+    const end = g.until ? trialEndDate(g.until, g.timeZone) : null;
+    return (
+        <div className="mt-2">
+            <p className="text-gray-800">{plan} is no longer offered. {end ? `It stays active until ${end}.` : "It stays active for now."}</p>
+            {end && g.transitionsEnabled && g.daysLeft !== undefined && g.daysLeft <= TRIAL_NOTICE_DAYS && (
+                <p role="status" className="mt-2 rounded-lg bg-amber-50 p-3 text-amber-900">
+                    {plan} ends in {days(g.daysLeft)}, on {end}. {setting1 ? "After that, contact the Agafari team to continue." : "After that you can choose one of the available plans."}
+                </p>
+            )}
+        </div>
     );
 }

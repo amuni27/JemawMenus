@@ -142,5 +142,62 @@ describe("owner Plan section", () => {
         section = await screen.findByRole("region", { name: "Plan" });
         expect(section.textContent).toContain("Your free trial ended on 12/31/2026.");
     });
-});
 
+    describe("grandfathering notices (AGF E4-M6)", () => {
+        const current = (grandfathering: Record<string, unknown>) => ({ planCode: "MODEL_3", status: "ACTIVE", periodEnd: "2027-01-01T06:00:00Z",
+            sourceLabel: "Manual record, no payment verified", outsideCurrentConfiguration: true,
+            grandfathering: { timeZone: "America/Chicago", transitionsEnabled: true, ...grandfathering } });
+
+        it("says the plan is no longer offered and stays active until its end, with a last-week warning only when transitions are on", async () => {
+            get.mockResolvedValue(setting2({ canRequest: false, current: current({ until: "2027-01-01T06:00:00Z", daysLeft: 20 }) }));
+            render(<PlanSection />);
+            let section = await screen.findByRole("region", { name: "Plan" });
+            expect(section.textContent).toContain("Your plan (Model 3) is no longer offered. It stays active until 12/31/2026.");
+            expect(section.textContent).not.toContain("ends in");
+            cleanup();
+
+            get.mockResolvedValue(setting2({ canRequest: false, current: current({ until: "2027-01-01T06:00:00Z", daysLeft: 5 }) }));
+            render(<PlanSection />);
+            section = await screen.findByRole("region", { name: "Plan" });
+            expect(section.textContent).toContain("Your plan (Model 3) ends in 5 days, on 12/31/2026. After that you can choose one of the available plans.");
+            cleanup();
+
+            get.mockResolvedValue(setting2({ canRequest: false, current: current({ until: "2027-01-01T06:00:00Z", daysLeft: 5, transitionsEnabled: false }) }));
+            render(<PlanSection />);
+            section = await screen.findByRole("region", { name: "Plan" });
+            expect(section.textContent).toContain("It stays active until 12/31/2026.");
+            expect(section.textContent).not.toContain("ends in");
+            cleanup();
+
+            get.mockResolvedValue({ data: { visible: true, setting: "SETTING_1", configVersion: 3, plans: [], canRequest: false, featuresUnaffected: true,
+                current: current({ until: "2027-01-01T06:00:00Z", daysLeft: 3 }) } });
+            render(<PlanSection />);
+            section = await screen.findByRole("region", { name: "Plan" });
+            expect(section.textContent).toContain("Your plan (Model 3) ends in 3 days, on 12/31/2026. After that, contact the Agafari team to continue.");
+        });
+
+        it("says an open-ended grandfathered plan stays active for now, without promising contact", async () => {
+            get.mockResolvedValue(setting2({ canRequest: false, current: { ...current({}), periodEnd: null } }));
+            render(<PlanSection />);
+            const section = await screen.findByRole("region", { name: "Plan" });
+            expect(section.textContent).toContain("Your plan (Model 3) is no longer offered. It stays active for now.");
+            expect(section.textContent).not.toContain("will contact you");
+            expect(section.textContent).toContain("All features stay available");
+        });
+
+        it("after the end, lets the owner choose under Setting 2 and points to the Agafari team under Setting 1", async () => {
+            const ended = { planCode: "MODEL_3", endedAt: "2027-01-01T06:00:00Z", timeZone: "America/Chicago" };
+            get.mockResolvedValue(setting2({ endedPlan: ended }));
+            render(<PlanSection />);
+            let section = await screen.findByRole("region", { name: "Plan" });
+            expect(section.textContent).toContain("Your previous plan (Model 3) ended on 12/31/2026. Choose a plan to continue.");
+            expect(within(section).getByRole("button", { name: "Request Model 4" })).toBeTruthy();
+            cleanup();
+
+            get.mockResolvedValue({ data: { visible: true, setting: "SETTING_1", configVersion: 3, plans: [], canRequest: false, featuresUnaffected: true, endedPlan: ended } });
+            render(<PlanSection />);
+            section = await screen.findByRole("region", { name: "Plan" });
+            expect(section.textContent).toContain("Your previous plan (Model 3) ended on 12/31/2026. Contact the Agafari team to continue with Model 1.");
+        });
+    });
+});

@@ -25,7 +25,8 @@ export type MonetizationHistoryPage = { items: MonetizationConfig[]; page: numbe
 // AGF E4-M3: plans, a read-only restaurant list and manual subscription records (no payment verified).
 export type SubscriptionPlan = { code: MonetizationModel; model: MonetizationModel; setting: MonetizationSetting;
   adSource: 'NONE' | 'AGAFARI' | 'RESTAURANT'; paid: boolean; enabledByCurrentConfiguration: boolean };
-export type AdminBusiness = { id: string; name: string; slug: string; createdAt: string; subscriptionStatus: string | null; planCode: string | null };
+export type AdminBusiness = { id: string; name: string; slug: string; createdAt: string; subscriptionStatus: string | null; planCode: string | null;
+  grandfathered?: boolean };
 export type AdminBusinessPage = { items: AdminBusiness[]; page: number; size: number; total: number };
 export type Subscription = {
   id: string; businessId: string; planCode: MonetizationModel; status: 'TRIAL' | 'ACTIVE' | 'GRANDFATHERED' | 'EXPIRED';
@@ -33,7 +34,14 @@ export type Subscription = {
   paymentVerified: boolean; sourceLabel: string | null; createdAt: string; createdBy: string; updatedAt: string;
   endedAt: string | null; rowVersion: number; outsideCurrentConfiguration: boolean;
   effectiveStatus?: 'TRIAL' | 'ACTIVE' | 'GRANDFATHERED' | 'EXPIRED'; effectiveEnd?: string | null; // AGF E4-M5
+  grandfathering?: GrandfatheringInfo; // AGF E4-M6: present only while grandfathered
 };
+// AGF E4-M6: the approved end (period end, or an open-ended subscription's valid transition date, or none). With
+// transitionsEnabled false this is information only.
+export type GrandfatheringInfo = { until?: string; untilSource: 'PERIOD_END' | 'TRANSITION_DATE' | 'NONE'; transitionDateIgnored: boolean;
+  transitionsEnabled: boolean; overdue: boolean };
+export type GrandfatheringPreview = { grandfathered: number; byPlan: Record<string, number>; overdue: number; openEndedWithoutDate: number;
+  transitionDatesNotApplying: number };
 export type Entitlements = { mode: 'INACTIVE' | 'ACTIVE'; planCode: string | null; status: string | null;
   adSource: 'NONE' | 'AGAFARI' | 'RESTAURANT'; restaurantAdManager: boolean; limits: Record<string, number>; source: string | null; degraded: boolean };
 export type PlanRequestSummary = { id: string; planCode: MonetizationModel; configVersion: number; requestedAt: string;
@@ -84,8 +92,8 @@ export const adminApi = {
   monetizationHistory: (page: number, size: number) =>
     adminClient.get<MonetizationHistoryPage>('/admin/monetization-config/history', { params: { page, size } }),
   plans: () => adminClient.get<SubscriptionPlan[]>('/admin/plans'),
-  businesses: (query: string, page: number, size: number) =>
-    adminClient.get<AdminBusinessPage>('/admin/businesses', { params: { query, page, size } }),
+  businesses: (query: string, page: number, size: number, grandfathered?: boolean) =>
+    adminClient.get<AdminBusinessPage>('/admin/businesses', { params: grandfathered ? { query, page, size, grandfathered } : { query, page, size } }),
   businessSubscription: (businessId: string) => adminClient.get<BusinessSubscriptionView>(`/admin/businesses/${businessId}/subscription`),
   subscriptionHistory: (businessId: string) => adminClient.get<Subscription[]>(`/admin/businesses/${businessId}/subscriptions`),
   recordSubscription: (businessId: string, record: SubscriptionRecord) =>
@@ -101,6 +109,13 @@ export const adminApi = {
   convertTrial: (businessId: string, expectedConfigVersion: number, rowVersion: number) =>
     adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial/convert`, { expectedConfigVersion, rowVersion }),
   trialIntents: () => adminClient.get<TrialIntentOverview>('/admin/trial-intents'),
+  // AGF E4-M6: the transition date of an open-ended grandfathered subscription (a calendar date, restaurant time zone)
+  setTransitionDate: (businessId: string, transitionDate: string, rowVersion: number) =>
+    adminClient.put<Subscription>(`/admin/businesses/${businessId}/subscription/transition-date`, { transitionDate, rowVersion }),
+  clearTransitionDate: (businessId: string, rowVersion: number) =>
+    adminClient.post<Subscription>(`/admin/businesses/${businessId}/subscription/transition-date/clear`, { rowVersion }),
+  grandfatheringPreview: (setting: MonetizationSetting, models: MonetizationModel[]) =>
+    adminClient.get<GrandfatheringPreview>('/admin/grandfathering/preview', { params: { setting, models: models.join(',') } }),
   planRequests: (status: string, page: number, size: number) =>
     adminClient.get<PlanRequestPage>('/admin/plan-requests', { params: { status, page, size } }),
   fulfilPlanRequest: (id: string, expectedConfigVersion: number, rowVersion: number) =>
