@@ -12,13 +12,16 @@ const businesses = vi.fn();
 const businessSubscription = vi.fn();
 const fulfilPlanRequest = vi.fn();
 const declinePlanRequest = vi.fn();
+const startTrial = vi.fn();
+const extendSubscription = vi.fn();
+const convertTrial = vi.fn();
 const subscriptionHistory = vi.fn();
 const recordSubscription = vi.fn();
 const endSubscription = vi.fn();
 vi.mock("../../api/adminApi", async (orig) => ({
     ...(await orig<typeof import("../../api/adminApi")>()),
     adminApi: { plans, monetizationConfig, businesses, businessSubscription, subscriptionHistory, recordSubscription, endSubscription,
-        fulfilPlanRequest, declinePlanRequest },
+        fulfilPlanRequest, declinePlanRequest, startTrial, extendSubscription, convertTrial },
 }));
 
 const { default: SuperAdminSubscriptions } = await import("./SuperAdminSubscriptions.tsx");
@@ -159,6 +162,49 @@ describe("Super Admin subscriptions", () => {
         fireEvent.click(within(detail).getByRole("button", { name: "Fulfil request from Cafe One" }));
         fireEvent.click(within(screen.getByRole("dialog", { name: "Fulfil plan request" })).getByRole("button", { name: "Fulfil" }));
         await waitFor(() => expect(fulfilPlanRequest).toHaveBeenCalledWith("r1", 2, 0));
+    });
+
+    it("shows a running trial with extend, end and convert, and the pending status update of an ended trial (AGF E4-M5)", async () => {
+        monetizationConfig.mockResolvedValue({ data: { configured: true, version: 1, setting: "SETTING_1", models: ["MODEL_1"] } });
+        const trial = sub({ planCode: "MODEL_1", status: "TRIAL", source: "TRIAL", sourceLabel: "Trial (automatic), no payment involved",
+            periodEnd: "2026-12-01T10:00:00Z", effectiveStatus: "TRIAL", rowVersion: 4 });
+        businessSubscription.mockResolvedValue(view(trial));
+        convertTrial.mockResolvedValue({ data: sub({ planCode: "MODEL_1" }) });
+        extendSubscription.mockResolvedValue({ data: trial });
+        const detail = await openCafe();
+        expect(detail.textContent).toContain("Model 1 · Trial");
+        expect(detail.textContent).toContain("Trial (automatic), no payment involved");
+
+        fireEvent.click(within(detail).getByRole("button", { name: "Extend trial" }));
+        const extend = screen.getByRole("dialog", { name: "Extend trial" });
+        fireEvent.change(within(extend).getByLabelText("New end date"), { target: { value: "2026-12-31" } });
+        fireEvent.click(within(extend).getByRole("button", { name: "Extend" }));
+        await waitFor(() => expect(extendSubscription).toHaveBeenCalledWith("b1", "2026-12-31T00:00:00.000Z", 4));
+
+        fireEvent.click(within(await screen.findByRole("region", { name: "Cafe One subscription" })).getByRole("button", { name: "Convert to manual Model 1 record" }));
+        const convert = screen.getByRole("dialog", { name: "Convert trial" });
+        expect(convert.textContent).toContain("Manual record. No payment is taken or verified.");
+        expect(convert.textContent).toContain("The trial is kept in the history.");
+        fireEvent.click(within(convert).getByRole("button", { name: "Convert" }));
+        await waitFor(() => expect(convertTrial).toHaveBeenCalledWith("b1", 1, 4));
+    });
+
+    it("marks an effectively ended trial as pending a status update without an extend action (AGF E4-M5)", async () => {
+        businessSubscription.mockResolvedValue(view(sub({ planCode: "MODEL_1", status: "TRIAL", source: "TRIAL", periodEnd: "2026-10-01T10:00:00Z",
+            sourceLabel: "Trial (automatic), no payment involved", effectiveStatus: "EXPIRED", effectiveEnd: "2026-10-01T10:00:00Z" })));
+        const detail = await openCafe();
+        expect(detail.textContent).toContain("Trial ended");
+        expect(detail.textContent).toContain("(status update pending)");
+        expect(within(detail).queryByRole("button", { name: "Extend trial" })).toBeNull();
+    });
+
+    it("offers to start a trial under Setting 1 for a restaurant that never had one (AGF E4-M5)", async () => {
+        monetizationConfig.mockResolvedValue({ data: { configured: true, version: 1, setting: "SETTING_1", models: ["MODEL_1"] } });
+        startTrial.mockResolvedValue({ data: {} });
+        const detail = await openCafe();
+        fireEvent.click(within(detail).getByRole("button", { name: "Start trial" }));
+        fireEvent.click(within(screen.getByRole("dialog", { name: "Start trial" })).getByRole("button", { name: "Start" }));
+        await waitFor(() => expect(startTrial).toHaveBeenCalledWith("b1", 1));
     });
 });
 

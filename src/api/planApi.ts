@@ -7,7 +7,10 @@ export type OwnerPlanRequest = { id: string; planCode: string; configVersion: nu
 export type OwnerPlanView = {
     visible: boolean; setting?: "SETTING_1" | "SETTING_2"; configVersion?: number; plans?: OwnerPlan[]; current?: OwnerSubscription;
     pendingRequest?: OwnerPlanRequest; canRequest?: boolean; trialAvailable?: boolean; featuresUnaffected?: boolean;
+    trial?: OwnerTrial;
 };
+// AGF E4-M5: the restaurant's trial in its effective state (ended as soon as its end date has passed)
+export type OwnerTrial = { startedAt: string; endsAt: string; daysLeft: number; effectiveStatus: "TRIAL" | "EXPIRED" };
 
 const planApi = {
     get() {

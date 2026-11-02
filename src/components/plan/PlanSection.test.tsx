@@ -103,4 +103,29 @@ describe("owner Plan section", () => {
         expect((await screen.findByRole("alert")).textContent).toContain("already has a current subscription");
         await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
     });
+
+    it("shows the running trial with days left, the last-week notice and the ended notice (AGF E4-M5)", async () => {
+        const s1 = (trial: Record<string, unknown>) => ({ data: { visible: true, setting: "SETTING_1", configVersion: 1, plans: [], canRequest: false,
+            trialAvailable: true, featuresUnaffected: true, trial: { startedAt: "2026-11-01T10:00:00Z", endsAt: "2026-12-01T10:00:00Z", ...trial } } });
+        get.mockResolvedValue(s1({ daysLeft: 20, effectiveStatus: "TRIAL" }));
+        render(<PlanSection />);
+        let section = await screen.findByRole("region", { name: "Plan" });
+        expect(section.textContent).toContain("Free trial: 20 days left (ends");
+        expect(section.textContent).not.toContain("Trial details aren't available yet");
+        cleanup();
+
+        get.mockResolvedValue(s1({ daysLeft: 5, effectiveStatus: "TRIAL" }));
+        render(<PlanSection />);
+        section = await screen.findByRole("region", { name: "Plan" });
+        expect(section.textContent).toContain("Your free trial ends in 5 days. The Agafari team will contact you about your plan.");
+        cleanup();
+
+        get.mockResolvedValue(s1({ daysLeft: 0, effectiveStatus: "EXPIRED" }));
+        render(<PlanSection />);
+        section = await screen.findByRole("region", { name: "Plan" });
+        expect(section.textContent).toContain("Your free trial ended on");
+        expect(section.textContent).toContain("All features stay available for now. The Agafari team will contact you.");
+        expect(within(section).queryByRole("button")).toBeNull();
+    });
 });
+

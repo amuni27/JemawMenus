@@ -29,9 +29,10 @@ export type AdminBusiness = { id: string; name: string; slug: string; createdAt:
 export type AdminBusinessPage = { items: AdminBusiness[]; page: number; size: number; total: number };
 export type Subscription = {
   id: string; businessId: string; planCode: MonetizationModel; status: 'TRIAL' | 'ACTIVE' | 'GRANDFATHERED' | 'EXPIRED';
-  configVersion: number; periodEnd: string | null; transitionDate: string | null; source: 'MANUAL' | 'PROVIDER';
+  configVersion: number; periodEnd: string | null; transitionDate: string | null; source: 'MANUAL' | 'PROVIDER' | 'TRIAL';
   paymentVerified: boolean; sourceLabel: string | null; createdAt: string; createdBy: string; updatedAt: string;
   endedAt: string | null; rowVersion: number; outsideCurrentConfiguration: boolean;
+  effectiveStatus?: 'TRIAL' | 'ACTIVE' | 'GRANDFATHERED' | 'EXPIRED'; effectiveEnd?: string | null; // AGF E4-M5
 };
 export type Entitlements = { mode: 'INACTIVE' | 'ACTIVE'; planCode: string | null; status: string | null;
   adSource: 'NONE' | 'AGAFARI' | 'RESTAURANT'; restaurantAdManager: boolean; limits: Record<string, number>; source: string | null; degraded: boolean };
@@ -85,6 +86,13 @@ export const adminApi = {
     adminClient.post<Subscription>(`/admin/businesses/${businessId}/subscription`, record),
   endSubscription: (businessId: string, rowVersion: number) =>
     adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { status: 'EXPIRED', rowVersion }),
+  // AGF E4-M5: trials (extend and end use the subscription PATCH)
+  startTrial: (businessId: string, expectedConfigVersion: number) =>
+    adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial`, { expectedConfigVersion }),
+  extendSubscription: (businessId: string, periodEnd: string, rowVersion: number) =>
+    adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { periodEnd, rowVersion }),
+  convertTrial: (businessId: string, expectedConfigVersion: number, rowVersion: number) =>
+    adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial/convert`, { expectedConfigVersion, rowVersion }),
   planRequests: (status: string, page: number, size: number) =>
     adminClient.get<PlanRequestPage>('/admin/plan-requests', { params: { status, page, size } }),
   fulfilPlanRequest: (id: string, expectedConfigVersion: number, rowVersion: number) =>
