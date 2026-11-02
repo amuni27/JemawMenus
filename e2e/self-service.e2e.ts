@@ -7,7 +7,8 @@ import { randomUUID } from "node:crypto";
 // Models 2, 3, 4 and an active Agafari ad. Owner A starts Free with Ads from Subscription & Plans (approved wording) and
 // the guest menu shows the Agafari ad. Owner B has a pending Ad-Free request: "Keep my request" changes nothing; the
 // explicit "Withdraw request and start free" withdraws it and starts Free with Ads. Paid plans can't be started; a Free
-// with Ads request points to self-service. Verification isn't operational in this demo, so it isn't required (SS-2).
+// with Ads request points to self-service. Verification is operational in this demo (local outbox), so it is required
+// (SS-2): an unverified owner is refused until the outbox link verifies the email.
 
 function adminCredentials() {
     const email = process.env.E2E_ADMIN_EMAIL, password = process.env.E2E_ADMIN_PASSWORD;
@@ -45,6 +46,14 @@ async function restaurantWithMenu(request: APIRequestContext, label: string): Pr
     return { businessId, email, password, auth };
 }
 
+/** SS-2: the demo outbox holds the verification link; following it verifies the owner's email. */
+async function verifyEmail(request: APIRequestContext, r: Restaurant) {
+    const box = await request.get(`/api/demo/email-verification-outbox?email=${encodeURIComponent(r.email)}`);
+    expect(box.status()).toBe(200);
+    const token = new URL((await box.json()).verifyUrl).hash.replace(/^#token=/, ""); // the token travels in the fragment
+    expect((await request.post("/api/auth/verify-email", { data: { token } })).status()).toBe(200);
+}
+
 async function ownerPlansPage(browser: Browser, r: Restaurant): Promise<Page> {
     const page = await (await browser.newContext({ storageState: { cookies: [], origins: [] }, viewport: { width: 1280, height: 900 } })).newPage();
     await page.goto("/auth/login");
@@ -77,6 +86,7 @@ test.describe("J26 self-service Free with Ads", () => {
 
         // Owner A: Start free from Subscription & Plans
         const a = await restaurantWithMenu(request, "SelfA");
+        await verifyEmail(request, a);
         const ownerA = await ownerPlansPage(browser, a);
         await expect(card(ownerA, "Free with Ads").getByRole("button", { name: "Start free" })).toBeVisible();
         await expect(card(ownerA, "Free with Ads").getByRole("button", { name: /^Request / })).toHaveCount(0);
@@ -100,6 +110,7 @@ test.describe("J26 self-service Free with Ads", () => {
 
         // Owner B: a pending Ad-Free request is withdrawn only after explicit confirmation
         const b = await restaurantWithMenu(request, "SelfB");
+        await verifyEmail(request, b);
         const ownerB = await ownerPlansPage(browser, b);
         await card(ownerB, "Ad-Free").getByRole("button", { name: "Request Ad-Free" }).click();
         await ownerB.getByRole("dialog", { name: "Request a plan" }).getByRole("button", { name: "Send request" }).click();
@@ -117,8 +128,13 @@ test.describe("J26 self-service Free with Ads", () => {
         await expect(ownerB.locator("#plan")).toContainText("Free with Ads · Active");
         await expect(ownerB.locator("#plan")).not.toContainText("Request for Ad-Free sent on");
 
-        // Paid plans can't be started; a Free with Ads request points to self-service
+        // SS-2: unverified is refused while verification is operational; paid plans can't be started; a Free with Ads request
+        // points to self-service
         const c = await restaurantWithMenu(request, "SelfC");
+        const unverified = await request.post("/api/plan/activations", { headers: c.auth, data: { planCode: "MODEL_2", expectedConfigVersion: version } });
+        expect(unverified.status()).toBe(403);
+        expect((await unverified.json()).code).toBe("EMAIL_NOT_VERIFIED");
+        await verifyEmail(request, c);
         const paid = await request.post("/api/plan/activations", { headers: c.auth, data: { planCode: "MODEL_4", expectedConfigVersion: version } });
         expect(paid.status()).toBe(400);
         expect((await paid.json()).code).toBe("PLAN_REQUIRES_PAYMENT");
