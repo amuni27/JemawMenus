@@ -13,6 +13,8 @@ const listSoldOut = vi.fn();
 vi.mock("../../api/itemsApi.ts", () => ({ default: { listSoldOut } }));
 const getViews = vi.fn(); // AGF-S2-24
 vi.mock("../../api/menuViewsApi", () => ({ default: { get: getViews } }));
+// ONB Phase 1: the dashboard Plan card asks for the plan view; no network in tests (plans hidden here)
+vi.mock("../../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 
 const { default: Dashboard } = await import("./Dashboard.tsx");
 
@@ -152,7 +154,7 @@ describe("owner dashboard", () => {
         listMenus.mockResolvedValue({ data: [menu("m1", "All-Day", true)] });
         renderDashboard();
         expect(await screen.findByRole("heading", { name: "Menu views" })).toBeTruthy();
-        expect(getViews).toHaveBeenCalledWith("biz-1", 30);
+        await waitFor(() => expect(getViews).toHaveBeenCalledWith("biz-1", 30)); // the card loads in an effect after it renders
     });
 
     it("keeps the rest of the dashboard when the views can't be loaded", async () => {
