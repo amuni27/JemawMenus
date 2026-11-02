@@ -39,7 +39,12 @@ export type Entitlements = { mode: 'INACTIVE' | 'ACTIVE'; planCode: string | nul
 export type PlanRequestSummary = { id: string; planCode: MonetizationModel; configVersion: number; requestedAt: string;
   rowVersion: number; outsideCurrentConfiguration: boolean };
 export type BusinessSubscriptionView = { businessId: string; businessName: string; current?: Subscription;
-  entitlements: Entitlements; monetizationActive: boolean; pendingRequest?: PlanRequestSummary };
+  entitlements: Entitlements; monetizationActive: boolean; pendingRequest?: PlanRequestSummary; trialIntent?: TrialIntentSummary };
+// AGF E4-M5 recovery: a registration's trial intent; PENDING until the trial is created (after commit or by the daily retry)
+export type TrialIntentSummary = { businessId: string; businessName?: string; status: 'PENDING' | 'STARTED' | 'NOT_STARTED';
+  resolution?: string; configVersion: number; failedAttempts: number; lastAttemptAt?: string; lastError?: string; createdAt: string;
+  resolvedAt?: string; needsAttention: boolean };
+export type TrialIntentOverview = { pending: number; needsAttention: number; items: TrialIntentSummary[] };
 // AGF E4-M4: owner plan requests; fulfilling records the E4-M3 manual subscription (no payment verified).
 export type PlanRequest = { id: string; businessId: string; businessName?: string; planCode: MonetizationModel; configVersion: number;
   status: 'PENDING' | 'FULFILLED' | 'DECLINED' | 'WITHDRAWN'; requestedAt: string; requestedBy?: string; resolvedAt?: string;
@@ -93,6 +98,7 @@ export const adminApi = {
     adminClient.patch<Subscription>(`/admin/businesses/${businessId}/subscription`, { periodEnd, rowVersion }),
   convertTrial: (businessId: string, expectedConfigVersion: number, rowVersion: number) =>
     adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial/convert`, { expectedConfigVersion, rowVersion }),
+  trialIntents: () => adminClient.get<TrialIntentOverview>('/admin/trial-intents'),
   planRequests: (status: string, page: number, size: number) =>
     adminClient.get<PlanRequestPage>('/admin/plan-requests', { params: { status, page, size } }),
   fulfilPlanRequest: (id: string, expectedConfigVersion: number, rowVersion: number) =>

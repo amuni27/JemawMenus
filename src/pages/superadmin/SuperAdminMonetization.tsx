@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   adminApi, type MonetizationConfig, type MonetizationHistoryPage, type MonetizationModel, type MonetizationSetting,
+  type TrialIntentOverview,
 } from '../../api/adminApi';
 import Modal from '../../components/ui/Modal';
 import ModalHeader from '../../components/ui/ModalHeader';
@@ -32,6 +33,7 @@ export default function SuperAdminMonetization() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [recovery, setRecovery] = useState<TrialIntentOverview | null>(null);
 
   const load = useCallback(async () => {
     const [config, versions] = await Promise.all([adminApi.monetizationConfig(), adminApi.monetizationHistory(0, HISTORY_SIZE)]);
@@ -44,6 +46,13 @@ export default function SuperAdminMonetization() {
   useEffect(() => {
     load().catch((err) => setError(errorMessage(err, "Couldn't load the monetization configuration.")));
   }, [load]);
+
+  useEffect(() => {
+    // AGF E4-M5 recovery: optional; the page works without it
+    let alive = true;
+    adminApi.trialIntents().then((res) => { if (alive) setRecovery(res.data); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
 
   const chosen: MonetizationModel[] = setting === 'SETTING_1' ? ['MODEL_1'] : SETTING_2_MODELS.filter((m) => models.includes(m));
   const needsModel = setting === 'SETTING_2' && chosen.length === 0;
@@ -101,6 +110,12 @@ export default function SuperAdminMonetization() {
             <p className="font-semibold text-gray-900">Not configured</p>
           )}
         </div>
+        {recovery && (
+          <p className="mt-3 text-sm text-gray-700">
+            {recovery.pending === 0 ? 'Trials pending recovery: none'
+              : `Trials pending recovery: ${recovery.pending}${recovery.needsAttention > 0 ? ` (${recovery.needsAttention} need${recovery.needsAttention === 1 ? 's' : ''} attention)` : ''}`}
+          </p>
+        )}
 
         <fieldset className="mt-5">
           <legend className="text-sm font-semibold text-gray-900">Setting</legend>

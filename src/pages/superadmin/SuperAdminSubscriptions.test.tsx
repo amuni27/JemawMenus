@@ -198,6 +198,25 @@ describe("Super Admin subscriptions", () => {
         expect(within(detail).queryByRole("button", { name: "Extend trial" })).toBeNull();
     });
 
+    it("shows a trial pending recovery and when it needs attention, but nothing once resolved (AGF E4-M5 recovery)", async () => {
+        const intent = (over: Record<string, unknown>) => ({ data: { ...view(null).data, trialIntent: { businessId: "b1", status: "PENDING", configVersion: 1,
+            failedAttempts: 1, createdAt: "2026-11-01T10:00:00Z", needsAttention: false, ...over } } });
+        businessSubscription.mockResolvedValue(intent({}));
+        let detail = await openCafe();
+        expect(within(detail).getByText("Trial pending recovery (1 failed attempt)")).toBeTruthy();
+        expect(detail.textContent).not.toContain("Needs attention");
+
+        cleanup();
+        businessSubscription.mockResolvedValue(intent({ failedAttempts: 3, needsAttention: true }));
+        detail = await openCafe();
+        expect(within(detail).getByText("Trial pending recovery: needs attention (3 failed attempts)")).toBeTruthy();
+
+        cleanup();
+        businessSubscription.mockResolvedValue(intent({ status: "STARTED", resolution: "RETRY", failedAttempts: 2 }));
+        detail = await openCafe();
+        expect(detail.textContent).not.toContain("Trial pending recovery");
+    });
+
     it("offers to start a trial under Setting 1 for a restaurant that never had one (AGF E4-M5)", async () => {
         monetizationConfig.mockResolvedValue({ data: { configured: true, version: 1, setting: "SETTING_1", models: ["MODEL_1"] } });
         startTrial.mockResolvedValue({ data: {} });

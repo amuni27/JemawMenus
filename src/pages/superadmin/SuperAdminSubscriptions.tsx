@@ -18,6 +18,12 @@ const date = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleSt
 
 type Dialog = 'record' | 'end' | 'extend' | 'convert' | 'start' | null;
 
+// AGF E4-M5 recovery: a registration's trial wasn't created yet; the daily job keeps retrying it
+const recoveryText = (failed: number, needsAttention: boolean) => {
+  const attempts = `${failed} failed attempt${failed === 1 ? '' : 's'}`;
+  return needsAttention ? `Trial pending recovery: needs attention (${attempts})` : `Trial pending recovery (${attempts})`;
+};
+
 export default function SuperAdminSubscriptions() {
   const [query, setQuery] = useState('');
   const [list, setList] = useState<AdminBusinessPage | null>(null);
@@ -147,6 +153,11 @@ export default function SuperAdminSubscriptions() {
             <>
               {!view.monetizationActive && (
                 <p className="mt-2 text-sm text-gray-600">Monetization is inactive: every restaurant keeps today's features.</p>
+              )}
+              {view.trialIntent?.status === 'PENDING' && (
+                <p className={`mt-3 inline-block rounded px-2 py-0.5 text-xs font-medium ${view.trialIntent.needsAttention ? 'bg-red-100 text-red-900' : 'bg-amber-100 text-amber-900'}`}>
+                  {recoveryText(view.trialIntent.failedAttempts, view.trialIntent.needsAttention)}
+                </p>
               )}
               <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm">
                 {current ? (
