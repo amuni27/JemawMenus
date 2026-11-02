@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { RestaurantAd } from './restaurantAdsApi';
 
 // AGF E4-M1: the Super Admin console's own API client and session (SC5). It uses its own storage key, never sends or
 // clears the owner's `token`, and a 401 ends only the admin session. The backend checks the ADMIN role on every request.
@@ -132,6 +133,11 @@ export const adminApi = {
   confirmAdImage: (id: string, objectKey: string, imageAlt: string, rowVersion: number) =>
     adminClient.post<AgafariAd>(`/admin/ads/${id}/image/confirm`, { objectKey, imageAlt, rowVersion }),
   removeAdImage: (id: string, rowVersion: number) => adminClient.post<AgafariAd>(`/admin/ads/${id}/image/remove`, { rowVersion }),
+  // AGF E4-M8: oversight of restaurant ads (list, suspend with a reason, reinstate to Paused; no create, edit or archive)
+  restaurantAds: (params: { businessId?: string; status?: string } = {}) => adminClient.get<RestaurantAd[]>('/admin/restaurant-ads', { params }),
+  suspendRestaurantAd: (id: string, reason: string, rowVersion: number) =>
+    adminClient.post<RestaurantAd>(`/admin/restaurant-ads/${id}/suspend`, { reason, rowVersion }),
+  reinstateRestaurantAd: (id: string, rowVersion: number) => adminClient.post<RestaurantAd>(`/admin/restaurant-ads/${id}/reinstate`, { rowVersion }),
   // AGF E4-M6: the transition date of an open-ended grandfathered subscription (a calendar date, restaurant time zone)
   setTransitionDate: (businessId: string, transitionDate: string, rowVersion: number) =>
     adminClient.put<Subscription>(`/admin/businesses/${businessId}/subscription/transition-date`, { transitionDate, rowVersion }),

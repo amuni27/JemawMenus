@@ -6,6 +6,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 // AGF-S2-33 (D-NF-3): a signed-in owner on another business's admin URL sees the owner not-found screen
 // instead of their own data under someone else's address.
 
+// AGF E4-M8: the owner layout asks whether to show "Ads"; no network in tests
+vi.mock("../../api/restaurantAdsApi", () => ({ default: { list: () => Promise.resolve({ data: { canManage: false, nonArchivedCount: 0, ads: [] } }) } }));
 vi.mock("../../app/context/AuthContext", () => ({
     useAuth: () => ({ user: { fullName: "Demo Owner", email: "owner@example.com" }, business: { id: "own-biz", name: "Cafe" }, logout: vi.fn() }),
 }));

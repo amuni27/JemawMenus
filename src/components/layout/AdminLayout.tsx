@@ -4,6 +4,7 @@ import {Settings, HelpCircle, User, LogOut} from "lucide-react";
 import {useAuth} from "../../app/context/AuthContext.tsx";
 import NotFound from "../NotFound.tsx";
 import EmailVerificationBanner from "../auth/EmailVerificationBanner";
+import restaurantAdsApi from "../../api/restaurantAdsApi";
 
 
 // AGF-S2-09: Dashboard added; login still lands on Menus (D4)
@@ -13,6 +14,8 @@ const NAV_ITEMS = [
     {label: "QR Code", path: "admin/qrcode", exact: false},
     {label: "Specials", path: "admin/specials", exact: false}, // AGF-S2-25 (not "Deals", S2-29)
 ];
+// AGF E4-M8: shown only when the restaurant can manage its own ads (current Model 3, ads on) or still has ads to view or archive
+const ADS_ITEM = {label: "Ads", path: "admin/ads", exact: false};
 
 export default function AdminLayout() {
     const auth = useAuth();
@@ -21,7 +24,16 @@ export default function AdminLayout() {
     const {pathname} = useLocation();
     const tenantSlug = pathname.split("/")[1]; // crude extract
     const [accountOpen, setAccountOpen] = useState(false);
+    const [showAds, setShowAds] = useState(false);
     const accountRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        let alive = true;
+        restaurantAdsApi.list().then(
+            (res) => alive && setShowAds(res.data.canManage || res.data.nonArchivedCount > 0),
+            () => alive && setShowAds(false)); // any failure: the navigation stays as before
+        return () => { alive = false; };
+    }, []);
 
     useEffect(() => {
         const onClickOutside = (e: MouseEvent) => {
@@ -62,7 +74,7 @@ export default function AdminLayout() {
                 className={`flex flex-col fixed inset-y-0 left-0 z-40 w-64 transform bg-gray-50 border-r border-gray-200 px-6 py-8 transition-transform duration-200 md:static md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
                 <h1 className="text-xl font-bold mb-6 mt-6 lg:mt-0">Venue</h1>
                 <nav className="space-y-2">
-                    {NAV_ITEMS.map((item) => {
+                    {(showAds ? [...NAV_ITEMS, ADS_ITEM] : NAV_ITEMS).map((item) => {
                         const active = item.exact
                             ? pathname.replace(/\/+$/, "") === `/${tenantSlug}/${item.path}`
                             : pathname.includes(item.path);

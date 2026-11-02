@@ -524,7 +524,7 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                     </main>
                     {/* AGF-S2-24: menu-views privacy notice */}
                     <footer className="mt-10 border-t border-gray-100 py-4 text-center">
-                        <PrivacyNotice />
+                        <PrivacyNotice restaurantAds={!preview && Boolean(publicMenu.restaurantAdsNotice)} />
                     </footer>
                 </div>
             </div>

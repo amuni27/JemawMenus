@@ -50,6 +50,7 @@ type BusinessMenuResponse = {
     business: Business;
     menus: Menu[];
     sponsored?: SponsoredAd; // AGF E4-M7: only for an eligible Model 2 restaurant with ads enabled
+    restaurantAdsNotice?: boolean; // AGF E4-M8: true when restaurant ads apply (Model 3, enabled), for the privacy notice
 };
 
 export function usePublicBusinessMenu(businessId?: string) {
@@ -94,6 +95,7 @@ export function usePublicBusinessMenu(businessId?: string) {
         business: data?.business,
         menus: data?.menus ?? [],
         sponsored: data?.sponsored,
+        restaurantAdsNotice: data?.restaurantAdsNotice ?? false,
         loading,
         error,
         notFound,

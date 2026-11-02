@@ -26,6 +26,8 @@ import SuperAdminLayout from "../pages/superadmin/SuperAdminLayout.tsx";
 import SuperAdminOverview from "../pages/superadmin/SuperAdminOverview.tsx";
 import SuperAdminAuditLog from "../pages/superadmin/SuperAdminAuditLog.tsx";
 import SuperAdminAds from "../pages/superadmin/SuperAdminAds.tsx";
+import SuperAdminRestaurantAds from "../pages/superadmin/SuperAdminRestaurantAds.tsx";
+import RestaurantAdsPage from "../pages/admin/RestaurantAdsPage.tsx";
 import SuperAdminMonetization from "../pages/superadmin/SuperAdminMonetization.tsx";
 import SuperAdminSubscriptions from "../pages/superadmin/SuperAdminSubscriptions.tsx";
 import SuperAdminPlanRequests from "../pages/superadmin/SuperAdminPlanRequests.tsx";
@@ -79,6 +81,7 @@ export const routes: RouteObject[] = [
                     {path: 'subscriptions', element: <SuperAdminSubscriptions/>},
                     {path: 'plan-requests', element: <SuperAdminPlanRequests/>},
                     {path: 'ads', element: <SuperAdminAds/>},
+                    {path: 'restaurant-ads', element: <SuperAdminRestaurantAds/>}, // AGF E4-M8
                     {path: 'audit', element: <SuperAdminAuditLog/>},
                 ],
             },
@@ -111,6 +114,7 @@ export const routes: RouteObject[] = [
                             {index: true, element: <Dashboard/>},
                             {path: 'qrcode', element: <QRPage/>},
                             {path: 'specials', element: <SpecialsPage/>}, // AGF-S2-25
+                            {path: 'ads', element: <RestaurantAdsPage/>}, // AGF E4-M8: the owner's own ads (Model 3)
                             {
                                 path: 'menus',
                                 children: [

@@ -5,6 +5,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 // AGF-S2-22: the email-verification banner is part of the owner area.
 
+// AGF E4-M8: the owner layout asks whether to show "Ads"; no network in tests
+vi.mock("../../api/restaurantAdsApi", () => ({ default: { list: () => Promise.resolve({ data: { canManage: false, nonArchivedCount: 0, ads: [] } }) } }));
 vi.mock("../../app/context/AuthContext", () => ({
     useAuth: () => ({
         user: { fullName: "Demo Owner", email: "owner@example.com", emailVerification: { verified: false, available: true, publishGateEnabled: true } },

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import PrivacyNotice, { MENU_VIEWS_NOTICE, SPONSORED_NOTICE } from "./PrivacyNotice";
+import PrivacyNotice, { MENU_VIEWS_NOTICE, RESTAURANT_ADS_NOTICE, SPONSORED_NOTICE } from "./PrivacyNotice";
 
 // AGF-S2-24 (D-S2-24-2, -3): the guest menu footer's "Privacy" link opens the approved menu-views notice in an
 // accessible dialog (S2-27 rules: focus moves in, Escape closes, focus returns to the link).
@@ -23,6 +23,18 @@ describe("guest privacy notice", () => {
         render(<PrivacyNotice />);
         fireEvent.click(screen.getByRole("button", { name: /privacy/i }));
         expect(screen.getByRole("dialog").textContent).toContain(SPONSORED_NOTICE);
+    });
+
+    it("adds the approved Model 3 sentence only when restaurant ads apply (AGF E4-M8)", () => {
+        expect(RESTAURANT_ADS_NOTICE).toBe("This menu may display sponsored content managed by the restaurant. "
+            + "Agafari does not track your clicks or collect personal information for these advertisements.");
+        render(<PrivacyNotice />);
+        fireEvent.click(screen.getByRole("button", { name: /privacy/i }));
+        expect(screen.getByRole("dialog").textContent).not.toContain(RESTAURANT_ADS_NOTICE);
+        cleanup();
+        render(<PrivacyNotice restaurantAds />);
+        fireEvent.click(screen.getByRole("button", { name: /privacy/i }));
+        expect(screen.getByRole("dialog").textContent).toContain(RESTAURANT_ADS_NOTICE);
     });
 
     it("opens the notice in a labelled dialog and closes it with Escape, returning focus", () => {

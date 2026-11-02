@@ -13,7 +13,11 @@ export const MENU_VIEWS_NOTICE =
 export const SPONSORED_NOTICE = "Menus on Model 2 can show one sponsored item chosen by Agafari. We count how often it is delivered, "
     + "without any information about you.";
 
-export default function PrivacyNotice() {
+// AGF E4-M8 (Q-M8-12): the approved sentence, shown only on menus where restaurant ads apply (Model 3, enabled)
+export const RESTAURANT_ADS_NOTICE = "This menu may display sponsored content managed by the restaurant. "
+    + "Agafari does not track your clicks or collect personal information for these advertisements.";
+
+export default function PrivacyNotice({ restaurantAds = false }: { restaurantAds?: boolean }) {
     const [open, setOpen] = useState(false);
     const titleId = useId();
     const linkRef = useRef<HTMLButtonElement>(null);
@@ -70,6 +74,7 @@ export default function PrivacyNotice() {
                         </div>
                         <p className="mt-3 text-sm text-gray-700">{MENU_VIEWS_NOTICE}</p>
                         <p className="mt-2 text-sm text-gray-700">{SPONSORED_NOTICE}</p>
+                        {restaurantAds && <p className="mt-2 text-sm text-gray-700">{RESTAURANT_ADS_NOTICE}</p>}
                     </div>
                 </div>
             )}

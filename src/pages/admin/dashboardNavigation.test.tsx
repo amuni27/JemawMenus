@@ -5,6 +5,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 // AGF-S2-09 / D4: the dashboard is reachable from the owner navigation; Menus stays the landing page after login.
 
+// AGF E4-M8: the owner layout asks whether to show "Ads"; no network in tests
+vi.mock("../../api/restaurantAdsApi", () => ({ default: { list: () => Promise.resolve({ data: { canManage: false, nonArchivedCount: 0, ads: [] } }) } }));
 vi.mock("../../app/context/AuthContext", () => ({
     useAuth: () => ({ user: { fullName: "Demo Owner", email: "owner@example.com" }, business: { id: "biz-1", name: "Cafe" }, logout: vi.fn() }),
 }));
