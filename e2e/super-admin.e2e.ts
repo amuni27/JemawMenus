@@ -35,6 +35,13 @@ test.describe("J18 Super Admin console", () => {
         await page.getByRole("link", { name: "Audit log" }).click();
         const table = page.getByRole("table", { name: "Audit log" });
         await expect(table).toContainText("ADMIN_LOGIN_SUCCEEDED");
+        // the bootstrap is the oldest event; later journeys (for example J23) can push it past the first page
+        const older = page.getByRole("button", { name: "Older" });
+        while (await older.isEnabled()) {
+            const before = await table.textContent();
+            await older.click();
+            await expect(table).not.toHaveText(before ?? "");
+        }
         await expect(table).toContainText("ADMIN_BOOTSTRAP_CREATED");
         await expect(table).not.toContainText(password);
         expect(await seriousViolations(page)).toEqual([]);

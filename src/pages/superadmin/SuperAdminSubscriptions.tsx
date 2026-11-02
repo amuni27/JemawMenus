@@ -186,7 +186,7 @@ export default function SuperAdminSubscriptions() {
                         : `${model(current.planCode)} · Trial · ends ${trialEndDate(current.periodEnd, view.timeZone)}`) : `${model(current.planCode)} · ${current.status}`}
                     </p>
                     <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">{current.sourceLabel}</p>
-                    {current.outsideCurrentConfiguration && !current.grandfathering && (
+                    {current.outsideCurrentConfiguration && (
                       <p className="ml-2 mt-1 inline-block rounded bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-900">Outside current configuration</p>
                     )}
                     {current.grandfathering && (
