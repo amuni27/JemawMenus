@@ -18,7 +18,8 @@ export default function SponsoredSlot({ ad, lang }: { ad?: SponsoredAd | null; l
     const title = lang === "am" && ad.titleAm ? ad.titleAm : ad.title;
     const body = lang === "am" && ad.bodyAm ? ad.bodyAm : ad.body;
     return (
-        <section role="region" aria-labelledby={labelId} className="mx-auto mt-4 max-w-5xl px-4">
+        // AD-D1: in the menu column like Specials and Chef's picks (no extra side inset), same spacing before the next section
+        <section role="region" aria-labelledby={labelId} className="mb-10 sm:mb-12">
             <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p id={labelId} className="text-xs font-semibold uppercase tracking-wide text-gray-700">{SPONSORED_LABEL[lang]}</p>
                 <a href={ad.linkUrl} target="_blank" rel="sponsored noopener noreferrer"

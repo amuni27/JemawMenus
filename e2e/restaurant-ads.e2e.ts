@@ -127,6 +127,12 @@ test.describe("J25 restaurant ads", () => {
         const link = slot.getByRole("link", { name: /House tibs/ });
         await expect(link).toHaveAttribute("href", "https://example.test/tibs");
         await expect(link).toHaveAttribute("rel", "sponsored noopener noreferrer");
+        // AD-D1 layout: the card spans the menu column (no extra inset) and leaves section spacing before the next heading
+        const column = await page.locator("main").boundingBox(), card = await slot.boundingBox();
+        const nextHeading = await page.getByRole("heading", { name: "Mains" }).last().boundingBox();
+        expect(Math.abs(card!.x - column!.x)).toBeLessThanOrEqual(1);
+        expect(Math.abs(card!.width - column!.width)).toBeLessThanOrEqual(1);
+        expect(nextHeading!.y - (card!.y + card!.height)).toBeGreaterThanOrEqual(32);
         expect(await privacyText(page)).toContain(MODEL3_NOTICE);
         expect(await seriousViolations(page)).toEqual([]);
         await page.goto(`/${b.businessId}/menu`);

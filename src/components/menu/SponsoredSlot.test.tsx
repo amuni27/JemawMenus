@@ -38,4 +38,14 @@ describe("SponsoredSlot", () => {
         render(<SponsoredSlot ad={{ ...ad, imageUrl: "https://img.test/a.png", imageAlt: "A cup of coffee" }} lang="en" />);
         expect(screen.getByRole("img", { name: "A cup of coffee" }).getAttribute("src")).toBe("https://img.test/a.png");
     });
+
+    // AD-D1 (PO-approved layout correction): the slot sits in the menu column like Specials and Chef's picks, with no extra
+    // side inset of its own, and leaves the same space before the next section
+    it("uses the menu sections' width and bottom spacing", () => {
+        render(<SponsoredSlot ad={ad} lang="en" />);
+        const slot = screen.getByRole("region", { name: "Sponsored" });
+        const classes = slot.className.split(/\s+/);
+        expect(classes).toEqual(expect.arrayContaining(["mb-10", "sm:mb-12"]));
+        for (const inset of ["px-4", "mx-auto", "max-w-5xl", "mt-4"]) expect(classes).not.toContain(inset);
+    });
 });
