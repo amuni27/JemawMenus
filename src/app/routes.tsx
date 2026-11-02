@@ -25,6 +25,7 @@ import SuperAdminLogin from "../pages/superadmin/SuperAdminLogin.tsx";
 import SuperAdminLayout from "../pages/superadmin/SuperAdminLayout.tsx";
 import SuperAdminOverview from "../pages/superadmin/SuperAdminOverview.tsx";
 import SuperAdminAuditLog from "../pages/superadmin/SuperAdminAuditLog.tsx";
+import SuperAdminAds from "../pages/superadmin/SuperAdminAds.tsx";
 import SuperAdminMonetization from "../pages/superadmin/SuperAdminMonetization.tsx";
 import SuperAdminSubscriptions from "../pages/superadmin/SuperAdminSubscriptions.tsx";
 import SuperAdminPlanRequests from "../pages/superadmin/SuperAdminPlanRequests.tsx";
@@ -77,6 +78,7 @@ export const routes: RouteObject[] = [
                     {path: 'monetization', element: <SuperAdminMonetization/>},
                     {path: 'subscriptions', element: <SuperAdminSubscriptions/>},
                     {path: 'plan-requests', element: <SuperAdminPlanRequests/>},
+                    {path: 'ads', element: <SuperAdminAds/>},
                     {path: 'audit', element: <SuperAdminAuditLog/>},
                 ],
             },

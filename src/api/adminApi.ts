@@ -40,6 +40,17 @@ export type Subscription = {
 // transitionsEnabled false this is information only.
 export type GrandfatheringInfo = { until?: string; untilSource: 'PERIOD_END' | 'TRANSITION_DATE' | 'NONE'; transitionDateIgnored: boolean;
   transitionsEnabled: boolean; overdue: boolean };
+// AGF E4-M7: an Agafari ad. Schedule = UTC instants plus the same moments as local time and offset in scheduleTimeZone
+// (D-M7-1). servedImpressions: deliveries with a guest menu (not confirmed on-screen visibility).
+export type AgafariAd = {
+  id: string; title: string; body: string; titleAm?: string; bodyAm?: string; linkUrl: string; imageUrl?: string; imageAlt?: string;
+  startsAt: string; endsAt?: string; scheduleTimeZone: string; startLocal: string; startOffset: string; endLocal?: string; endOffset?: string;
+  status: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'; servedImpressions: number; createdAt: string; updatedAt: string; rowVersion: number;
+};
+export type AdInput = {
+  title: string; body: string; titleAm?: string; bodyAm?: string; linkUrl: string; timeZone: string; startLocal: string; endLocal?: string;
+  startOffset?: string; endOffset?: string; rowVersion?: number;
+};
 export type GrandfatheringPreview = { grandfathered: number; byPlan: Record<string, number>; overdue: number; openEndedWithoutDate: number;
   transitionDatesNotApplying: number };
 export type Entitlements = { mode: 'INACTIVE' | 'ACTIVE'; planCode: string | null; status: string | null;
@@ -109,6 +120,18 @@ export const adminApi = {
   convertTrial: (businessId: string, expectedConfigVersion: number, rowVersion: number) =>
     adminClient.post<Subscription>(`/admin/businesses/${businessId}/trial/convert`, { expectedConfigVersion, rowVersion }),
   trialIntents: () => adminClient.get<TrialIntentOverview>('/admin/trial-intents'),
+  // AGF E4-M7: Agafari ads (no delete: archive)
+  ads: () => adminClient.get<AgafariAd[]>('/admin/ads'),
+  createAd: (input: AdInput) => adminClient.post<AgafariAd>('/admin/ads', input),
+  updateAd: (id: string, input: AdInput) => adminClient.put<AgafariAd>(`/admin/ads/${id}`, input),
+  pauseAd: (id: string, rowVersion: number) => adminClient.post<AgafariAd>(`/admin/ads/${id}/pause`, { rowVersion }),
+  resumeAd: (id: string, rowVersion: number) => adminClient.post<AgafariAd>(`/admin/ads/${id}/resume`, { rowVersion }),
+  archiveAd: (id: string, rowVersion: number) => adminClient.post<AgafariAd>(`/admin/ads/${id}/archive`, { rowVersion }),
+  presignAdImage: (id: string, contentType: string) =>
+    adminClient.post<{ uploadUrl: string; objectKey: string; expiresInSeconds: number }>(`/admin/ads/${id}/image/presign`, { contentType }),
+  confirmAdImage: (id: string, objectKey: string, imageAlt: string, rowVersion: number) =>
+    adminClient.post<AgafariAd>(`/admin/ads/${id}/image/confirm`, { objectKey, imageAlt, rowVersion }),
+  removeAdImage: (id: string, rowVersion: number) => adminClient.post<AgafariAd>(`/admin/ads/${id}/image/remove`, { rowVersion }),
   // AGF E4-M6: the transition date of an open-ended grandfathered subscription (a calendar date, restaurant time zone)
   setTransitionDate: (businessId: string, transitionDate: string, rowVersion: number) =>
     adminClient.put<Subscription>(`/admin/businesses/${businessId}/subscription/transition-date`, { transitionDate, rowVersion }),

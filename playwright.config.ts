@@ -16,6 +16,10 @@ process.env.E2E_ADMIN_PASSWORD ||= `Aa1!${randomSecret(24)}`;
 
 const BACKEND_PORT = 8081;
 const FRONTEND = "http://127.0.0.1:5176";
+// AGF E4-M7: J24 runs against its own demo backend and frontend with entitlements and Agafari ads on, so J1–J23 keep their
+// flags (J20 checks that monetization stays inactive). Local in-memory demo only.
+const ADS_BACKEND_PORT = 8082;
+const ADS_FRONTEND = "http://127.0.0.1:5177";
 const backendDir = resolve(process.env.E2E_BACKEND_DIR ?? "../jemaw-menu-backend-spring");
 const CI = !!process.env.CI;
 
@@ -40,9 +44,14 @@ export default defineConfig({
         { name: "setup", testMatch: /auth\.setup\.e2e\.ts$/ },
         {
             name: "smoke",
-            testIgnore: /auth\.setup\.e2e\.ts$/,
+            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)ads\.e2e\.ts$/],
             dependencies: ["setup"],
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined },
+        },
+        {
+            name: "ads",
+            testMatch: /(^|\/)ads\.e2e\.ts$/,
+            use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: ADS_FRONTEND },
         },
     ],
     webServer: [
@@ -88,6 +97,42 @@ export default defineConfig({
                 VITE_API_BASE_URL: FRONTEND,
                 VITE_PUBLIC_MENU_BASE_URL: FRONTEND,
                 E2E_BACKEND_URL: `http://127.0.0.1:${BACKEND_PORT}`,
+            },
+        },
+        {
+            // AGF E4-M7: started once the first backend answers (it has compiled), so the two Maven runs never compile at once
+            name: "backend for J24 (demo profile, ads on)",
+            cwd: backendDir,
+            command: `until curl -sf -o /dev/null http://127.0.0.1:${BACKEND_PORT}/venue/00000000-0000-4000-8000-0000000000b1/menu; do sleep 2; done; mkdir -p target/e2e-run-ads && sh ./mvnw -q -B -Pdemo spring-boot:run -Dspring-boot.run.profiles=demo "-Dspring-boot.run.arguments=--server.port=${ADS_BACKEND_PORT}" -Dspring-boot.run.workingDirectory=target/e2e-run-ads`,
+            url: `http://127.0.0.1:${ADS_BACKEND_PORT}/venue/00000000-0000-4000-8000-0000000000b1/menu`,
+            timeout: 400_000,
+            reuseExistingServer: !CI,
+            stdout: "ignore",
+            stderr: "pipe",
+            env: {
+                APP_JWT_SECRET: process.env.E2E_JWT_SECRET,
+                APP_PASSWORD_RESET_SECRET: process.env.E2E_RESET_SECRET,
+                APP_EMAIL_VERIFICATION_SECRET: process.env.E2E_VERIFY_SECRET,
+                APP_ADMIN_BOOTSTRAP_EMAIL: process.env.E2E_ADMIN_EMAIL,
+                APP_ADMIN_BOOTSTRAP_PASSWORD: process.env.E2E_ADMIN_PASSWORD,
+                APP_MONETIZATION_ENTITLEMENTS_ENABLED: "true", // AGF E4-M7: on only in this J24 demo backend
+                APP_MONETIZATION_AGAFARI_ADS_ENABLED: "true", // AGF E4-M7: on only in this J24 demo backend; default false everywhere else
+                DEMO_OWNER_PASSWORD: process.env.E2E_OWNER_PASSWORD,
+                APP_PUBLIC_MENU_BASE_URL: ADS_FRONTEND,
+            },
+        },
+        {
+            name: "frontend for J24 (production build)",
+            command: "npx vite build --mode e2e --outDir dist-e2e-ads && npx vite preview --mode e2e --outDir dist-e2e-ads --host 127.0.0.1 --port 5177 --strictPort",
+            url: ADS_FRONTEND,
+            timeout: 180_000,
+            reuseExistingServer: !CI,
+            stdout: "ignore",
+            stderr: "pipe",
+            env: {
+                VITE_API_BASE_URL: ADS_FRONTEND,
+                VITE_PUBLIC_MENU_BASE_URL: ADS_FRONTEND,
+                E2E_BACKEND_URL: `http://127.0.0.1:${ADS_BACKEND_PORT}`,
             },
         },
     ],

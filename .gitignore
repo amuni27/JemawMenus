@@ -33,3 +33,4 @@ dist-ssr
 /test-results/
 /e2e/.auth/
 /dist-e2e/
+/dist-e2e-ads/

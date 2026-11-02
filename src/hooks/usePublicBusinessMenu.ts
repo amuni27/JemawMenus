@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import publicMenuApi from "../api/publicMenueApi.ts"; // adjust path
 import { errorMessage, isNotFound } from "../utils/errorMessage.ts";
 import type { GuestBusinessInfo } from "../components/menu/GuestInfoPanel";
+import type { SponsoredAd } from "../components/menu/SponsoredSlot";
 
 type Business = {
     id: string;
@@ -48,6 +49,7 @@ type Menu = {
 type BusinessMenuResponse = {
     business: Business;
     menus: Menu[];
+    sponsored?: SponsoredAd; // AGF E4-M7: only for an eligible Model 2 restaurant with ads enabled
 };
 
 export function usePublicBusinessMenu(businessId?: string) {
@@ -91,6 +93,7 @@ export function usePublicBusinessMenu(businessId?: string) {
     return {
         business: data?.business,
         menus: data?.menus ?? [],
+        sponsored: data?.sponsored,
         loading,
         error,
         notFound,

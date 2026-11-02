@@ -3,6 +3,7 @@ import { useNow } from "../../hooks/useNow";
 import { activeCategorySpecials, activeSpecials, shownPrice, type SpecialFields } from "../../utils/specials";
 import { GuestClockProvider } from "../../components/menu/GuestClock";
 import { SpecialsSection } from "../../components/menu/SpecialsSection";
+import SponsoredSlot from "../../components/menu/SponsoredSlot";
 import { Outlet, useParams } from "react-router-dom";
 import { usePublicBusinessMenu } from "../../hooks/usePublicBusinessMenu";
 
@@ -496,6 +497,8 @@ const { tenantSlug, itemId } = useParams<{ tenantSlug: string; itemId?: string }
                                 {!narrowing && (
                                     <>
                                         <SpecialsSection items={specials} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} categories={categorySpecials} onSelectCategory={scrollToCategory} />
+                                        {/* AGF E4-M7 (C2): one sponsored slot after Specials (or first when there are none), before the categories */}
+                                        <SponsoredSlot ad={preview ? undefined : publicMenu.sponsored} lang={guestLanguage.lang} />
                                         <FeaturedSection items={picks} currency={activeMenu?.currency} onAddItem={addMenuItemToWaiterList} addDisabledLabel={addDisabledLabel} />
                                     </>
                                 )}

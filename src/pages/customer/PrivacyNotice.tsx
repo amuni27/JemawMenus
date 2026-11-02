@@ -9,6 +9,10 @@ export const MENU_VIEWS_NOTICE =
     + "We don't use cookies for this and don't store your IP address, device or any other information that identifies you. "
     + "Restaurants see only the daily totals.";
 
+// AGF E4-M7 (Q-M7-12): the approved sentence about the one sponsored item on Model 2 menus (English, like the notice above)
+export const SPONSORED_NOTICE = "Menus on Model 2 can show one sponsored item chosen by Agafari. We count how often it is delivered, "
+    + "without any information about you.";
+
 export default function PrivacyNotice() {
     const [open, setOpen] = useState(false);
     const titleId = useId();
@@ -65,6 +69,7 @@ export default function PrivacyNotice() {
                             </button>
                         </div>
                         <p className="mt-3 text-sm text-gray-700">{MENU_VIEWS_NOTICE}</p>
+                        <p className="mt-2 text-sm text-gray-700">{SPONSORED_NOTICE}</p>
                     </div>
                 </div>
             )}

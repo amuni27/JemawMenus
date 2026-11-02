@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import PrivacyNotice, { MENU_VIEWS_NOTICE } from "./PrivacyNotice";
+import PrivacyNotice, { MENU_VIEWS_NOTICE, SPONSORED_NOTICE } from "./PrivacyNotice";
 
 // AGF-S2-24 (D-S2-24-2, -3): the guest menu footer's "Privacy" link opens the approved menu-views notice in an
 // accessible dialog (S2-27 rules: focus moves in, Escape closes, focus returns to the link).
@@ -15,6 +15,14 @@ describe("guest privacy notice", () => {
             + "We don't use cookies for this and don't store your IP address, device or any other information that identifies you. "
             + "Restaurants see only the daily totals."
         );
+    });
+
+    it("adds the approved sponsored-item sentence (AGF E4-M7)", () => {
+        expect(SPONSORED_NOTICE).toBe("Menus on Model 2 can show one sponsored item chosen by Agafari. We count how often it is delivered, "
+            + "without any information about you.");
+        render(<PrivacyNotice />);
+        fireEvent.click(screen.getByRole("button", { name: /privacy/i }));
+        expect(screen.getByRole("dialog").textContent).toContain(SPONSORED_NOTICE);
     });
 
     it("opens the notice in a labelled dialog and closes it with Escape, returning focus", () => {
