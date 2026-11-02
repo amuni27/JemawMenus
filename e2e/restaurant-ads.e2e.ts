@@ -127,6 +127,12 @@ test.describe("J25 restaurant ads", () => {
         const link = slot.getByRole("link", { name: /House tibs/ });
         await expect(link).toHaveAttribute("href", "https://example.test/tibs");
         await expect(link).toHaveAttribute("rel", "sponsored noopener noreferrer");
+        // AD "Visit advertiser": one link with a visible cue and a clear name (title, cue, new-tab note), reachable by keyboard
+        await expect(slot.getByRole("link")).toHaveCount(1);
+        await expect(link.getByText("Visit advertiser")).toBeVisible();
+        await expect(link).toHaveAccessibleName("House tibs Visit advertiser (opens in a new tab)");
+        await link.focus();
+        await expect(link).toBeFocused();
         // AD-D1 layout: the card spans the menu column (no extra inset) and leaves section spacing before the next heading
         const column = await page.locator("main").boundingBox(), card = await slot.boundingBox();
         const nextHeading = await page.getByRole("heading", { name: "Mains" }).last().boundingBox();

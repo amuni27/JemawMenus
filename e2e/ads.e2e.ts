@@ -101,6 +101,12 @@ test.describe("J24 Agafari ads", () => {
         await expect(link).toHaveAttribute("href", "https://example.test/coffee");
         await expect(link).toHaveAttribute("target", "_blank");
         await expect(link).toHaveAttribute("rel", "sponsored noopener noreferrer");
+        // AD "Visit advertiser": one link with a visible cue and a clear name (title, cue, new-tab note), reachable by keyboard
+        await expect(slot.getByRole("link")).toHaveCount(1);
+        await expect(link.getByText("Visit advertiser")).toBeVisible();
+        await expect(link).toHaveAccessibleName("Coffee week Visit advertiser (opens in a new tab)");
+        await link.focus();
+        await expect(link).toBeFocused();
         const category = page.getByRole("heading", { name: "Mains" }).last();
         expect(await slot.evaluate((el, cat) => Boolean(el.compareDocumentPosition(cat as Node) & Node.DOCUMENT_POSITION_FOLLOWING), await category.elementHandle()))
             .toBe(true);
