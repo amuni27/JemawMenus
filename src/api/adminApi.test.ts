@@ -88,5 +88,26 @@ describe("admin API client", () => {
         expect(JSON.parse(calls[4].data as string)).toEqual({ planCode: "MODEL_4", expectedConfigVersion: 2 });
         expect(JSON.parse(calls[5].data as string)).toEqual({ status: "EXPIRED", rowVersion: 3 });
     });
+
+    it("lists, fulfils and declines plan requests under /admin (AGF E4-M4)", async () => {
+        localStorage.setItem(ADMIN_TOKEN_KEY, "admin-token");
+        const calls: { method?: string; url?: string; data?: unknown; params?: unknown }[] = [];
+        const original = adminClient.defaults.adapter;
+        adminClient.defaults.adapter = (async (config: { method?: string; url?: string; data?: unknown; params?: unknown }) => {
+            calls.push({ method: config.method, url: config.url, data: config.data, params: config.params });
+            return { data: {}, status: 200, statusText: "OK", headers: {}, config };
+        }) as never;
+        try {
+            await adminApi.planRequests("PENDING", 0, 20);
+            await adminApi.fulfilPlanRequest("r1", 3, 0);
+            await adminApi.declinePlanRequest("r1", 1);
+        } finally {
+            adminClient.defaults.adapter = original;
+        }
+        expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["get /admin/plan-requests", "post /admin/plan-requests/r1/fulfil", "post /admin/plan-requests/r1/decline"]);
+        expect(calls[0].params).toEqual({ status: "PENDING", page: 0, size: 20 });
+        expect(JSON.parse(calls[1].data as string)).toEqual({ expectedConfigVersion: 3, rowVersion: 0 });
+        expect(JSON.parse(calls[2].data as string)).toEqual({ rowVersion: 1 });
+    });
 });
 

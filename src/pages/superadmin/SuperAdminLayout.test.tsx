@@ -82,4 +82,12 @@ describe("Super Admin console layout", () => {
         const link = await screen.findByRole("link", { name: "Subscriptions" });
         expect(link.getAttribute("href")).toBe("/super-admin/subscriptions");
     });
+
+    it("links to plan requests (AGF E4-M4)", async () => {
+        localStorage.setItem("adminToken", "admin-token");
+        renderConsole();
+        const link = await screen.findByRole("link", { name: "Plan requests" });
+        expect(link.getAttribute("href")).toBe("/super-admin/plan-requests");
+    });
 });
+
