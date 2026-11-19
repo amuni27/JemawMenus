@@ -3,7 +3,8 @@ import { expect, test, type Browser, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
 // AGF E4-M5 J22: Model 1 trials (trials and owner plan visibility on in the local E2E demo only). The admin sets Setting 1;
-// a newly registered restaurant gets a 30-day free trial; the owner sees the days left; the admin extends the trial, then
+// AGF BE-2 (register §45 D-3 B, §48): a newly registered restaurant gets no automatic trial; the owner verifies their email,
+// confirms and starts the 30-day free trial (BE-1/FE-1); the owner sees the days left; the admin extends the trial, then
 // converts it to a manual Model 1 record (no payment verified); the owner sees the plan and the trial stays in the history.
 // Expiry itself is covered by backend tests with a controlled clock (E2E can't wait 30 days).
 
@@ -59,7 +60,7 @@ async function configureSetting2(page: Page) {
 }
 
 test.describe("J22 Trials", () => {
-    test("a new restaurant gets a 30-day trial that the admin extends and converts to a manual Model 1 record", async ({ page, browser, request }) => {
+    test("a new restaurant gets no automatic trial; the owner starts the 30-day trial, which the admin extends and converts to a manual Model 1 record", async ({ page, browser, request }) => {
         const admin = await adminPage(browser);
         await configureSetting1(admin);
 
@@ -81,10 +82,25 @@ test.describe("J22 Trials", () => {
         await expect(page).toHaveURL(/\/admin/);
         const businessId = new URL(page.url()).pathname.split("/")[1];
 
-        await page.goto(`/${businessId}/admin`);
-        await expect(page.getByRole("region", { name: "Plan" })).toContainText("Free trial: 30 days left");
+        // BE-2: no trial at registration; the owner is offered one, after verifying their email (operational here, Q2)
         await page.goto(`/${businessId}/admin/plans`); // ONB Phase 1: plans live on Subscription & Plans
         const section = page.locator("#plan");
+        const offer = page.getByRole("region", { name: "Free trial" });
+        await expect(offer).toContainText("Try Agafari free for 30 days.");
+        await expect(offer).toContainText("Verify your email to start your free trial.");
+        await expect(section).not.toContainText("days left");
+        const outbox = await request.get(`${BACKEND}/api/demo/email-verification-outbox`, { params: { email } });
+        expect(outbox.status()).toBe(200);
+        await page.goto((await outbox.json()).verifyUrl as string);
+        await expect(page.getByRole("heading", { name: "Email verified" })).toBeVisible();
+        await page.goto(`/${businessId}/admin/plans`);
+        await offer.getByRole("button", { name: "Start free trial" }).click();
+        await page.getByRole("dialog", { name: "Start your 30-day free trial?" }).getByRole("button", { name: "Start free trial" }).click();
+        await expect(section.getByRole("status")).toContainText("Your free trial has started.");
+
+        await page.goto(`/${businessId}/admin`);
+        await expect(page.getByRole("region", { name: "Plan" })).toContainText("Free trial: 30 days left");
+        await page.goto(`/${businessId}/admin/plans`);
         await expect(section).toContainText("Free trial: 30 days left (ends");
         await expect(section).toContainText("All features stay available while plans are being introduced.");
         expect(await seriousViolations(page, "#plan")).toEqual([]);
