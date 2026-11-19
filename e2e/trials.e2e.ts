@@ -7,6 +7,8 @@ import { randomUUID } from "node:crypto";
 // converts it to a manual Model 1 record (no payment verified); the owner sees the plan and the trial stays in the history.
 // Expiry itself is covered by backend tests with a controlled clock (E2E can't wait 30 days).
 
+const BACKEND = "http://127.0.0.1:8081";
+
 function adminCredentials() {
     const email = process.env.E2E_ADMIN_EMAIL, password = process.env.E2E_ADMIN_PASSWORD;
     if (!email || !password) throw new Error("E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD are not set (playwright.config.ts generates them)");
@@ -39,6 +41,21 @@ async function configureSetting1(page: Page) {
     await page.getByRole("button", { name: "Save configuration" }).click();
     await page.getByRole("dialog", { name: "Change monetization configuration" }).getByRole("button", { name: "Save" }).click();
     await expect(current).toContainText("Setting 1");
+}
+
+// AGF FE-1 J27: Setting 2 registrations get no trial; the restaurant becomes eligible once the admin sets Setting 1.
+async function configureSetting2(page: Page) {
+    await page.getByRole("link", { name: "Monetization" }).click();
+    const current = page.getByRole("region", { name: "Current configuration" });
+    await expect(current).toBeVisible();
+    await page.getByRole("radio", { name: /Setting 2/ }).check();
+    for (const [m, on] of [["2", true], ["3", false], ["4", true]] as const) {
+        const box = page.getByRole("checkbox", { name: new RegExp(`Model ${m}`) });
+        if (on) await box.check(); else if (await box.isChecked()) await box.uncheck();
+    }
+    await page.getByRole("button", { name: "Save configuration" }).click();
+    await page.getByRole("dialog", { name: "Change monetization configuration" }).getByRole("button", { name: "Save" }).click();
+    await expect(current).toContainText("Setting 2");
 }
 
 test.describe("J22 Trials", () => {
@@ -114,5 +131,56 @@ test.describe("J22 Trials", () => {
         await expect(audit).toContainText("TRIAL_STARTED");
         await expect(audit).toContainText("TRIAL_EXTENDED");
         await expect(audit).toContainText("TRIAL_CONVERTED");
+    });
+
+    // AGF FE-1 J27 (backend BE-1): the owner starts the free trial themselves on Subscription & Plans, after verifying their
+    // email (verification is operational in this demo, Q2) and confirming; the trial then runs for 30 days.
+    test("J27 an eligible owner verifies their email, confirms and starts the 30-day free trial", async ({ page, browser, request }) => {
+        const admin = await adminPage(browser);
+        await configureSetting2(admin);
+        const stamp = Date.now().toString(36);
+        const email = `owner-trial-${stamp}@e2e.agafari.test`;
+        const password = `Aa1!${randomUUID()}`; // local, per-run test value
+        const register = await request.post("/api/auth/register", { data: {
+            fullName: "Trial Owner", email, password, businessName: `Owner Trial Cafe ${stamp}`, businessPhone: `+2519${String(Date.now()).slice(-8)}`,
+            customSubdomain: `owner-trial-${stamp}`, open24_7: true, country: "ET", locationUrl: "https://maps.app.goo.gl/AbC123xyz",
+        } });
+        expect(register.status()).toBe(201);
+        await configureSetting1(admin);
+
+        await page.setViewportSize({ width: 375, height: 812 });
+        await page.goto("/auth/login");
+        await page.getByPlaceholder("you@example.com").fill(email);
+        await page.getByPlaceholder("********").fill(password);
+        await page.getByRole("button", { name: "Sign in" }).click();
+        await expect(page).toHaveURL(/\/admin/);
+        const businessId = new URL(page.url()).pathname.split("/")[1];
+
+        await page.goto(`/${businessId}/admin/plans`);
+        const offer = page.getByRole("region", { name: "Free trial" });
+        await expect(offer).toContainText("Try Agafari free for 30 days.");
+        await expect(offer).toContainText("Verify your email to start your free trial.");
+        await expect(offer.getByRole("button", { name: "Start free trial" })).toHaveCount(0);
+
+        const outbox = await request.get(`${BACKEND}/api/demo/email-verification-outbox`, { params: { email } });
+        expect(outbox.status()).toBe(200);
+        await page.goto((await outbox.json()).verifyUrl as string);
+        await expect(page.getByRole("heading", { name: "Email verified" })).toBeVisible();
+
+        await page.goto(`/${businessId}/admin/plans`);
+        await offer.getByRole("button", { name: "Start free trial" }).click();
+        const dialog = page.getByRole("dialog", { name: "Start your 30-day free trial?" });
+        await expect(dialog).toContainText("There's no charge and no payment details are needed.");
+        expect(await seriousViolations(page, '[role="dialog"]')).toEqual([]);
+        await dialog.getByRole("button", { name: "Start free trial" }).click();
+
+        const section = page.locator("#plan");
+        await expect(section.getByRole("status")).toContainText("Your free trial has started.");
+        await expect(section).toContainText("Free trial: 30 days left (ends");
+        await expect(section.getByRole("button", { name: "Start free trial" })).toHaveCount(0);
+        expect(await seriousViolations(page, "#plan")).toEqual([]);
+
+        await admin.getByRole("link", { name: "Audit log" }).click();
+        await expect(admin.getByRole("table", { name: "Audit log" })).toContainText("TRIAL_STARTED");
     });
 });

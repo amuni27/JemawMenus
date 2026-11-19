@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
+import { useAuth } from "../../app/context/AuthContext";
 import planApi, { type OwnerGrandfathering, type OwnerPlanView } from "../../api/planApi";
 import Modal from "../../components/ui/Modal";
 import ModalHeader from "../../components/ui/ModalHeader";
@@ -7,7 +8,7 @@ import { errorMessage } from "../../utils/errorMessage";
 import { trialEndDate } from "../../utils/trialDate";
 import {
     ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS, PRICING_NOTE,
-    TRIAL_NOTICE_DAYS, days, planName, statusLabel,
+    TRIAL_DAYS, TRIAL_NOTICE_DAYS, TRIAL_REFUSALS, TRIAL_TERMS, days, planName, statusLabel,
 } from "../../components/plan/planText";
 
 // ONB Phase 1: the owner's Subscription & Plans page (moved from the account page's Plan section, AGF E4-M4). Only while
@@ -16,8 +17,12 @@ import {
 // request is never a subscription and there is no change action (E4-M4-Q4). No prices; every feature stays available.
 // AGF Self-Service Phase A: while self-service is on, a free plan shows "Start free" (approved wording, SS-9); a pending
 // request is withdrawn only after the owner confirms it in the dialog (SS-3); paid plans keep "Request".
+// AGF FE-1 (register §45 D-3, §46, §47): under Setting 1, while the backend says the restaurant is eligible (trialEligible),
+// the owner starts the free trial after a confirmation. While email verification is required (operational and not yet
+// verified, Q2) the page asks for it instead of offering the start. Every outcome reloads the view.
 
-type Dialog = { kind: "request"; planCode: string } | { kind: "withdraw" } | { kind: "start"; planCode: string } | null;
+type Dialog = { kind: "request"; planCode: string } | { kind: "withdraw" } | { kind: "start"; planCode: string } | { kind: "trial" } | null;
+type ApiRefusal = { response?: { data?: { code?: unknown } } };
 
 export default function SubscriptionPlansPage() {
     const { tenantSlug } = useParams();
@@ -25,6 +30,8 @@ export default function SubscriptionPlansPage() {
     const [dialog, setDialog] = useState<Dialog>(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
+    const [notice, setNotice] = useState("");
+    const { user, refresh } = useAuth();
 
     const load = useCallback(() => planApi.get().then((res) => setView(res.data), () => setView({ visible: false })), []);
     useEffect(() => { load(); }, [load]);
@@ -35,6 +42,7 @@ export default function SubscriptionPlansPage() {
     const run = async (action: () => Promise<unknown>) => {
         setBusy(true);
         setError("");
+        setNotice("");
         try {
             await action();
         } catch (err) {
@@ -54,6 +62,30 @@ export default function SubscriptionPlansPage() {
     const canRequest = Boolean(view.canRequest) && !current && !pending;
     const selfService = view.selfService;
     const canStartFree = Boolean(selfService?.available) && !current;
+    const setting1 = view.setting === "SETTING_1";
+    const trialOffered = setting1 && view.trialEligible === true && !current && !trial;
+    const verification = user?.emailVerification;
+    const mustVerify = Boolean(verification?.available && !verification.verified); // Q2: only while verification is operational
+
+    const startTrial = async () => {
+        if (busy) return;
+        setBusy(true);
+        setError("");
+        setNotice("");
+        try {
+            const res = await planApi.startTrial(view.configVersion ?? 0);
+            setNotice(res.data.created ? "Your free trial has started." : "Your free trial is already running.");
+        } catch (err) {
+            const code = (err as ApiRefusal | null)?.response?.data?.code;
+            const known = typeof code === "string" ? TRIAL_REFUSALS[code] : undefined;
+            setError(known ?? errorMessage(err, "Couldn't start your free trial. Please try again."));
+            if (code === "EMAIL_NOT_VERIFIED") await refresh?.(); // the session's verification state was out of date
+        } finally {
+            setDialog(null);
+            setBusy(false);
+            await load();
+        }
+    };
 
     return (
         <section id="plan" aria-labelledby="plans-heading" className="space-y-6">
@@ -63,6 +95,7 @@ export default function SubscriptionPlansPage() {
                 <p className="mt-1 text-sm text-gray-700">{setting2 ? "Compare the plans available for your restaurant." : "Your restaurant's plan."}</p>
             </div>
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+            {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
 
             <section aria-labelledby="current-plan" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
                 <h3 id="current-plan" className="text-base font-semibold text-gray-900">Current plan</h3>
@@ -104,11 +137,31 @@ export default function SubscriptionPlansPage() {
                     </div>
                 )}
 
-                {!current && !trial && view.setting === "SETTING_1" && (
+                {!current && !trial && setting1 && !trialOffered && (
                     <div className="mt-3 text-sm text-gray-800">
                         <p>Your plan model: free trial, then a paid subscription.</p>
                         <p className="mt-1 text-gray-700">Trial details aren't available yet.</p>
                     </div>
+                )}
+
+                {trialOffered && (
+                    <section aria-labelledby="free-trial" className="mt-3 text-sm text-gray-800">
+                        <h4 id="free-trial" className="font-semibold text-gray-900">Free trial</h4>
+                        <ul className="mt-2 space-y-1">
+                            {TRIAL_TERMS.map((t) => (
+                                <li key={t} className="flex gap-2"><span aria-hidden="true" className="text-emerald-700">✓</span><span>{t}</span></li>
+                            ))}
+                        </ul>
+                        {mustVerify ? (
+                            <p className="mt-3 rounded-lg bg-amber-50 p-3 text-amber-900">
+                                Verify your email to start your free trial. We sent a link to {user?.email}. Use Resend link at the top of the page if you need a new one.
+                            </p>
+                        ) : (
+                            <button type="button" className={`${OWNER_PRIMARY} mt-4`} onClick={() => setDialog({ kind: "trial" })} disabled={busy}>
+                                Start free trial
+                            </button>
+                        )}
+                    </section>
                 )}
 
                 {!current && pending && (
@@ -243,6 +296,20 @@ export default function SubscriptionPlansPage() {
                         </div>
                     </div>
                 ))}
+            </Modal>
+
+            <Modal open={dialog?.kind === "trial"} onClose={() => !busy && setDialog(null)} className="max-w-md">
+                <div role="dialog" aria-modal="true" aria-label={`Start your ${TRIAL_DAYS}-day free trial?`}>
+                    <ModalHeader title={`Start your ${TRIAL_DAYS}-day free trial?`} onClose={() => !busy && setDialog(null)} />
+                    <p className="text-sm text-gray-800">Your free trial lasts {TRIAL_DAYS} days. There's no charge and no payment details are needed.</p>
+                    <p className="mt-2 text-sm text-gray-800">Each restaurant can have one free trial. Before it ends, the Agafari team will contact you about your plan.</p>
+                    <div className="mt-6 flex justify-end gap-2">
+                        <button type="button" className={OWNER_SECONDARY} onClick={() => setDialog(null)} disabled={busy}>Cancel</button>
+                        <button type="button" className={OWNER_PRIMARY} disabled={busy} onClick={startTrial}>
+                            {busy ? "Starting…" : "Start free trial"}
+                        </button>
+                    </div>
+                </div>
             </Modal>
 
             <Modal open={dialog?.kind === "withdraw"} onClose={() => !busy && setDialog(null)} className="max-w-md">

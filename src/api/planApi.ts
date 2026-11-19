@@ -18,7 +18,11 @@ export type OwnerPlanView = {
     prices?: OwnerPrice[];
     // AGF R5 F1 (backend SUB-R4-11): present only while a payment for this restaurant is being reviewed (no plan change until resolved)
     paymentUnderReview?: OwnerPaymentUnderReview;
+    // AGF FE-1 (backend BE-1): present only while trials are enabled; true when the owner can start the free trial now
+    trialEligible?: boolean;
 };
+// AGF FE-1: the backend's SubscriptionActivationResponse for POST /plan/trial (201 created; 200 the trial already running)
+export type OwnerTrialStart = { subscriptionId: string; planCode: string; status: string; created: boolean; withdrawnRequestId: string | null };
 // AGF R5 F1: mirrors the backend's OwnerPlanView.Price (amounts in minor units, e.g. cents)
 export type OwnerPrice = { id: string; planCode: string; interval: "MONTH" | "YEAR"; currency: "USD" | "ETB"; amountMinor: number };
 // AGF R5 F1: mirrors the backend's OwnerPlanView.PaymentUnderReview; the backend may send null for the amount, currency or payment time
@@ -37,6 +41,10 @@ const planApi = {
     activate(planCode: string, expectedConfigVersion: number, withdrawPending?: { id: string; rowVersion: number }) {
         return apiAuth.post("/plan/activations", { planCode, expectedConfigVersion,
             ...(withdrawPending ? { withdrawPendingRequestId: withdrawPending.id, withdrawPendingRequestRowVersion: withdrawPending.rowVersion } : {}) });
+    },
+    // AGF FE-1: the owner starts the restaurant's free trial (Setting 1); the restaurant and owner come from the token
+    startTrial(expectedConfigVersion: number) {
+        return apiAuth.post<OwnerTrialStart>("/plan/trial", { expectedConfigVersion });
     },
     withdraw(rowVersion: number) {
         return apiAuth.patch("/plan/requests/current", { status: "WITHDRAWN", rowVersion });

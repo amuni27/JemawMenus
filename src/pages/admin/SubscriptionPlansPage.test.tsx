@@ -12,7 +12,13 @@ const get = vi.fn();
 const request = vi.fn();
 const withdraw = vi.fn();
 const activate = vi.fn();
-vi.mock("../../api/planApi", () => ({ default: { get, request, withdraw, activate } }));
+const startTrial = vi.fn();
+vi.mock("../../api/planApi", () => ({ default: { get, request, withdraw, activate, startTrial } }));
+// AGF FE-1: the session's email verification state (the same source as the owner area's verification banner)
+type Verification = { verified: boolean; available: boolean; publishGateEnabled: boolean };
+const refresh = vi.fn();
+const auth = { value: { user: { email: "owner@cafe.test", emailVerification: { verified: true, available: true, publishGateEnabled: false } as Verification }, refresh } };
+vi.mock("../../app/context/AuthContext", () => ({ useAuth: () => auth.value }));
 
 const { default: SubscriptionPlansPage } = await import("./SubscriptionPlansPage.tsx");
 
@@ -33,7 +39,8 @@ const setting2 = (over: Record<string, unknown> = {}) => ({ data: { visible: tru
 const pending = { id: "r1", planCode: "MODEL_4", configVersion: 3, requestedAt: "2026-11-01T10:00:00Z", rowVersion: 0, outsideCurrentConfiguration: false };
 
 beforeEach(() => {
-    for (const fn of [get, request, withdraw, activate]) fn.mockReset();
+    for (const fn of [get, request, withdraw, activate, startTrial, refresh]) fn.mockReset();
+    auth.value.user.emailVerification = { verified: true, available: true, publishGateEnabled: false };
     get.mockResolvedValue(setting2());
     request.mockResolvedValue({ data: { id: "r1", status: "PENDING" } });
     withdraw.mockResolvedValue({ data: { id: "r1", status: "WITHDRAWN" } });
@@ -351,5 +358,161 @@ describe("owner Subscription & Plans page", () => {
             await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
         });
     });
-});
 
+    // AGF FE-1 (register §45 D-3, §46 Q1/Q2, §47): under Setting 1 the owner starts the free trial themselves, only while the
+    // backend says the restaurant is eligible, after an explicit confirmation; the trial terms follow the accepted policy
+    // (30 days, E4-Q2a; no charge; one per restaurant; the Agafari team follows up, E4-M5).
+    describe("Start Free Trial (FE-1)", () => {
+        const setting1 = (over: Record<string, unknown> = {}) => ({ data: { visible: true, setting: "SETTING_1", configVersion: 1, plans: [], canRequest: false,
+            trialAvailable: false, featuresUnaffected: true, trialEligible: true, ...over } });
+        const running = { startedAt: "2026-11-19T09:00:00Z", endsAt: "2026-12-19T09:00:00Z", daysLeft: 30, effectiveStatus: "TRIAL", timeZone: "Africa/Addis_Ababa" };
+        const started = { subscriptionId: "t1", planCode: "MODEL_1", status: "TRIAL", created: true, withdrawnRequestId: null };
+        const section = () => screen.findByRole("region", { name: "Subscription & Plans" });
+        const confirm = async () => {
+            fireEvent.click(within(await section()).getByRole("button", { name: "Start free trial" }));
+            return screen.getByRole("dialog", { name: "Start your 30-day free trial?" });
+        };
+
+        it("offers the trial with its terms only while the restaurant is eligible", async () => {
+            get.mockResolvedValue(setting1());
+            render(<PlansPage />);
+            const s = await section();
+            const offer = within(s).getByRole("region", { name: "Free trial" });
+            expect(offer.textContent).toContain("Try Agafari free for 30 days.");
+            expect(offer.textContent).toContain("No payment details and no charge.");
+            expect(offer.textContent).toContain("One free trial per restaurant.");
+            expect(offer.textContent).toContain("Before it ends, the Agafari team will contact you about your plan.");
+            expect(within(offer).getByRole("button", { name: "Start free trial" })).toBeTruthy();
+            expect(s.textContent).not.toContain("Trial details aren't available yet");
+            cleanup();
+
+            for (const over of [{ trialEligible: false }, { trialEligible: undefined }, { trialEligible: true, trial: running },
+                { trialEligible: true, current: { planCode: "MODEL_1", status: "ACTIVE", periodEnd: null, sourceLabel: null, outsideCurrentConfiguration: false } }]) {
+                get.mockResolvedValue(setting1(over));
+                render(<PlansPage />);
+                expect(within(await section()).queryByRole("button", { name: "Start free trial" })).toBeNull();
+                cleanup();
+            }
+        });
+
+        it("never offers the trial under Setting 2", async () => {
+            get.mockResolvedValue(setting2({ trialEligible: true }));
+            render(<PlansPage />);
+            const s = await section();
+            expect(within(s).queryByRole("button", { name: "Start free trial" })).toBeNull();
+            expect(within(s).getAllByRole("button", { name: /^Request / })).toHaveLength(2);
+        });
+
+        it("starts only after an explicit confirmation, then shows the running trial", async () => {
+            get.mockResolvedValue(setting1());
+            startTrial.mockResolvedValue({ status: 201, data: started });
+            render(<PlansPage />);
+            let dialog = await confirm();
+            expect(dialog.textContent).toContain("Your free trial lasts 30 days. There's no charge and no payment details are needed.");
+            expect(dialog.textContent).toContain("Each restaurant can have one free trial.");
+            fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+            expect(startTrial).not.toHaveBeenCalled();
+            expect(screen.queryByRole("dialog", { name: "Start your 30-day free trial?" })).toBeNull();
+
+            dialog = await confirm();
+            get.mockResolvedValue(setting1({ trialEligible: false, trialAvailable: true, trial: running }));
+            fireEvent.click(within(dialog).getByRole("button", { name: "Start free trial" }));
+            await waitFor(() => expect(startTrial).toHaveBeenCalledWith(1));
+            expect(startTrial).toHaveBeenCalledTimes(1);
+            const s = await section();
+            await waitFor(() => expect(s.textContent).toContain("Free trial: 30 days left"));
+            expect(within(s).getByRole("status").textContent).toContain("Your free trial has started.");
+            expect(within(s).queryByRole("button", { name: "Start free trial" })).toBeNull();
+            expect(screen.queryByRole("alert")).toBeNull();
+        });
+
+        it("a repeated click confirms the trial that is already running", async () => {
+            get.mockResolvedValue(setting1());
+            startTrial.mockResolvedValue({ status: 200, data: { ...started, created: false } });
+            render(<PlansPage />);
+            const dialog = await confirm();
+            get.mockResolvedValue(setting1({ trialEligible: false, trial: running }));
+            fireEvent.click(within(dialog).getByRole("button", { name: "Start free trial" }));
+            expect((await screen.findByRole("status")).textContent).toContain("Your free trial is already running.");
+            await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+        });
+
+        it("sends one request however often the confirmation is clicked", async () => {
+            get.mockResolvedValue(setting1());
+            let finish: (v: unknown) => void = () => {};
+            startTrial.mockReturnValue(new Promise((r) => { finish = r; }));
+            render(<PlansPage />);
+            const dialog = await confirm();
+            const button = within(dialog).getByRole("button", { name: "Start free trial" });
+            fireEvent.click(button);
+            await waitFor(() => expect((within(dialog).getByRole("button", { name: "Starting…" }) as HTMLButtonElement).disabled).toBe(true));
+            fireEvent.click(within(dialog).getByRole("button", { name: "Starting…" }));
+            expect(startTrial).toHaveBeenCalledTimes(1);
+            finish({ status: 201, data: started });
+            await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+        });
+
+        it("on a configuration change says so and reloads the plans", async () => {
+            get.mockResolvedValue(setting1());
+            startTrial.mockRejectedValue({ response: { status: 409, data: { code: "CONFIG_VERSION_CONFLICT", message: "The available plans changed. Reload and try again." } } });
+            render(<PlansPage />);
+            const dialog = await confirm();
+            get.mockResolvedValue(setting1({ configVersion: 2 }));
+            fireEvent.click(within(dialog).getByRole("button", { name: "Start free trial" }));
+            expect((await screen.findByRole("alert")).textContent).toContain("The available plans changed. We've updated this page; check it and try again.");
+            await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+            startTrial.mockResolvedValue({ status: 201, data: started });
+            fireEvent.click(within(await confirm()).getByRole("button", { name: "Start free trial" }));
+            await waitFor(() => expect(startTrial).toHaveBeenLastCalledWith(2)); // the reloaded version
+        });
+
+        it.each([
+            ["SUBSCRIPTION_EXISTS", 409, "Your restaurant already has a plan."],
+            ["TRIAL_ALREADY_USED", 409, "Your restaurant has already had its free trial."],
+            ["PLAN_REQUEST_PENDING", 409, "You have a pending plan request."],
+            ["TRIAL_NOT_OFFERED", 409, "A free trial isn't offered for your restaurant."],
+            ["TRIALS_DISABLED", 403, "Free trials aren't available."],
+            ["MONETIZATION_NOT_CONFIGURED", 400, "Plans aren't available yet."],
+        ])("shows the refusal %s and reloads", async (code, status, message) => {
+            get.mockResolvedValue(setting1());
+            startTrial.mockRejectedValue({ response: { status, data: { code, message } } });
+            render(<PlansPage />);
+            fireEvent.click(within(await confirm()).getByRole("button", { name: "Start free trial" }));
+            expect((await screen.findByRole("alert")).textContent).toContain(message);
+            await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+            expect(screen.queryByRole("status")).toBeNull();
+        });
+
+        it("falls back to a plain message when the server sends none", async () => {
+            get.mockResolvedValue(setting1());
+            startTrial.mockRejectedValue({ response: { status: 500, data: {} } });
+            render(<PlansPage />);
+            fireEvent.click(within(await confirm()).getByRole("button", { name: "Start free trial" }));
+            expect((await screen.findByRole("alert")).textContent).toContain("Couldn't start your free trial. Please try again.");
+        });
+
+        it("asks for a verified email instead of offering a start while verification is required (Q2)", async () => {
+            auth.value.user.emailVerification = { verified: false, available: true, publishGateEnabled: false };
+            get.mockResolvedValue(setting1());
+            render(<PlansPage />);
+            const offer = within(await section()).getByRole("region", { name: "Free trial" });
+            expect(offer.textContent).toContain("Verify your email to start your free trial. We sent a link to owner@cafe.test.");
+            expect(offer.textContent).toContain("Use Resend link at the top of the page if you need a new one.");
+            expect(within(offer).queryByRole("button", { name: "Start free trial" })).toBeNull();
+            cleanup();
+
+            auth.value.user.emailVerification = { verified: false, available: false, publishGateEnabled: false }; // no email provider yet
+            render(<PlansPage />);
+            expect(within(await section()).getByRole("button", { name: "Start free trial" })).toBeTruthy();
+        });
+
+        it("when the server still asks for verification, explains it and refreshes the session", async () => {
+            get.mockResolvedValue(setting1());
+            startTrial.mockRejectedValue({ response: { status: 403, data: { code: "EMAIL_NOT_VERIFIED", message: "Verify your email to start your free trial." } } });
+            render(<PlansPage />);
+            fireEvent.click(within(await confirm()).getByRole("button", { name: "Start free trial" }));
+            expect((await screen.findByRole("alert")).textContent).toContain("Verify your email to start your free trial.");
+            await waitFor(() => expect(refresh).toHaveBeenCalled());
+        });
+    });
+});

@@ -35,6 +35,20 @@ export const CHANGE_NOTE = "To change your plan, contact the Agafari team.";
 
 // AGF E4-M5: in-app trial notices (emails wait for D5)
 export const TRIAL_NOTICE_DAYS = 7;
+
+// AGF FE-1: the owner-started free trial. Terms from the accepted trial policy only: 30 days (E4-Q2a), no charge and no
+// payment details, one trial per restaurant (D-M5-2), the Agafari team follows up (E4-M5). Owner-facing refusal wording
+// by the backend's BE-1 codes; a code not listed here shows the server's own message.
+export const TRIAL_DAYS = 30;
+export const TRIAL_TERMS = [
+    `Try Agafari free for ${TRIAL_DAYS} days.`,
+    "No payment details and no charge.",
+    "One free trial per restaurant.",
+    "Before it ends, the Agafari team will contact you about your plan.",
+];
+export const TRIAL_REFUSALS: Record<string, string> = {
+    CONFIG_VERSION_CONFLICT: "The available plans changed. We've updated this page; check it and try again.",
+};
 export const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
 
 export const statusLabel = (status: string) => status.charAt(0) + status.slice(1).toLowerCase();

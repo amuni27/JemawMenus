@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
-import type { OwnerPaymentUnderReview, OwnerPlanView, OwnerPrice } from "./planApi.ts";
+import type { OwnerPaymentUnderReview, OwnerPlanView, OwnerPrice, OwnerTrialStart } from "./planApi.ts";
 
 // AGF E4-M4: the owner's plan API goes through the owner client (owner token); the restaurant comes from the token.
 
@@ -52,5 +52,19 @@ describe("owner plan API", () => {
         expectTypeOf<OwnerPlanView["paymentUnderReview"]>().toEqualTypeOf<OwnerPaymentUnderReview | undefined>();
         expectTypeOf<OwnerPrice>().toEqualTypeOf<{ id: string; planCode: string; interval: "MONTH" | "YEAR"; currency: "USD" | "ETB"; amountMinor: number }>();
         expectTypeOf<OwnerPaymentUnderReview>().toEqualTypeOf<{ amountMinor: number | null; currency: string | null; paidAt: string | null; reference: string; since: string }>();
+    });
+
+    // AGF FE-1 (backend BE-1): the owner starts the restaurant's free trial; only the configuration version is sent (the
+    // restaurant and owner come from the token). The response is the backend's SubscriptionActivationResponse.
+    it("starts the free trial with the configuration version the owner saw", async () => {
+        post.mockResolvedValueOnce({ status: 201, data: { subscriptionId: "t1", planCode: "MODEL_1", status: "TRIAL", created: true, withdrawnRequestId: null } });
+        const res = await planApi.startTrial(1);
+        expect(post).toHaveBeenLastCalledWith("/plan/trial", { expectedConfigVersion: 1 });
+        expect(res.data.created).toBe(true);
+    });
+
+    it("types trialEligible and the trial start response as the backend sends them", () => {
+        expectTypeOf<OwnerPlanView["trialEligible"]>().toEqualTypeOf<boolean | undefined>();
+        expectTypeOf<OwnerTrialStart>().toEqualTypeOf<{ subscriptionId: string; planCode: string; status: string; created: boolean; withdrawnRequestId: string | null }>();
     });
 });
