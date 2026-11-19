@@ -14,7 +14,15 @@ export type OwnerPlanView = {
     trial?: OwnerTrial; endedPlan?: OwnerEndedPlan;
     // AGF Self-Service Phase A: present only while self-service is on
     selfService?: { available: boolean; verificationRequired: boolean };
+    // AGF R5 F1 (backend SUB-R3-02): present only while prices are visible in the restaurant's market; `id` is what a checkout names
+    prices?: OwnerPrice[];
+    // AGF R5 F1 (backend SUB-R4-11): present only while a payment for this restaurant is being reviewed (no plan change until resolved)
+    paymentUnderReview?: OwnerPaymentUnderReview;
 };
+// AGF R5 F1: mirrors the backend's OwnerPlanView.Price (amounts in minor units, e.g. cents)
+export type OwnerPrice = { id: string; planCode: string; interval: "MONTH" | "YEAR"; currency: "USD" | "ETB"; amountMinor: number };
+// AGF R5 F1: mirrors the backend's OwnerPlanView.PaymentUnderReview; the backend may send null for the amount, currency or payment time
+export type OwnerPaymentUnderReview = { amountMinor: number | null; currency: string | null; paidAt: string | null; reference: string; since: string };
 // AGF E4-M5: the restaurant's trial in its effective state (ended as soon as its end date has passed)
 export type OwnerTrial = { startedAt: string; endsAt: string; daysLeft: number; effectiveStatus: "TRIAL" | "EXPIRED"; timeZone?: string };
 

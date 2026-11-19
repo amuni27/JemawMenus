@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import type { OwnerPaymentUnderReview, OwnerPlanView, OwnerPrice } from "./planApi.ts";
 
 // AGF E4-M4: the owner's plan API goes through the owner client (owner token); the restaurant comes from the token.
 
@@ -18,5 +19,38 @@ describe("owner plan API", () => {
         expect(get).toHaveBeenCalledWith("/plan");
         expect(post).toHaveBeenCalledWith("/plan/requests", { planCode: "MODEL_4", expectedConfigVersion: 3 });
         expect(patch).toHaveBeenCalledWith("/plan/requests/current", { status: "WITHDRAWN", rowVersion: 2 });
+    });
+
+    // AGF R5 F1: the plan view's optional price and payment-review fields, exactly as the backend's OwnerPlanView sends them
+    // (`prices` only while prices are visible in the restaurant's market; `paymentUnderReview` only while a payment is reviewed).
+    it("passes prices and a payment under review through unchanged", async () => {
+        const view: OwnerPlanView = {
+            visible: true, setting: "SETTING_2", configVersion: 4,
+            plans: [{ code: "MODEL_4", model: "MODEL_4", adSource: "NONE", paid: true }],
+            prices: [{ id: "8e1f6a40-0000-4000-8000-000000000001", planCode: "MODEL_4", interval: "MONTH", currency: "USD", amountMinor: 2500 }],
+            paymentUnderReview: { amountMinor: 2500, currency: "USD", paidAt: "2026-11-11T11:57:47Z", reference: "exc-1", since: "2026-11-11T11:58:00Z" },
+        };
+        get.mockResolvedValueOnce({ data: view });
+        const res = await planApi.get();
+        expect(res.data).toEqual(view);
+        expect(res.data.prices?.[0].amountMinor).toBe(2500);
+        expect(res.data.paymentUnderReview?.reference).toBe("exc-1");
+    });
+
+    it("keeps the fields optional and the review values nullable, as the backend omits or nulls them", async () => {
+        const hidden: OwnerPlanView = { visible: false };
+        get.mockResolvedValueOnce({ data: hidden });
+        const res = await planApi.get();
+        expect(res.data.prices).toBeUndefined();
+        expect(res.data.paymentUnderReview).toBeUndefined();
+        const unknownAmount: OwnerPaymentUnderReview = { amountMinor: null, currency: null, paidAt: null, reference: "exc-2", since: "2026-11-11T12:00:00Z" };
+        expect(unknownAmount.amountMinor).toBeNull();
+    });
+
+    it("types match the backend DTO (OwnerPlanView.Price, OwnerPlanView.PaymentUnderReview)", () => {
+        expectTypeOf<OwnerPlanView["prices"]>().toEqualTypeOf<OwnerPrice[] | undefined>();
+        expectTypeOf<OwnerPlanView["paymentUnderReview"]>().toEqualTypeOf<OwnerPaymentUnderReview | undefined>();
+        expectTypeOf<OwnerPrice>().toEqualTypeOf<{ id: string; planCode: string; interval: "MONTH" | "YEAR"; currency: "USD" | "ETB"; amountMinor: number }>();
+        expectTypeOf<OwnerPaymentUnderReview>().toEqualTypeOf<{ amountMinor: number | null; currency: string | null; paidAt: string | null; reference: string; since: string }>();
     });
 });
