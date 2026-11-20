@@ -143,7 +143,7 @@ export default function Dashboard() {
                     <section aria-labelledby="dash-actions" className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                         <h3 id="dash-actions" className="text-sm font-semibold text-gray-700">Quick actions</h3>
                         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                            <Link to={`/${tenantSlug}/admin/menus/new`} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark">
+                            <Link to={`/${tenantSlug}/admin/menus/new`} className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700">
                                 <Plus aria-hidden="true" className="h-4 w-4" /> Create menu
                             </Link>
                             <Link to={`/${tenantSlug}/admin/qrcode`} className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">

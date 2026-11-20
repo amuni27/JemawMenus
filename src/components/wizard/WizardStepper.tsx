@@ -24,7 +24,7 @@ export default function WizardStepper({ steps, current, completed, onStepClick }
               className={clsx(
                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2",
                 {
-                  "bg-brand text-white border-brand": state === "active",
+                  "bg-brand-dark text-white border-brand-dark": state === "active", // AGF D-8
                   "bg-green-500 text-white border-green-500": state === "done",
                   "bg-gray-200 text-gray-600 border-gray-200": state === "pending",
                 }

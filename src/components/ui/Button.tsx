@@ -21,7 +21,7 @@ export default function Button({
     'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2';
   const variants: Record<Variant, string> = {
     primary:
-      'bg-brand text-white hover:bg-brand-dark focus:ring-brand/50 disabled:bg-brand/40',
+      'bg-brand-dark text-white hover:bg-rose-700 focus:ring-brand/50 disabled:bg-brand/40', // AGF D-8: 4.70:1 / 6.29:1 (WCAG AA)
     secondary:
       'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-400 disabled:bg-gray-50',
     danger:

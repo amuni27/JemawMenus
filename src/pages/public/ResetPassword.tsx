@@ -72,7 +72,7 @@ export default function ResetPassword() {
             <p role="status" className="rounded bg-emerald-50 p-3 text-sm text-emerald-800">
               Your password has been changed. Sign in with your new password.
             </p>
-            <Link to="/auth/login" className="block w-full rounded-md bg-brand px-4 py-2 text-center text-sm font-medium text-white hover:bg-brand-dark">
+            <Link to="/auth/login" className="block w-full rounded-md bg-brand-dark px-4 py-2 text-center text-sm font-medium text-white hover:bg-rose-700">
               Sign in
             </Link>
           </div>
@@ -82,7 +82,7 @@ export default function ResetPassword() {
           <div className="space-y-4">
             <p className="rounded bg-amber-50 p-3 text-sm text-amber-800">This reset link is invalid or has expired.</p>
             <p className="text-sm text-gray-600">Links work once and expire after 30 minutes.</p>
-            <Link to="/auth/forgot-password" className="block w-full rounded-md bg-brand px-4 py-2 text-center text-sm font-medium text-white hover:bg-brand-dark">
+            <Link to="/auth/forgot-password" className="block w-full rounded-md bg-brand-dark px-4 py-2 text-center text-sm font-medium text-white hover:bg-rose-700">
               Request a new link
             </Link>
           </div>
