@@ -50,7 +50,7 @@ export default defineConfig({
         { name: "setup", testMatch: /auth\.setup\.e2e\.ts$/ },
         {
             name: "smoke",
-            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service|onboarding)\.e2e\.ts$/],
+            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service|onboarding|publishing-gate-signoff)\.e2e\.ts$/],
             dependencies: ["setup"],
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined },
         },
@@ -61,7 +61,7 @@ export default defineConfig({
         },
         {
             name: "onboarding",
-            testMatch: /(^|\/)onboarding\.e2e\.ts$/, // J28 (AGF FE-2)
+            testMatch: /(^|\/)(onboarding|publishing-gate-signoff)\.e2e\.ts$/, // J28 (AGF FE-2), then J29 (AGF FE-4)
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: ONBOARDING_FRONTEND },
         },
     ],

@@ -73,6 +73,22 @@ export type PlanRequest = { id: string; businessId: string; businessName?: strin
 export type PlanRequestPage = { items: PlanRequest[]; page: number; size: number; total: number };
 export type SubscriptionRecord = { planCode: MonetizationModel; periodEnd?: string; expectedConfigVersion: number };
 
+// AGF FE-4 (backend BE-6): the read-only publishing-gate dry run per market and its sign-off (register §56–§58)
+export type PublishGateMarket = 'ET' | 'US';
+export type PublishGateSection = 'EXEMPT' | 'ALLOWED' | 'BLOCKED' | 'PUBLISHED_WITHOUT_PLAN' | 'REVIEW' | 'NOT_GATED';
+export type PublishGateCounts = { exempt: number; allowed: number; blocked: number; errors: number; total: number;
+  publishedWithoutPlan: number; review: number; notGated: number };
+export type PublishGateSignOff = { signedAt?: string; by?: string; cutOver?: string; fingerprint?: string; valid: boolean };
+export type PublishGateSummary = { market: PublishGateMarket; generatedAt: string; cutOver?: string;
+  config?: { version: number; setting: MonetizationSetting; models: MonetizationModel[] };
+  ownerPlansVisible: boolean; trialsEnabled: boolean; selfServiceEnabled: boolean; periodEndEnabled: boolean; gateEnabled: boolean;
+  billingEnabled: boolean; blockers: string[]; counts: PublishGateCounts; fingerprint: string; latestSignOff?: PublishGateSignOff };
+export type PublishGateRow = { businessId?: string; name?: string; country?: string; createdAt?: string; ownerStatus?: string;
+  emailVerified?: boolean; publishedMenus?: number; plan?: string; reason?: string; pendingRequest?: boolean; openCheckout?: boolean;
+  paymentUnderReview?: boolean; flags?: string[]; menuId?: string; menuName?: string; restaurantSection?: string };
+export type PublishGatePage = { section: PublishGateSection; items: PublishGateRow[]; page: number; size: number; total: number };
+export type PublishGateSignOffResult = { market: PublishGateMarket; signedAt: string; cutOver: string; fingerprint: string };
+
 export const adminClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'https://jemaw-menu-backend-spring.onrender.com'}/api`,
 });
@@ -98,6 +114,13 @@ export const adminApi = {
   login: (email: string, password: string) =>
     adminClient.post<{ token: string; admin: AdminSummary }>('/admin/auth/login', { email, password }),
   me: () => adminClient.get<AdminSummary>('/admin/me'),
+  // AGF FE-4 (BE-6): read only, except the sign-off; nothing here turns the gate on
+  publishGateSummary: (market: PublishGateMarket) => adminClient.get<PublishGateSummary>('/admin/publish-gate/dry-run', { params: { market } }),
+  publishGateSection: (market: PublishGateMarket, section: PublishGateSection, page: number, size: number) =>
+    adminClient.get<PublishGatePage>(`/admin/publish-gate/dry-run/sections/${section}`, { params: { market, page, size } }),
+  publishGateCsv: (market: PublishGateMarket) => adminClient.get<Blob>('/admin/publish-gate/dry-run.csv', { params: { market }, responseType: 'blob' }),
+  signOffPublishGate: (market: PublishGateMarket, fingerprint: string) =>
+    adminClient.post<PublishGateSignOffResult>('/admin/publish-gate/dry-run/sign-off', { market, fingerprint }),
   auditEvents: (page: number, size: number) => adminClient.get<AdminAuditPage>('/admin/audit-events', { params: { page, size } }),
   monetizationConfig: () => adminClient.get<MonetizationConfig>('/admin/monetization-config'),
   saveMonetizationConfig: (change: MonetizationConfigChange) => adminClient.put<MonetizationConfig>('/admin/monetization-config', change),

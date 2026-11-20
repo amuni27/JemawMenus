@@ -53,6 +53,7 @@ export default function SuperAdminLayout() {
           <NavLink to="/super-admin/plan-requests" className={link}>Plan requests</NavLink>
           <NavLink to="/super-admin/ads" className={link}>Ads</NavLink>
           <NavLink to="/super-admin/restaurant-ads" className={link}>Restaurant ads</NavLink>
+          <NavLink to="/super-admin/publishing-gate" className={link}>Publishing gate</NavLink>
           <NavLink to="/super-admin/audit" className={link}>Audit log</NavLink>
         </nav>
         <main className="min-w-0 flex-1"><Outlet context={admin} /></main>

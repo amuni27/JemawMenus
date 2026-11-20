@@ -32,6 +32,7 @@ import SubscriptionPlansPage from "../pages/admin/SubscriptionPlansPage.tsx";
 import SuperAdminMonetization from "../pages/superadmin/SuperAdminMonetization.tsx";
 import SuperAdminSubscriptions from "../pages/superadmin/SuperAdminSubscriptions.tsx";
 import SuperAdminPlanRequests from "../pages/superadmin/SuperAdminPlanRequests.tsx";
+import SuperAdminPublishingGate from "../pages/superadmin/SuperAdminPublishingGate.tsx"; // AGF FE-4
 
 // The app's route table, in its own module so route tests can use it (AGF-S2-29)
 export const routes: RouteObject[] = [
@@ -83,6 +84,7 @@ export const routes: RouteObject[] = [
                     {path: 'plan-requests', element: <SuperAdminPlanRequests/>},
                     {path: 'ads', element: <SuperAdminAds/>},
                     {path: 'restaurant-ads', element: <SuperAdminRestaurantAds/>}, // AGF E4-M8
+                    {path: 'publishing-gate', element: <SuperAdminPublishingGate/>}, // AGF FE-4: dry run and sign-off (read only)
                     {path: 'audit', element: <SuperAdminAuditLog/>},
                 ],
             },
