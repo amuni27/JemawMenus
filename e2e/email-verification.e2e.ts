@@ -1,3 +1,4 @@
+import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
@@ -41,6 +42,11 @@ test.describe("J17 email verification", () => {
         await page.goto(`/${businessId}/admin/menus/${menu.id}`);
         await page.getByRole("button", { name: "Publish" }).click();
         await expect(page.getByRole("alert")).toHaveText("Verify your email to publish menus.");
+        // AGF register §56 D-6: the FE-3 verification notice is accessible (WCAG 2.0/2.1 A and AA, serious and critical)
+        const notice = page.getByRole("region", { name: "Publishing refused" });
+        await expect(notice.getByRole("button", { name: "Resend verification email" })).toBeVisible();
+        const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).include('[aria-label="Publishing refused"]').analyze();
+        expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
 
         // The link from the demo outbox verifies the email
         const outbox = await request.get(`${BACKEND}/api/demo/email-verification-outbox`, { params: { email } });

@@ -26,6 +26,9 @@ const ADS_FRONTEND = "http://127.0.0.1:5177";
 // the past (every restaurant there is new), so J1–J27 keep it unset and prove that existing navigation is unchanged.
 const ONBOARDING_BACKEND_PORT = 8083;
 const ONBOARDING_FRONTEND = "http://127.0.0.1:5178";
+// AGF gate-local (register §56 D-6): opt-in only. With E2E_GATE_BASE_URL set, only the gate-local project runs, against an
+// already-running local disposable-PostgreSQL environment with the ET publishing gate on; no servers are started here.
+const GATE_LOCAL = process.env.E2E_GATE_BASE_URL;
 const backendDir = resolve(process.env.E2E_BACKEND_DIR ?? "../jemaw-menu-backend-spring");
 const CI = !!process.env.CI;
 
@@ -46,11 +49,17 @@ export default defineConfig({
         video: "off",
         screenshot: "only-on-failure",
     },
-    projects: [
+    projects: GATE_LOCAL ? [
+        {
+            name: "gate-local",
+            testMatch: /(^|\/)gate-local\.e2e\.ts$/,
+            use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: GATE_LOCAL },
+        },
+    ] : [
         { name: "setup", testMatch: /auth\.setup\.e2e\.ts$/ },
         {
             name: "smoke",
-            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service|onboarding|publishing-gate-signoff)\.e2e\.ts$/],
+            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service|onboarding|publishing-gate-signoff|gate-local)\.e2e\.ts$/],
             dependencies: ["setup"],
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined },
         },
@@ -65,7 +74,7 @@ export default defineConfig({
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: ONBOARDING_FRONTEND },
         },
     ],
-    webServer: [
+    webServer: GATE_LOCAL ? [] : [
         {
             name: "backend (demo profile)",
             cwd: backendDir,
