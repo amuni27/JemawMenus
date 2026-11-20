@@ -22,6 +22,10 @@ const FRONTEND = "http://127.0.0.1:5176";
 // Local in-memory demo only.
 const ADS_BACKEND_PORT = 8082;
 const ADS_FRONTEND = "http://127.0.0.1:5177";
+// AGF FE-2 J28: plan selection after sign-in runs against its own demo backend and frontend with the BE-5a cut-over set in
+// the past (every restaurant there is new), so J1–J27 keep it unset and prove that existing navigation is unchanged.
+const ONBOARDING_BACKEND_PORT = 8083;
+const ONBOARDING_FRONTEND = "http://127.0.0.1:5178";
 const backendDir = resolve(process.env.E2E_BACKEND_DIR ?? "../jemaw-menu-backend-spring");
 const CI = !!process.env.CI;
 
@@ -46,7 +50,7 @@ export default defineConfig({
         { name: "setup", testMatch: /auth\.setup\.e2e\.ts$/ },
         {
             name: "smoke",
-            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service)\.e2e\.ts$/],
+            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service|onboarding)\.e2e\.ts$/],
             dependencies: ["setup"],
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined },
         },
@@ -54,6 +58,11 @@ export default defineConfig({
             name: "ads",
             testMatch: /(^|\/)((restaurant-)?ads|self-service)\.e2e\.ts$/, // J24, J25, then J26
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: ADS_FRONTEND },
+        },
+        {
+            name: "onboarding",
+            testMatch: /(^|\/)onboarding\.e2e\.ts$/, // J28 (AGF FE-2)
+            use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: ONBOARDING_FRONTEND },
         },
     ],
     webServer: [
@@ -138,6 +147,46 @@ export default defineConfig({
                 VITE_API_BASE_URL: ADS_FRONTEND,
                 VITE_PUBLIC_MENU_BASE_URL: ADS_FRONTEND,
                 E2E_BACKEND_URL: `http://127.0.0.1:${ADS_BACKEND_PORT}`,
+            },
+        },
+        {
+            // AGF FE-2 J28: started once the J24 backend answers, so no two Maven runs compile at once
+            name: "backend for J28 (demo profile, plan selection)",
+            cwd: backendDir,
+            command: `until curl -sf -o /dev/null http://127.0.0.1:${ADS_BACKEND_PORT}/venue/00000000-0000-4000-8000-0000000000b1/menu; do sleep 2; done; mkdir -p target/e2e-run-onboarding && sh ./mvnw -q -B -Pdemo spring-boot:run -Dspring-boot.run.profiles=demo "-Dspring-boot.run.arguments=--server.port=${ONBOARDING_BACKEND_PORT}" -Dspring-boot.run.workingDirectory=target/e2e-run-onboarding`,
+            url: `http://127.0.0.1:${ONBOARDING_BACKEND_PORT}/venue/00000000-0000-4000-8000-0000000000b1/menu`,
+            timeout: 500_000,
+            reuseExistingServer: !CI,
+            stdout: "ignore",
+            stderr: "pipe",
+            env: {
+                APP_JWT_SECRET: process.env.E2E_JWT_SECRET,
+                APP_PASSWORD_RESET_SECRET: process.env.E2E_RESET_SECRET,
+                APP_EMAIL_VERIFICATION_SECRET: process.env.E2E_VERIFY_SECRET,
+                APP_EMAIL_VERIFICATION_LINK_BASE_URL: `${ONBOARDING_FRONTEND}/auth/verify-email`,
+                APP_ADMIN_BOOTSTRAP_EMAIL: process.env.E2E_ADMIN_EMAIL,
+                APP_ADMIN_BOOTSTRAP_PASSWORD: process.env.E2E_ADMIN_PASSWORD,
+                APP_MONETIZATION_OWNER_PLANS_VISIBLE: "true",
+                APP_MONETIZATION_TRIALS_ENABLED: "true",
+                APP_MONETIZATION_SELF_SERVICE_ENABLED: "true",
+                // AGF BE-5a: the cut-over, in the past here so every restaurant in this demo is new; empty (unset) everywhere else
+                APP_MONETIZATION_PLAN_SELECTION_REQUIRED_FROM: "2020-01-01T00:00:00Z",
+                DEMO_OWNER_PASSWORD: process.env.E2E_OWNER_PASSWORD,
+                APP_PUBLIC_MENU_BASE_URL: ONBOARDING_FRONTEND,
+            },
+        },
+        {
+            name: "frontend for J28 (production build)",
+            command: "npx vite build --mode e2e --outDir dist-e2e-onboarding && npx vite preview --mode e2e --outDir dist-e2e-onboarding --host 127.0.0.1 --port 5178 --strictPort",
+            url: ONBOARDING_FRONTEND,
+            timeout: 180_000,
+            reuseExistingServer: !CI,
+            stdout: "ignore",
+            stderr: "pipe",
+            env: {
+                VITE_API_BASE_URL: ONBOARDING_FRONTEND,
+                VITE_PUBLIC_MENU_BASE_URL: ONBOARDING_FRONTEND,
+                E2E_BACKEND_URL: `http://127.0.0.1:${ONBOARDING_BACKEND_PORT}`,
             },
         },
     ],

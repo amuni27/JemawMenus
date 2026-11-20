@@ -7,6 +7,8 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
 const login = vi.fn();
 vi.mock("../../app/context/AuthContext", () => ({ useAuth: () => ({ login, loading: false }) }));
+// AGF FE-2: sign-in without a return page reads the plan view; no network in tests (plans hidden: Menus, as before)
+vi.mock("../../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 
 const { default: Login } = await import("./Login.tsx");
 

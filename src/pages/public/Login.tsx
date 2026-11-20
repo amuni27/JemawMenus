@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../app/context/AuthContext';
 import { safeNextPath } from '../../services/session';
+import { landingAfterSignIn } from '../../services/planSelection';
 
 // Why the owner was sent here (AGF-S1-11)
 const REASON_MESSAGES: Record<string, string> = {
@@ -20,6 +21,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
+  const [routing, setRouting] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +30,17 @@ export default function Login() {
       const businessId = session.business?.id;
       // Return to the page the owner was on, if it is one of their own admin pages
       const next = safeNextPath(params.get('next'), businessId);
-      if (businessId) nav(next ?? `/${businessId}/admin/menus`, { replace: true });
-      else nav('/');
+      if (!businessId) {
+        nav('/');
+        return;
+      }
+      if (next) {
+        nav(next, { replace: true });
+        return;
+      }
+      // AGF FE-2: a new restaurant that must still choose lands on Subscription & Plans (backend signal; never blocks sign-in)
+      setRouting(true);
+      nav(await landingAfterSignIn(businessId), { replace: true });
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Sign in failed. Please try again.";
       setError(msg);
@@ -63,8 +74,8 @@ export default function Login() {
         <p className="-mt-3 text-right text-sm">
           <Link className="text-rose-500 hover:underline" to="/auth/forgot-password">Forgot password?</Link>
         </p>
-        <Button type="submit" variant="primary" isLoading={loading} className="w-full">
-          {loading ? 'Signing in…' : 'Sign in'}
+        <Button type="submit" variant="primary" isLoading={loading || routing} className="w-full">
+          {loading || routing ? 'Signing in…' : 'Sign in'}
         </Button>
         <p className="text-center text-sm">
           Don’t have an account?{' '}

@@ -20,6 +20,15 @@ const ADS_ITEM = {label: "Ads", path: "admin/ads", exact: false};
 // ONB Phase 1: shown only while the owner plan view is visible (owner-plans-visible)
 const PLANS_ITEM = {label: "Subscription & Plans", path: "admin/plans", exact: false};
 
+// AGF FE-2: the plan reminder can be dismissed for the browser session (storage may be unavailable: then it just shows)
+const REMINDER_KEY = "agafari.planReminderDismissed";
+function readReminderDismissed(businessId?: string): boolean {
+    try { return Boolean(businessId) && sessionStorage.getItem(REMINDER_KEY) === businessId; } catch { return false; }
+}
+function writeReminderDismissed(businessId?: string) {
+    try { if (businessId) sessionStorage.setItem(REMINDER_KEY, businessId); } catch { /* not remembered */ }
+}
+
 export default function AdminLayout() {
     const auth = useAuth();
     const nav = useNavigate();
@@ -29,6 +38,8 @@ export default function AdminLayout() {
     const [accountOpen, setAccountOpen] = useState(false);
     const [showAds, setShowAds] = useState(false);
     const [showPlans, setShowPlans] = useState(false);
+    const [selectionRequired, setSelectionRequired] = useState(false);
+    const [reminderDismissed, setReminderDismissed] = useState(() => readReminderDismissed(auth.business?.id));
     const accountRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -36,9 +47,27 @@ export default function AdminLayout() {
         restaurantAdsApi.list().then(
             (res) => alive && setShowAds(res.data.canManage || res.data.nonArchivedCount > 0),
             () => alive && setShowAds(false)); // any failure: the navigation stays as before
-        planApi.get().then((res) => alive && setShowPlans(Boolean(res.data.visible)), () => alive && setShowPlans(false));
         return () => { alive = false; };
     }, []);
+
+    // ONB Phase 1 + AGF FE-2: the plan view decides "Subscription & Plans" and the plan reminder. Read once; read again on
+    // each page only while a choice is required, so the reminder goes away once the owner has chosen.
+    const planChecked = useRef(false);
+    const planRequired = useRef(false);
+    useEffect(() => {
+        if (planChecked.current && !planRequired.current) return;
+        let alive = true;
+        const settle = (visible: boolean, required: boolean) => {
+            if (!alive) return;
+            planChecked.current = true;
+            planRequired.current = required;
+            setShowPlans(visible);
+            setSelectionRequired(required);
+        };
+        planApi.get().then((res) => settle(Boolean(res.data.visible), res.data.visible === true && res.data.selectionRequired === true),
+            () => settle(false, false)); // any failure: the navigation stays as before
+        return () => { alive = false; };
+    }, [pathname]);
 
     useEffect(() => {
         const onClickOutside = (e: MouseEvent) => {
@@ -187,6 +216,19 @@ export default function AdminLayout() {
                 <div className="max-w-6xl mx-auto px-4 py-6">
                     <EmailVerificationBanner/>{/* AGF-S2-22 */}
                     {/* AGF-S2-33 (D-NF-3): another business's admin URL shows not-found, not the owner's data under it */}
+                    {selectionRequired && !reminderDismissed && !pathname.includes("/admin/plans") && tenantSlug === auth.business?.id && (
+                        <div role="status" aria-label="Plan reminder"
+                             className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                            <p>
+                                Choose how your restaurant starts on Agafari.{" "}
+                                <Link to={`/${tenantSlug}/admin/plans`} className="font-semibold underline">Go to Subscription &amp; Plans</Link>
+                            </p>
+                            <button type="button" aria-label="Dismiss plan reminder" className="text-amber-900 hover:text-amber-950"
+                                    onClick={() => { writeReminderDismissed(auth.business?.id); setReminderDismissed(true); }}>
+                                ×
+                            </button>
+                        </div>
+                    )}{/* AGF FE-2 */}
                     {auth.business?.id && tenantSlug !== auth.business.id ? <NotFound context="owner"/> : <Outlet/>}
                 </div>
             </main>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "../../app/context/AuthContext";
 import planApi, { type OwnerGrandfathering, type OwnerPlanView } from "../../api/planApi";
 import Modal from "../../components/ui/Modal";
@@ -94,6 +94,16 @@ export default function SubscriptionPlansPage() {
                 <h2 id="plans-heading" className="text-2xl font-bold text-gray-900">Subscription &amp; Plans</h2>
                 <p className="mt-1 text-sm text-gray-700">{setting2 ? "Compare the plans available for your restaurant." : "Your restaurant's plan."}</p>
             </div>
+            {/* AGF FE-2 (§49 Q8 skippable): first-time banner while the backend says this new restaurant must still choose */}
+            {view.selectionRequired === true && (
+                <section aria-labelledby="plan-welcome" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-950 sm:p-6">
+                    <h3 id="plan-welcome" className="text-base font-semibold">{"Choose how you'd like to start"}</h3>
+                    <p className="mt-1">Choose a plan for your restaurant on this page. You can prepare your menus meanwhile.</p>
+                    <Link to={`/${tenantSlug}/admin/menus`} className="mt-3 inline-block font-semibold text-rose-700 underline hover:text-rose-800">
+                        Continue to my menus
+                    </Link>
+                </section>
+            )}
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
 

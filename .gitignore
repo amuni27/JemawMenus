@@ -34,3 +34,4 @@ dist-ssr
 /e2e/.auth/
 /dist-e2e/
 /dist-e2e-ads/
+/dist-e2e-onboarding/

@@ -20,6 +20,8 @@ export type OwnerPlanView = {
     paymentUnderReview?: OwnerPaymentUnderReview;
     // AGF FE-1 (backend BE-1): present only while trials are enabled; true when the owner can start the free trial now
     trialEligible?: boolean;
+    // AGF FE-2 (backend BE-5a): present only while the cut-over is configured; true when this new restaurant must still choose how to start
+    selectionRequired?: boolean;
 };
 // AGF FE-1: the backend's SubscriptionActivationResponse for POST /plan/trial (201 created; 200 the trial already running)
 export type OwnerTrialStart = { subscriptionId: string; planCode: string; status: string; created: boolean; withdrawnRequestId: string | null };
