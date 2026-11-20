@@ -7,6 +7,10 @@ import Button from "../../components/ui/Button";
 import {MenuDto, MenuType} from "../../types/menu";
 import menuApi from "../../api/menuApi";
 import { errorMessage } from "../../utils/errorMessage";
+import { useParams } from "react-router-dom";
+import { usePublishPermission } from "../../hooks/usePublishPermission";
+import PublishRefusalNotice from "../../components/menu/PublishRefusalNotice";
+import { publishRefusal, type PublishRefusal } from "../../utils/publishRefusal";
 
 interface Props {
   initial?: Partial<MenuDto>;
@@ -28,6 +32,10 @@ export default function MenuWizard({ initial, onSave }: Props) {
   }));
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // AGF FE-3: a refused publish keeps the form as typed and offers to save it without publishing (F-2)
+  const { tenantSlug } = useParams();
+  const { publishAllowed, plansVisible } = usePublishPermission();
+  const [refusal, setRefusal] = useState<{ kind: PublishRefusal; message?: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const serverErrors = useFieldErrors(); // AGF-S2-11
@@ -69,19 +77,31 @@ export default function MenuWizard({ initial, onSave }: Props) {
   };
 
   // Wait for the save; on failure show the API error and stay on the form
-  const saveMenu = async () => {
+  const saveMenu = async (withoutPublishing = false) => {
     if (!validate()) return;
     setSaving(true);
     setSaveError("");
+    setRefusal(null);
     try {
       // AGF-S2-23: the Amharic name is sent when filled (new menu) or changed (edit; "" clears)
       const nameAm = (data.nameAm ?? "").trim();
       const payload: MenuDto = { ...data, nameAm };
       if (nameAm === (initial?.nameAm ?? "").trim()) delete payload.nameAm;
+      if (withoutPublishing) {
+        // AGF FE-3 (F-2): create saves an unpublished draft; edit keeps the menu's original published state and visibility
+        payload.isActive = isEdit ? initial?.isActive : false;
+        if (isEdit) payload.visibility = initial?.visibility;
+      }
       if (payload.visibility === undefined) delete payload.visibility;
       if (payload.isActive === undefined) delete payload.isActive;
       await onSave(payload);
     } catch (err) {
+      const kind = publishRefusal(err);
+      if (kind) {
+        setRefusal({ kind, message: (err as { response?: { data?: { message?: string } } }).response?.data?.message });
+        setSaving(false);
+        return;
+      }
       // Field errors appear under their fields; otherwise the server message is shown (AGF-S2-11)
       setSaveError(serverErrors.apply(err, {
         name: data.name, menuTypeId: data.menuTypeId, description: data.description ?? "", nameAm: (data.nameAm ?? "").trim(),
@@ -104,6 +124,15 @@ export default function MenuWizard({ initial, onSave }: Props) {
 
         {saveError && (
             <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{saveError}</p>
+        )}
+        {refusal && (
+            <div className="mb-4">
+              <PublishRefusalNotice kind={refusal.kind} message={refusal.message} businessId={tenantSlug} plansVisible={plansVisible}>
+                <Button variant="secondary" className="mt-3" onClick={() => saveMenu(true)} disabled={saving}>
+                  {isEdit ? "Save my changes without publishing" : "Save as draft instead"}
+                </Button>
+              </PublishRefusalNotice>
+            </div>
         )}
 
         <div className="space-y-4">
@@ -183,11 +212,15 @@ export default function MenuWizard({ initial, onSave }: Props) {
                       : "Live: guests can see this menu."
                   : "Guests can't see this menu until you publish it."}
             </p>
+            {/* AGF FE-3 (F-1): a hint only; the checkbox stays enabled and the server decides */}
+            {publishAllowed === false && (
+                <p className="mt-1 text-xs text-amber-900">Publishing needs a plan; you can save this menu as a draft.</p>
+            )}
           </div>
         </div>
 
         <div className="mt-8 flex justify-between">
-          <Button onClick={saveMenu} disabled={saving}>
+          <Button onClick={() => saveMenu()} disabled={saving}>
             {saving ? "Saving…" : isEdit ? "Update" : "Save Menu"}
           </Button>
         </div>

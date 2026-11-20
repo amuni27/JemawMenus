@@ -22,6 +22,8 @@ export type OwnerPlanView = {
     trialEligible?: boolean;
     // AGF FE-2 (backend BE-5a): present only while the cut-over is configured; true when this new restaurant must still choose how to start
     selectionRequired?: boolean;
+    // AGF FE-3 (backend BE-5b): present only while the publish gate is on for the restaurant's market; the gate's own decision
+    publishAllowed?: boolean;
 };
 // AGF FE-1: the backend's SubscriptionActivationResponse for POST /plan/trial (201 created; 200 the trial already running)
 export type OwnerTrialStart = { subscriptionId: string; planCode: string; status: string; created: boolean; withdrawnRequestId: string | null };

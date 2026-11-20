@@ -8,6 +8,8 @@ import { ToastProvider } from "../../components/ui/ToastContext";
 // existing reorder API with the same optimistic update and rollback as the up/down buttons.
 
 const getMenu = vi.fn();
+// AGF FE-3: menu pages read the plan view (publishAllowed); no network in tests (plans hidden: as before)
+vi.mock("../../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 vi.mock("../../api/menuApi", () => ({ default: { getMenu, listMenuTypes: vi.fn(), updateMenu: vi.fn() } }));
 vi.mock("../../app/context/AuthContext", () => ({ useAuth: () => ({ business: { id: "biz-1" } }) }));
 vi.mock("../../hooks/useMenus", () => ({ useMenus: () => ({ deleteMenu: vi.fn() }) }));

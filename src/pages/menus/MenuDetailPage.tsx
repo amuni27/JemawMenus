@@ -15,6 +15,10 @@ import { errorMessage, isNotFound } from "../../utils/errorMessage";
 import NotFound from "../../components/NotFound";
 import MarkAllAvailableDialog from "../../components/menu/MarkAllAvailableDialog";
 import { useToast } from "../../components/ui/ToastContext";
+import { usePublishPermission } from "../../hooks/usePublishPermission";
+import PublishRefusalNotice, { PublishNeedsPlanHint } from "../../components/menu/PublishRefusalNotice";
+import UnpublishWarningDialog from "../../components/menu/UnpublishWarningDialog";
+import { publishRefusal, type PublishRefusal } from "../../utils/publishRefusal";
 
 export default function MenuDetailPage() {
   const { menuId } = useParams<{ menuId: string }>();
@@ -42,6 +46,10 @@ export default function MenuDetailPage() {
   const [attempt, setAttempt] = useState(0);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState("");
+  // AGF FE-3: a publish refusal (plan or verification) and the unpublish warning while publishing needs a plan
+  const [refusal, setRefusal] = useState<{ kind: PublishRefusal; message?: string } | null>(null);
+  const [unpublishWarning, setUnpublishWarning] = useState(false);
+  const { publishAllowed, plansVisible } = usePublishPermission();
   // AGF-S2-19: mark every sold-out item of this menu available
   const toast = useToast();
   const soldOutCount = items.filter((i) => i.status === "OUT_OF_STOCK").length;
@@ -102,14 +110,25 @@ export default function MenuDetailPage() {
     if (!menu || !menuId) return;
     setPublishing(true);
     setPublishError("");
+    setRefusal(null);
     try {
       const res = await menuApi.updateMenu(menuId, { isActive: !menu.active } as Partial<Menu>);
       setMenu((m) => (m ? { ...m, ...res?.data, active: res?.data?.active ?? !m.active } : m));
     } catch (err) {
-      setPublishError(errorMessage(err, "Failed to update the menu"));
+      // AGF FE-3: plan and verification refusals get their own notice; everything else as before
+      const kind = publishRefusal(err);
+      if (kind) setRefusal({ kind, message: (err as { response?: { data?: { message?: string } } }).response?.data?.message });
+      else setPublishError(errorMessage(err, "Failed to update the menu"));
     } finally {
       setPublishing(false);
+      setUnpublishWarning(false);
     }
+  };
+
+  // AGF FE-3 (B-6): warn before unpublishing only when the backend says publishing needs a plan
+  const onPublishClick = () => {
+    if (menu?.active && publishAllowed === false) setUnpublishWarning(true);
+    else togglePublished();
   };
 
   if (loading) return <p className="p-6">Loading...</p>;
@@ -134,6 +153,14 @@ export default function MenuDetailPage() {
               <MenuStatusBadge menu={menu} />
             </div>
             {publishError && <p role="alert" className="mt-1 text-sm text-red-600">{publishError}</p>}
+            {refusal && (
+                <div className="mt-2 max-w-xl">
+                  <PublishRefusalNotice kind={refusal.kind} message={refusal.message} businessId={menu.businessId} plansVisible={plansVisible} />
+                </div>
+            )}
+            {!refusal && !menu.active && publishAllowed === false && (
+                <PublishNeedsPlanHint businessId={menu.businessId} plansVisible={plansVisible} />
+            )}
           </div>
 
           {/* wraps on phones: the header has five actions since S2-17 / S2-19 */}
@@ -145,7 +172,7 @@ export default function MenuDetailPage() {
             >
               Preview
             </Link>
-            <Button variant="secondary" onClick={togglePublished} disabled={publishing}>
+            <Button variant="secondary" onClick={onPublishClick} disabled={publishing}>
               {menu.active ? "Unpublish" : "Publish"}
             </Button>
             <Button
@@ -217,6 +244,12 @@ export default function MenuDetailPage() {
             onCreate={createItem}
             onPresignImage={presignItemImage}
             onConfirmImage={confirmItemImage}
+        />
+        <UnpublishWarningDialog
+            open={unpublishWarning}
+            busy={publishing}
+            onKeep={() => setUnpublishWarning(false)}
+            onUnpublish={togglePublished}
         />
         <MarkAllAvailableDialog
             open={markAllOpen}

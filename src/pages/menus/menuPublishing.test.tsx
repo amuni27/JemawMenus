@@ -11,6 +11,8 @@ const createMenu = vi.fn();
 const updateMenu = vi.fn();
 const getMenu = vi.fn();
 const listMenus = vi.fn();
+// AGF FE-3: menu pages read the plan view (publishAllowed); no network in tests (plans hidden: as before)
+vi.mock("../../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 vi.mock("../../api/menuApi", () => ({ default: { listMenuTypes, createMenu, updateMenu, getMenu, listMenus } }));
 vi.mock("../../app/context/AuthContext", () => ({ useAuth: () => ({ business: { id: "biz-1" } }) }));
 vi.mock("../../hooks/useMenus", () => ({ useMenus: () => ({ deleteMenu: vi.fn() }) }));

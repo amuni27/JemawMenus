@@ -7,6 +7,8 @@ import { ToastProvider } from "../../components/ui/ToastContext";
 // AGF-S2-23 (checkpoint A): the menu form has an optional Amharic name, sent when filled (new) or changed (edit; "" clears).
 
 const listMenuTypes = vi.fn().mockResolvedValue({ data: [{ id: "mt-lunch", name: "Lunch" }] });
+// AGF FE-3: menu pages read the plan view (publishAllowed); no network in tests (plans hidden: as before)
+vi.mock("../../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 vi.mock("../../api/menuApi", () => ({ default: { listMenuTypes } }));
 
 const { default: MenuWizard } = await import("./MenuWizard.tsx");

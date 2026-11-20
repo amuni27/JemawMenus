@@ -9,6 +9,8 @@ import type { Category, MenuItem } from "../types/menu";
 // business profile and registration forms; server messages are kept when there are no field errors.
 
 const listMenuTypes = vi.fn().mockResolvedValue({ data: [{ id: "t1", name: "Lunch" }] });
+// AGF FE-3: menu pages read the plan view (publishAllowed); no network in tests (plans hidden: as before)
+vi.mock("../api/planApi", () => ({ default: { get: () => Promise.resolve({ data: { visible: false } }) } }));
 vi.mock("../api/menuApi", () => ({ default: { listMenuTypes } }));
 const updateBusiness = vi.fn();
 vi.mock("../api/profileApi", () => ({ profileApi: { updateBusiness } }));
