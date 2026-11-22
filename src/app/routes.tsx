@@ -32,6 +32,8 @@ import SubscriptionPlansPage from "../pages/admin/SubscriptionPlansPage.tsx";
 import SuperAdminMonetization from "../pages/superadmin/SuperAdminMonetization.tsx";
 import SuperAdminSubscriptions from "../pages/superadmin/SuperAdminSubscriptions.tsx";
 import SuperAdminPlanRequests from "../pages/superadmin/SuperAdminPlanRequests.tsx";
+import CheckoutReturn from "../pages/billing/CheckoutReturn.tsx"; // AGF F4
+import CheckoutCancelled from "../pages/billing/CheckoutCancelled.tsx"; // AGF F4
 import SuperAdminPublishingGate from "../pages/superadmin/SuperAdminPublishingGate.tsx"; // AGF FE-4
 
 // The app's route table, in its own module so route tests can use it (AGF-S2-29)
@@ -68,6 +70,15 @@ export const routes: RouteObject[] = [
             {
                 path: '/auth/register',
                 element: <RegisterWizard/>,
+            },
+            // AGF F4 (register §84 D5): where Stripe Checkout returns the owner (the backend's configured success and cancel URLs)
+            {
+                path: '/billing/return',
+                element: <RequireAuth><CheckoutReturn/></RequireAuth>,
+            },
+            {
+                path: '/billing/cancelled',
+                element: <RequireAuth><CheckoutCancelled/></RequireAuth>,
             },
             // AGF E4-M1: the platform Super Admin console (fixed paths outrank /:tenantSlug)
             {

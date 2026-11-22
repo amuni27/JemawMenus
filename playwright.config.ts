@@ -50,13 +50,13 @@ export default defineConfig({
         { name: "setup", testMatch: /auth\.setup\.e2e\.ts$/ },
         {
             name: "smoke",
-            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service|onboarding|publishing-gate-signoff)\.e2e\.ts$/],
+            testIgnore: [/auth\.setup\.e2e\.ts$/, /(^|\/)((restaurant-)?ads|self-service|subscribe-checkout|onboarding|publishing-gate-signoff)\.e2e\.ts$/],
             dependencies: ["setup"],
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined },
         },
         {
             name: "ads",
-            testMatch: /(^|\/)((restaurant-)?ads|self-service)\.e2e\.ts$/, // J24, J25, then J26
+            testMatch: /(^|\/)((restaurant-)?ads|self-service|subscribe-checkout)\.e2e\.ts$/, // J24, J25, J26, then J33 (AGF F4)
             use: { ...devices["Desktop Chrome"], channel: process.env.E2E_BROWSER_CHANNEL || undefined, baseURL: ADS_FRONTEND },
         },
         {

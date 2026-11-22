@@ -107,6 +107,13 @@ export const CHECKOUT_NOT_AVAILABLE = "Online payment isn't available right now.
 export const CHECKOUT_VERIFY = "Verify your email to subscribe to a paid plan.";
 export const CHECKOUT_IN_PROGRESS = "You have a payment in progress.";
 export const CHECKOUT_CANCELLED_NOTICE = "Payment cancelled. You weren't charged.";
+// AGF F4 (register §84 D1, D5): the pages Stripe returns to; only the backend's verified plan view says a plan is active (P-7)
+export const RETURN_CONFIRMING = "Confirming your payment…";
+export const RETURN_ACTIVE = "Your plan is active.";
+export const RETURN_REVIEW = "We're reviewing your payment. This can take up to two business days.";
+export const RETURN_NOT_YET = "We haven't received a confirmation yet. If you paid, it will appear here; you can safely leave this page.";
+export const RETURN_NO_CHECKOUT = "We couldn't find a payment started in this browser. Your plan's state is on Subscription & Plans.";
+export const CANCEL_ALREADY_FINISHED = "This payment had already finished. Your plan's state is on Subscription & Plans.";
 export const CHECKOUT_REFUSALS: Record<string, string> = {
     EMAIL_NOT_VERIFIED: CHECKOUT_VERIFY,
     PAYMENT_UNDER_REVIEW: "We're reviewing a payment for your restaurant. You can subscribe once it's resolved.",
