@@ -36,6 +36,8 @@ export type OwnerPlanView = {
     publishAllowed?: boolean;
     // AGF FE-R1 (backend R5-03-B): present only while a paid plan's renewal needs the owner's attention
     renewal?: OwnerRenewal;
+    // AGF F3 (backend BE-F0): whether a paid checkout can be started now (the restaurant's market has billing on)
+    checkoutAvailable?: boolean;
 };
 // AGF FE-1: the backend's SubscriptionActivationResponse for POST /plan/trial (201 created; 200 the trial already running)
 export type OwnerTrialStart = { subscriptionId: string; planCode: string; status: string; created: boolean; withdrawnRequestId: string | null };

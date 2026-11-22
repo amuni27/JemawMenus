@@ -4,13 +4,16 @@ import { useAuth } from "../../app/context/AuthContext";
 import planApi, { type OwnerGrandfathering, type OwnerPlanView, type OwnerRenewal } from "../../api/planApi";
 import Modal from "../../components/ui/Modal";
 import NoticeList from "../../components/plan/NoticeList";
+import checkoutApi, { type Checkout } from "../../api/checkoutApi";
+import { clearIntent, intentFor, isStripeCheckoutUrl, readIntent, rememberCheckout, restoreIntent } from "../../utils/checkoutIntent";
 import ModalHeader from "../../components/ui/ModalHeader";
 import { errorMessage } from "../../utils/errorMessage";
 import { trialEndDate } from "../../utils/trialDate";
 import {
     ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS, PRICING_NOTE,
     TRIAL_DAYS, TRIAL_NOTICE_DAYS, TRIAL_REFUSALS, TRIAL_TERMS, days, planName, statusLabel, CARD_UPDATE_REFUSALS, CARD_UPDATE_FAILED, money,
-    PRICE_TO_BE_ANNOUNCED, priceLine,
+    PRICE_TO_BE_ANNOUNCED, priceLine, CHECKOUT_NOTE, CHECKOUT_FAILED, CHECKOUT_NOT_AVAILABLE, CHECKOUT_VERIFY, CHECKOUT_IN_PROGRESS, CHECKOUT_CANCELLED_NOTICE,
+    CHECKOUT_REFUSALS,
 } from "../../components/plan/planText";
 
 // ONB Phase 1: the owner's Subscription & Plans page (moved from the account page's Plan section, AGF E4-M4). Only while
@@ -23,6 +26,9 @@ import {
 // the owner starts the free trial after a confirmation. While email verification is required (operational and not yet
 // verified, Q2) the page asks for it instead of offering the start. Every outcome reloads the view.
 // AGF F2 (register §84 D1): paid cards show the backend's listed prices (amount, currency, interval; no tax wording, AD-16).
+// AGF F3 (register §84 D3, D4, D7): "Subscribe" replaces "Request" on a paid card only while the backend says checkout is
+// available and lists the plan's price, for an owner without a plan or on the free plan. It starts a checkout with one
+// Idempotency-Key per intent and goes only to Stripe's hosted page; the plan starts only from the backend's verified payment.
 // AGF FE-R1 (backend R5-03-B/E; addendum §13): a paid plan's renewal state above the current plan (past due with the date to
 // update the card by, ended for non-payment, a refund in progress, a payment under review) and "Update card", which opens the
 // payment provider's hosted page for the owner's own plan (Agafari never sees card data). Dates in the restaurant's time zone.
@@ -37,6 +43,8 @@ export default function SubscriptionPlansPage() {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
+    const [period, setPeriod] = useState<Record<string, string>>({}); // AGF F3: the chosen price per paid plan
+    const [inProgress, setInProgress] = useState<{ checkoutId?: string } | null>(null); // AGF F3 (D7)
     const { user, refresh } = useAuth();
 
     const load = useCallback(() => planApi.get().then((res) => setView(res.data), () => setView({ visible: false })), []);
@@ -68,6 +76,12 @@ export default function SubscriptionPlansPage() {
     // AGF F2: prices only as the backend lists them (prices-visible); none for a free plan
     const prices = view.prices ?? [];
     const pricesOf = (code: string) => prices.filter((pr) => pr.planCode === code).sort((a, b) => (a.interval === b.interval ? 0 : a.interval === "MONTH" ? -1 : 1));
+    // AGF F3 (D3): the server's NEW and UPGRADE paths: no current plan, or a free one
+    const onFreePlan = Boolean(current) && plans.some((p) => p.code === current?.planCode && !p.paid);
+    const canSubscribe = (code: string) => view.checkoutAvailable === true && pricesOf(code).length > 0 && (!current || onFreePlan);
+    const mustVerifyToPay = Boolean(user?.emailVerification?.available && !user?.emailVerification?.verified); // D4 guidance; the backend decides
+    const anySubscribe = plans.some((p) => p.paid && canSubscribe(p.code));
+    const anyPaidRequest = () => plans.some((p) => p.paid && !canSubscribe(p.code)) && canRequest;
     const canRequest = Boolean(view.canRequest) && !current && !pending;
     const selfService = view.selfService;
     const canStartFree = Boolean(selfService?.available) && !current;
@@ -118,6 +132,83 @@ export default function SubscriptionPlansPage() {
         }
     };
 
+    // AGF F3: start (or resume) the checkout for one price and go to Stripe's page; nothing is activated here
+    const goToStripe = (checkout: Checkout): boolean => {
+        if (checkout.status === "OPEN" && isStripeCheckoutUrl(checkout.redirectUrl)) {
+            window.location.assign(checkout.redirectUrl);
+            return true;
+        }
+        return false;
+    };
+
+    const subscribe = async (planCode: string, priceId: string) => {
+        if (busy) return;
+        setBusy(true);
+        setError("");
+        setNotice("");
+        setInProgress(null);
+        const before = readIntent(); // a checkout this browser already started, if any
+        const intent = intentFor(priceId, planCode);
+        try {
+            const res = await checkoutApi.create(priceId, intent.idempotencyKey);
+            let checkout = res.data;
+            if (checkout?.checkoutId) rememberCheckout(intent, checkout.checkoutId);
+            for (let i = 0; checkout?.status === "CREATING" && i < 10; i++) { // 202: the provider session is still being created
+                await new Promise((r) => setTimeout(r, 2000));
+                checkout = (await checkoutApi.get(checkout.checkoutId)).data;
+            }
+            if (!checkout || !goToStripe(checkout)) setError(checkout?.status === "CREATING" ? "Your payment page is still being prepared. Please try again in a moment." : CHECKOUT_FAILED);
+        } catch (err) {
+            const response = (err as { response?: { status?: number; data?: { code?: unknown } } } | null)?.response;
+            const code = typeof response?.data?.code === "string" ? response.data.code : undefined;
+            if (code === "CHECKOUT_ACTIVE") {
+                // D7: the payment in progress is the one this browser started earlier (if any); keep pointing at it
+                if (before?.checkoutId) restoreIntent(before);
+                setInProgress({ checkoutId: before?.checkoutId ?? readIntent()?.checkoutId });
+            } else {
+                if (code === "CHECKOUT_CANCELLED" || code === "IDEMPOTENCY_KEY_REUSED") clearIntent();
+                setError((code ? CHECKOUT_REFUSALS[code] : undefined) ?? (response?.status === 404 ? CHECKOUT_NOT_AVAILABLE : CHECKOUT_FAILED));
+            }
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    // AGF F3 (D7): continue or cancel the payment this browser started
+    const continuePayment = async (checkoutId: string) => {
+        setBusy(true);
+        setError("");
+        try {
+            const checkout = (await checkoutApi.get(checkoutId)).data;
+            if (!goToStripe(checkout)) {
+                clearIntent();
+                setInProgress(null);
+                setError(CHECKOUT_FAILED);
+                await load();
+            }
+        } catch {
+            setError(CHECKOUT_FAILED);
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const cancelPayment = async (checkoutId: string) => {
+        setBusy(true);
+        setError("");
+        try {
+            await checkoutApi.cancel(checkoutId);
+            clearIntent();
+            setInProgress(null);
+            setNotice(CHECKOUT_CANCELLED_NOTICE);
+            await load();
+        } catch {
+            setError(CHECKOUT_FAILED);
+        } finally {
+            setBusy(false);
+        }
+    };
+
     return (
         <section id="plan" aria-labelledby="plans-heading" className="space-y-6">
             <div>
@@ -137,6 +228,19 @@ export default function SubscriptionPlansPage() {
             )}
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
+            {inProgress && (
+                <section aria-labelledby="checkout-in-progress" className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950 sm:p-6">
+                    <h3 id="checkout-in-progress" className="text-base font-semibold">{CHECKOUT_IN_PROGRESS}</h3>
+                    {inProgress.checkoutId ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <button type="button" className={OWNER_PRIMARY} disabled={busy} onClick={() => continuePayment(inProgress.checkoutId!)}>Continue to payment</button>
+                            <button type="button" className={OWNER_SECONDARY} disabled={busy} onClick={() => cancelPayment(inProgress.checkoutId!)}>Cancel it</button>
+                        </div>
+                    ) : (
+                        <p className="mt-1">It was started elsewhere. Finish it there, or try again later.</p>
+                    )}
+                </section>
+            )}
             {view.renewal && <RenewalNotice renewal={view.renewal} busy={busy} onUpdateCard={updateCard} />}
             {view.paymentUnderReview && !view.renewal?.refund && (
                 <section aria-labelledby="payment-review" className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950 sm:p-6">
@@ -274,6 +378,27 @@ export default function SubscriptionPlansPage() {
                                                     Start free
                                                 </button>
                                             </div>
+                                        ) : p.paid && canSubscribe(p.code) ? (
+                                            <div className="mt-4">
+                                                {pricesOf(p.code).length > 1 && (
+                                                    <fieldset className="mb-3 text-sm text-gray-900">
+                                                        <legend className="mb-1 font-medium">Billing period for {planName(p.code)}</legend>
+                                                        {pricesOf(p.code).map((pr, i) => (
+                                                            <label key={pr.id} className="flex items-center gap-2 py-0.5">
+                                                                <input type="radio" name={`period-${p.code}`} value={pr.id}
+                                                                       checked={(period[p.code] ?? pricesOf(p.code)[0].id) === pr.id || (!period[p.code] && i === 0)}
+                                                                       onChange={() => setPeriod((s) => ({ ...s, [p.code]: pr.id }))} />
+                                                                {priceLine(pr)}
+                                                            </label>
+                                                        ))}
+                                                    </fieldset>
+                                                )}
+                                                {mustVerifyToPay && <p className="mb-2 text-sm text-gray-800">{CHECKOUT_VERIFY}</p>}
+                                                <button type="button" className={`${OWNER_PRIMARY} w-full`} disabled={busy || mustVerifyToPay}
+                                                        onClick={() => subscribe(p.code, period[p.code] ?? pricesOf(p.code)[0].id)}>
+                                                    Subscribe
+                                                </button>
+                                            </div>
                                         ) : canRequest && (p.paid || !selfService) && (
                                             <button type="button" className={`${OWNER_PRIMARY} mt-4 w-full`} onClick={() => setDialog({ kind: "request", planCode: p.code })}
                                                     disabled={busy}>
@@ -309,7 +434,8 @@ export default function SubscriptionPlansPage() {
 
             <div className="space-y-1 text-xs text-gray-700">
                 {setting2 && prices.length === 0 && <p>{PRICING_NOTE}</p>}
-                {setting2 && <p>{ACTIVATION_NOTE}</p>}
+                {setting2 && anySubscribe && <p>{CHECKOUT_NOTE}</p>}
+                {setting2 && (!anySubscribe || anyPaidRequest()) && <p>{ACTIVATION_NOTE}</p>}
                 <p>{FEATURES_NOTE}</p>
             </div>
 

@@ -99,3 +99,18 @@ export function noticeText(n: OwnerNotice): string {
 // AGF F2 (register §84 D1): a paid plan's price as the backend lists it (amount, currency, interval); no tax wording (AD-16)
 export const priceLine = (p: OwnerPrice) => `${money(p.amountMinor, p.currency)} per ${p.interval === "YEAR" ? "year" : "month"}`;
 export const PRICE_TO_BE_ANNOUNCED = "Price to be announced";
+
+// AGF F3 (register §84 D1, D4, D7): Subscribe wording and checkout refusals
+export const CHECKOUT_NOTE = "You'll pay securely on Stripe. Your plan starts once the payment is confirmed.";
+export const CHECKOUT_FAILED = "Couldn't start the payment. Please try again.";
+export const CHECKOUT_NOT_AVAILABLE = "Online payment isn't available right now.";
+export const CHECKOUT_VERIFY = "Verify your email to subscribe to a paid plan.";
+export const CHECKOUT_IN_PROGRESS = "You have a payment in progress.";
+export const CHECKOUT_CANCELLED_NOTICE = "Payment cancelled. You weren't charged.";
+export const CHECKOUT_REFUSALS: Record<string, string> = {
+    EMAIL_NOT_VERIFIED: CHECKOUT_VERIFY,
+    PAYMENT_UNDER_REVIEW: "We're reviewing a payment for your restaurant. You can subscribe once it's resolved.",
+    CHECKOUT_PLAN_CHANGE_UNAVAILABLE: CHANGE_NOTE,
+    CHECKOUT_CONVERSION_UNAVAILABLE: CHANGE_NOTE,
+    CHECKOUT_CANCELLED: "This payment was cancelled. Please try again.",
+};
