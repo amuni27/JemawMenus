@@ -12,7 +12,7 @@ import { trialEndDate } from "../../utils/trialDate";
 import {
     ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS, PRICING_NOTE,
     TRIAL_DAYS, TRIAL_NOTICE_DAYS, TRIAL_REFUSALS, TRIAL_TERMS, days, planName, statusLabel, CARD_UPDATE_REFUSALS, CARD_UPDATE_FAILED, money,
-    PRICE_TO_BE_ANNOUNCED, priceLine, CHECKOUT_NOTE, CHECKOUT_FAILED, CHECKOUT_NOT_AVAILABLE, CHECKOUT_VERIFY, CHECKOUT_IN_PROGRESS, CHECKOUT_CANCELLED_NOTICE,
+    PRICE_TO_BE_ANNOUNCED, PAYMENT_NOT_AVAILABLE, priceLine, CHECKOUT_NOTE, CHECKOUT_FAILED, CHECKOUT_NOT_AVAILABLE, CHECKOUT_VERIFY, CHECKOUT_IN_PROGRESS, CHECKOUT_CANCELLED_NOTICE,
     CHECKOUT_REFUSALS,
 } from "../../components/plan/planText";
 
@@ -78,12 +78,15 @@ export default function SubscriptionPlansPage() {
     const pricesOf = (code: string) => prices.filter((pr) => pr.planCode === code).sort((a, b) => (a.interval === b.interval ? 0 : a.interval === "MONTH" ? -1 : 1));
     // AGF F3 (D3): the server's NEW and UPGRADE paths: no current plan, or a free one
     const onFreePlan = Boolean(current) && plans.some((p) => p.code === current?.planCode && !p.paid);
-    const canSubscribe = (code: string) => view.checkoutAvailable === true && pricesOf(code).length > 0 && (!current || onFreePlan);
+    const mayChoosePaid = !current || onFreePlan;
+    const canSubscribe = (code: string) => view.checkoutAvailable === true && pricesOf(code).length > 0 && mayChoosePaid;
     const mustVerifyToPay = Boolean(user?.emailVerification?.available && !user?.emailVerification?.verified); // D4 guidance; the backend decides
     const anySubscribe = plans.some((p) => p.paid && canSubscribe(p.code));
-    const anyPaidRequest = () => plans.some((p) => p.paid && !canSubscribe(p.code)) && canRequest;
     const canRequest = Boolean(view.canRequest) && !current && !pending;
     const selfService = view.selfService;
+    // AGF F5 (register §87): only the free plan can still be requested here (self-service off); paid plans never are
+    const canRequestFree = (code: string) => canRequest && !selfService && plans.some((p) => p.code === code && !p.paid);
+    const anyFreeRequest = plans.some((p) => canRequestFree(p.code));
     const canStartFree = Boolean(selfService?.available) && !current;
     const setting1 = view.setting === "SETTING_1";
     const trialOffered = setting1 && view.trialEligible === true && !current && !trial;
@@ -344,9 +347,10 @@ export default function SubscriptionPlansPage() {
                         {plans.map((p) => {
                             const isCurrent = current?.planCode === p.code;
                             const isRequested = !current && pending?.planCode === p.code;
+                            const paymentUnavailable = p.paid && !isCurrent && mayChoosePaid && !canSubscribe(p.code);
                             return (
                                 <li key={p.code} className="flex">
-                                    <article aria-labelledby={`plan-${p.code}`}
+                                    <article aria-labelledby={`plan-${p.code}`} aria-describedby={paymentUnavailable ? `plan-${p.code}-payment` : undefined}
                                              className={`flex w-full flex-col rounded-2xl border bg-white p-5 shadow-sm ${isCurrent || isRequested ? "border-gray-900 ring-1 ring-gray-900" : "border-gray-200"}`}>
                                         <div className="flex items-start justify-between gap-2">
                                             <h4 id={`plan-${p.code}`} className="text-lg font-semibold text-gray-900">{planName(p.code)}</h4>
@@ -399,7 +403,11 @@ export default function SubscriptionPlansPage() {
                                                     Subscribe
                                                 </button>
                                             </div>
-                                        ) : canRequest && (p.paid || !selfService) && (
+                                        ) : paymentUnavailable ? (
+                                            <p id={`plan-${p.code}-payment`} className="mt-4 border-t border-gray-200 pt-3 text-sm font-medium text-gray-700">
+                                                {PAYMENT_NOT_AVAILABLE}
+                                            </p>
+                                        ) : canRequestFree(p.code) && (
                                             <button type="button" className={`${OWNER_PRIMARY} mt-4 w-full`} onClick={() => setDialog({ kind: "request", planCode: p.code })}
                                                     disabled={busy}>
                                                 Request {planName(p.code)}
@@ -435,7 +443,7 @@ export default function SubscriptionPlansPage() {
             <div className="space-y-1 text-xs text-gray-700">
                 {setting2 && prices.length === 0 && <p>{PRICING_NOTE}</p>}
                 {setting2 && anySubscribe && <p>{CHECKOUT_NOTE}</p>}
-                {setting2 && (!anySubscribe || anyPaidRequest()) && <p>{ACTIVATION_NOTE}</p>}
+                {setting2 && anyFreeRequest && !anySubscribe && <p>{ACTIVATION_NOTE}</p>}
                 <p>{FEATURES_NOTE}</p>
             </div>
 

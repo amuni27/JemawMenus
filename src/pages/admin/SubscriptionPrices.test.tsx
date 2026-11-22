@@ -70,10 +70,12 @@ describe("paid plan prices (F2)", () => {
         expect(within(m3).getByText("Price to be announced")).toBeTruthy();
     });
 
-    it("still says requesting doesn't charge while a paid plan is requested (no checkout yet)", async () => {
+    it("shows the price with 'Payment not available yet' and no Request while checkout isn't available (AGF F5)", async () => {
         get.mockResolvedValue(view({ prices: [{ id: "p-m4", planCode: "MODEL_4", interval: "MONTH", currency: "USD", amountMinor: 2500 }] }));
         render(<PlansPage />);
-        expect(await screen.findByRole("button", { name: /Request Ad-Free|Request Model 4/ })).toBeTruthy();
-        expect(screen.getByText(/Requesting a plan doesn't charge you/)).toBeTruthy();
+        const m4 = await card(/Ad-Free|Model 4/);
+        expect(m4.textContent).toContain("$25.00 per month");
+        expect(within(m4).getByText("Payment not available yet")).toBeTruthy();
+        expect(within(m4).queryByRole("button")).toBeNull();
     });
 });

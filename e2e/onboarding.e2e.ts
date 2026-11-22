@@ -168,8 +168,13 @@ test.describe("J28 Plan selection after sign-in", () => {
 
         const page = await signInFresh(browser, owner);
         await expect(page).toHaveURL(/\/admin\/plans$/);
-        await card(page, "Ad-Free").getByRole("button", { name: "Request Ad-Free" }).click();
-        await page.getByRole("dialog", { name: "Request a plan" }).getByRole("button", { name: "Send request" }).click();
+        // AGF F5: the page offers no paid-plan request now; an existing one (unchanged API) still counts as chosen
+        await expect(card(page, "Ad-Free")).toContainText("Payment not available yet");
+        await expect(card(page, "Ad-Free").getByRole("button")).toHaveCount(0);
+        const auth = { Authorization: `Bearer ${owner.token}` };
+        const v = (await (await request.get("/api/plan", { headers: auth })).json()).configVersion as number;
+        expect((await request.post("/api/plan/requests", { headers: auth, data: { planCode: "MODEL_4", expectedConfigVersion: v } })).status()).toBe(201);
+        await page.reload();
         await expect(page.locator("#plan")).toContainText("Request for Ad-Free sent on");
         await expect(page.locator("#plan")).not.toContainText("· Active");
         await expect(page.getByRole("region", { name: BANNER })).toHaveCount(0);

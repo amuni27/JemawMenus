@@ -128,8 +128,13 @@ test.describe("J23 Grandfathering", () => {
         }).toPass({ timeout: 60_000, intervals: [3_000] });
         await expect(section).toContainText("Choose a plan to continue.");
         expect(await seriousViolations(page, "#plan")).toEqual([]);
-        await section.getByRole("button", { name: "Request Ad-Free" }).click();
-        await page.getByRole("dialog", { name: "Request a plan" }).getByRole("button", { name: "Send request" }).click();
+        // AGF F5: no paid-plan request on the page; the owner's request goes through the unchanged API
+        await expect(section.getByRole("button", { name: "Request Ad-Free" })).toHaveCount(0);
+        await expect(section).toContainText("Payment not available yet");
+        const ownerAuth = { Authorization: `Bearer ${await page.evaluate(() => localStorage.getItem("token"))}` };
+        const v = (await (await page.request.get("/api/plan", { headers: ownerAuth })).json()).configVersion as number;
+        expect((await page.request.post("/api/plan/requests", { headers: ownerAuth, data: { planCode: "MODEL_4", expectedConfigVersion: v } })).status()).toBe(201);
+        await page.reload();
         await expect(section).toContainText("Request for Ad-Free sent");
 
         detail = await openRestaurant(admin, dated.name);

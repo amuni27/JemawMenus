@@ -90,7 +90,8 @@ test.describe("J26 self-service Free with Ads", () => {
         const ownerA = await ownerPlansPage(browser, a);
         await expect(card(ownerA, "Free with Ads").getByRole("button", { name: "Start free" })).toBeVisible();
         await expect(card(ownerA, "Free with Ads").getByRole("button", { name: /^Request / })).toHaveCount(0);
-        await expect(card(ownerA, "Ad-Free").getByRole("button", { name: "Request Ad-Free" })).toBeVisible();
+        await expect(card(ownerA, "Ad-Free").getByRole("button")).toHaveCount(0); // AGF F5: no paid-plan request
+        await expect(card(ownerA, "Ad-Free")).toContainText("Payment not available yet");
         expect(await seriousViolations(ownerA, "#plan")).toEqual([]);
         await card(ownerA, "Free with Ads").getByRole("button", { name: "Start free" }).click();
         const dialog = ownerA.getByRole("dialog", { name: "Start Free with Ads?" });
@@ -112,8 +113,10 @@ test.describe("J26 self-service Free with Ads", () => {
         const b = await restaurantWithMenu(request, "SelfB");
         await verifyEmail(request, b);
         const ownerB = await ownerPlansPage(browser, b);
-        await card(ownerB, "Ad-Free").getByRole("button", { name: "Request Ad-Free" }).click();
-        await ownerB.getByRole("dialog", { name: "Request a plan" }).getByRole("button", { name: "Send request" }).click();
+        // AGF F5: an existing paid request (made through the unchanged API; the page no longer offers one)
+        const v = (await (await request.get("/api/plan", { headers: b.auth })).json()).configVersion as number;
+        expect((await request.post("/api/plan/requests", { headers: b.auth, data: { planCode: "MODEL_4", expectedConfigVersion: v } })).status()).toBe(201);
+        await ownerB.reload();
         await expect(ownerB.locator("#plan")).toContainText("Request for Ad-Free sent on");
         const free = card(ownerB, "Free with Ads");
         await expect(free).toContainText("You have a pending request for Ad-Free. Starting Free with Ads will withdraw it.");

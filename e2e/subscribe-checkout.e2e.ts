@@ -22,7 +22,7 @@ const card = (page: Page, name: string) => page.getByRole("region", { name: "Ava
 const NO_CHECKOUT = "We couldn't find a payment started in this browser. Your plan's state is on Subscription & Plans.";
 
 test.describe("J33 Subscribe while billing is off", () => {
-    test("paid plans keep Request, the checkout API is closed, and the return and cancel pages are safe without a checkout", async ({ browser, request }) => {
+    test("paid plans say payment isn't available yet, the checkout API is closed, and the return and cancel pages are safe without a checkout", async ({ browser, request }) => {
         const token = (await (await request.post("/api/admin/auth/login", { data: adminCredentials() })).json()).token as string;
         const admin = { Authorization: `Bearer ${token}` };
         const current = await (await request.get("/api/admin/monetization-config", { headers: admin })).json();
@@ -58,7 +58,14 @@ test.describe("J33 Subscribe while billing is off", () => {
         await expect(page).toHaveURL(/\/admin/);
         await page.goto(`/${businessId}/admin/plans`);
         await expect(page.getByRole("heading", { name: "Subscription & Plans" })).toBeVisible();
-        await expect(card(page, "Ad-Free").getByRole("button", { name: "Request Ad-Free" })).toBeVisible();
+        // AGF F5 (register §87): a non-interactive status instead of Request or Subscribe
+        const adFree = card(page, "Ad-Free");
+        await expect(adFree.getByText("Payment not available yet")).toBeVisible();
+        await expect(adFree.getByRole("button")).toHaveCount(0);
+        await expect(adFree.getByRole("link")).toHaveCount(0);
+        await expect(adFree).toHaveAttribute("aria-describedby", /payment$/);
+        expect((await new AxeBuilder({ page }).include("#plan").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze()).violations
+            .filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
         await expect(card(page, "Free with Ads").getByRole("button", { name: "Start free" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Subscribe" })).toHaveCount(0);
         await expect(page.getByText("Pricing will be announced.").first()).toBeVisible();

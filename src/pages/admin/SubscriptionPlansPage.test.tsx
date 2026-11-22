@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 // UX-AC1…AC8): hidden unless the backend says visible; under Setting 2 the owner sees only the enabled plans with the approved
 // names and benefits, without prices, and requests one (a request, never a subscription); under Setting 1 status only;
 // with a current subscription no request or change; features always stay available.
+// AGF F5 (register §87): paid plans are never requested from this page; without checkout they say "Payment not available yet".
 
 const get = vi.fn();
 const request = vi.fn();
@@ -37,6 +38,8 @@ const plans = [{ code: "MODEL_2", model: "MODEL_2", adSource: "AGAFARI", paid: f
 const setting2 = (over: Record<string, unknown> = {}) => ({ data: { visible: true, setting: "SETTING_2", configVersion: 3, plans, canRequest: true,
     trialAvailable: false, featuresUnaffected: true, ...over } });
 const pending = { id: "r1", planCode: "MODEL_4", configVersion: 3, requestedAt: "2026-11-01T10:00:00Z", rowVersion: 0, outsideCurrentConfiguration: false };
+const pendingFree = { ...pending, planCode: "MODEL_2" };
+const UNAVAILABLE = "Payment not available yet";
 
 beforeEach(() => {
     for (const fn of [get, request, withdraw, activate, startTrial, refresh]) fn.mockReset();
@@ -64,23 +67,25 @@ describe("owner Subscription & Plans page", () => {
         expect(section.textContent).toContain("Pricing will be announced");
         expect(section.textContent).toContain("All features stay available while plans are being introduced.");
         expect(section.textContent).not.toMatch(/ETB|USD|\$|price:/i);
-        expect(within(section).getAllByRole("button", { name: /^Request / })).toHaveLength(2);
+        expect(within(section).getAllByRole("button", { name: /^Request / }).map((b) => b.textContent)).toEqual(["Request Free with Ads"]);
+        expect(within(section).queryByRole("button", { name: "Request Ad-Free" })).toBeNull();
+        expect(section.textContent).toContain(UNAVAILABLE);
     });
 
-    it("requests a plan after a confirmation and then shows the pending request", async () => {
+    it("requests the free plan after a confirmation (self-service off) and then shows the pending request", async () => {
         render(<PlansPage />);
         const section = await screen.findByRole("region", { name: "Subscription & Plans" });
-        get.mockResolvedValue(setting2({ pendingRequest: pending, canRequest: false }));
-        fireEvent.click(within(section).getByRole("button", { name: "Request Ad-Free" }));
+        get.mockResolvedValue(setting2({ pendingRequest: pendingFree, canRequest: false }));
+        fireEvent.click(within(section).getByRole("button", { name: "Request Free with Ads" }));
 
         const dialog = screen.getByRole("dialog", { name: "Request a plan" });
-        expect(dialog.textContent).toContain("Ad-Free");
+        expect(dialog.textContent).toContain("Free with Ads");
         expect(dialog.textContent).toContain("This is a request, not a purchase. The Agafari team will contact you.");
         expect(request).not.toHaveBeenCalled();
         fireEvent.click(within(dialog).getByRole("button", { name: "Send request" }));
 
-        await waitFor(() => expect(request).toHaveBeenCalledWith("MODEL_4", 3));
-        await waitFor(() => expect(section.textContent).toContain("Request for Ad-Free sent on"));
+        await waitFor(() => expect(request).toHaveBeenCalledWith("MODEL_2", 3));
+        await waitFor(() => expect(section.textContent).toContain("Request for Free with Ads sent on"));
         expect(within(section).queryByRole("button", { name: /^Request / })).toBeNull();
     });
 
@@ -92,7 +97,7 @@ describe("owner Subscription & Plans page", () => {
         fireEvent.click(within(section).getByRole("button", { name: "Withdraw request" }));
         fireEvent.click(within(screen.getByRole("dialog", { name: "Withdraw request" })).getByRole("button", { name: "Withdraw" }));
         await waitFor(() => expect(withdraw).toHaveBeenCalledWith(0));
-        await waitFor(() => expect(within(section).getAllByRole("button", { name: /^Request / })).toHaveLength(2));
+        await waitFor(() => expect(within(section).getAllByRole("button", { name: /^Request / })).toHaveLength(1));
     });
 
     it("under Setting 1 shows the plan model and that trial details aren't available, without a request action", async () => {
@@ -213,7 +218,8 @@ describe("owner Subscription & Plans page", () => {
             render(<PlansPage />);
             let section = await screen.findByRole("region", { name: "Subscription & Plans" });
             expect(section.textContent).toContain("Your previous plan (Business Ads) ended on 12/31/2026. Choose a plan to continue.");
-            expect(within(section).getByRole("button", { name: "Request Ad-Free" })).toBeTruthy();
+            expect(within(section).queryByRole("button", { name: "Request Ad-Free" })).toBeNull();
+            expect(section.textContent).toContain(UNAVAILABLE);
             cleanup();
 
             get.mockResolvedValue({ data: { visible: true, setting: "SETTING_1", configVersion: 3, plans: [], canRequest: false, featuresUnaffected: true, endedPlan: ended } });
@@ -286,13 +292,15 @@ describe("owner Subscription & Plans page", () => {
         const card = async (name: string) => within(await screen.findByRole("region", { name: "Available plans" })).getAllByRole("article")
             .find((c) => within(c).getByRole("heading").textContent === name)!;
 
-        it("offers Start free on the free plan only while self-service is available; paid plans keep Request", async () => {
+        it("offers Start free on the free plan only while self-service is available; paid plans aren't requestable", async () => {
             get.mockResolvedValue(setting2({ plans: all, selfService: { available: true, verificationRequired: false } }));
             render(<PlansPage />);
             const free = await card("Free with Ads");
             expect(within(free).getByRole("button", { name: "Start free" })).toBeTruthy();
             expect(within(free).queryByRole("button", { name: /^Request / })).toBeNull();
-            expect(within(await card("Ad-Free")).getByRole("button", { name: "Request Ad-Free" })).toBeTruthy();
+            expect(within(await card("Ad-Free")).queryByRole("button")).toBeNull();
+            expect((await card("Ad-Free")).textContent).toContain(UNAVAILABLE);
+            expect(screen.queryByText(/Requesting a plan doesn't charge you/)).toBeNull(); // nothing can be requested
             cleanup();
 
             get.mockResolvedValue(setting2({ plans: all })); // self-service off: today's request flow
@@ -400,7 +408,7 @@ describe("owner Subscription & Plans page", () => {
             render(<PlansPage />);
             const s = await section();
             expect(within(s).queryByRole("button", { name: "Start free trial" })).toBeNull();
-            expect(within(s).getAllByRole("button", { name: /^Request / })).toHaveLength(2);
+            expect(within(s).getAllByRole("button", { name: /^Request / })).toHaveLength(1); // AGF F5: the free plan only
         });
 
         it("starts only after an explicit confirmation, then shows the running trial", async () => {

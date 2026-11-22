@@ -101,6 +101,8 @@ export const priceLine = (p: OwnerPrice) => `${money(p.amountMinor, p.currency)}
 export const PRICE_TO_BE_ANNOUNCED = "Price to be announced";
 
 // AGF F3 (register §84 D1, D4, D7): Subscribe wording and checkout refusals
+// AGF F5 (register §87): a paid plan without checkout (billing off, not available, or no listed price); a status, never an action
+export const PAYMENT_NOT_AVAILABLE = "Payment not available yet";
 export const CHECKOUT_NOTE = "You'll pay securely on Stripe. Your plan starts once the payment is confirmed.";
 export const CHECKOUT_FAILED = "Couldn't start the payment. Please try again.";
 export const CHECKOUT_NOT_AVAILABLE = "Online payment isn't available right now.";

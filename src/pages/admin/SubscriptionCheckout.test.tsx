@@ -30,6 +30,7 @@ const plans = [{ code: "MODEL_2", model: "MODEL_2", adSource: "AGAFARI", paid: f
 const prices = [{ id: "p-month", planCode: "MODEL_4", interval: "MONTH", currency: "USD", amountMinor: 2500 }, { id: "p-year", planCode: "MODEL_4", interval: "YEAR", currency: "USD", amountMinor: 25000 }];
 const view = (over: Record<string, unknown> = {}) => ({ data: { visible: true, setting: "SETTING_2", configVersion: 3, plans, canRequest: true, featuresUnaffected: true,
     prices, checkoutAvailable: true, ...over } });
+const CHECKOUT_NOTE = "You'll pay securely on Stripe. Your plan starts once the payment is confirmed.";
 const STRIPE = "https://checkout.stripe.com/c/pay/cs_test_synthetic";
 const adFree = async () => (await screen.findAllByRole("article")).find((a) => /Ad-Free/.test(within(a).getByRole("heading").textContent ?? ""))!;
 const intent = () => JSON.parse(sessionStorage.getItem("agafari.checkoutIntent") ?? "null");
@@ -148,19 +149,41 @@ describe("Subscribe (F3)", () => {
         expect(progress.textContent).toContain("try again later");
     });
 
-    it("keeps Request where checkout isn't available or the plan has no listed price, never both", async () => {
+    // AGF F5 (register §87): no paid-plan Request; without checkout a non-interactive "Payment not available yet"
+    for (const [label, over] of [["checkout isn't available", { checkoutAvailable: false }], ["billing is off (no availability sent)", { checkoutAvailable: undefined }],
+        ["the plan has no listed price", { prices: [{ ...prices[0], planCode: "MODEL_3" }] }], ["no prices at all", { prices: undefined, checkoutAvailable: undefined }]] as const) {
+        it(`says "Payment not available yet" without any action when ${label}`, async () => {
+            get.mockResolvedValue(view(over));
+            render(<PlansPage />);
+            const card = await adFree();
+            const status = within(card).getByText("Payment not available yet");
+            expect(status.tagName).toBe("P");
+            expect(status.closest("button, a, [tabindex], [role=button]")).toBeNull();
+            expect(within(card).queryAllByRole("button")).toHaveLength(0);
+            expect(within(card).queryAllByRole("link")).toHaveLength(0);
+            expect(within(card).queryAllByRole("radio")).toHaveLength(0);
+            expect(screen.queryByRole("button", { name: "Subscribe" })).toBeNull();
+            expect(screen.queryByRole("button", { name: /^Request Ad-Free/ })).toBeNull();
+            expect(screen.queryByText(CHECKOUT_NOTE)).toBeNull();
+            expect(card.getAttribute("aria-describedby")).toBe(status.id); // the card's state is announced with it
+        });
+    }
+
+    it("keeps the listed price, benefits and comparison visible while payment isn't available", async () => {
         get.mockResolvedValue(view({ checkoutAvailable: false }));
         render(<PlansPage />);
-        let card = await adFree();
-        expect(within(card).getByRole("button", { name: "Request Ad-Free" })).toBeTruthy();
-        expect(within(card).queryByRole("button", { name: "Subscribe" })).toBeNull();
-        expect(screen.getByText(/Requesting a plan doesn't charge you/)).toBeTruthy();
-        cleanup();
-        get.mockResolvedValue(view({ prices: [] }));
+        const card = await adFree();
+        expect(within(card).getByRole("list", { name: "Ad-Free price" }).textContent).toContain("$25.00 per month");
+        expect(card.textContent).toContain("No ads on your guest menu");
+        expect(screen.getByRole("table", { name: "Plan comparison" })).toBeTruthy();
+    });
+
+    it("never shows Request and Subscribe together, and never the unavailable status beside Subscribe", async () => {
         render(<PlansPage />);
-        card = await adFree();
-        expect(within(card).queryByRole("button", { name: "Subscribe" })).toBeNull();
-        expect(within(card).getByRole("button", { name: "Request Ad-Free" })).toBeTruthy();
+        const card = await adFree();
+        expect(within(card).getByRole("button", { name: "Subscribe" })).toBeTruthy();
+        expect(within(card).queryByText("Payment not available yet")).toBeNull();
+        expect(screen.queryByRole("button", { name: /^Request Ad-Free/ })).toBeNull();
     });
 
     it("offers Subscribe to an owner on the free plan (upgrade), not to one on a paid plan", async () => {

@@ -7,6 +7,8 @@ import { AUTH_FILE, BUSINESS_ID, RESTAURANT } from "./support/owner";
 // not a purchase); the admin fulfils it from
 // Plan requests (manual record, no payment verified); the owner then sees the plan with no change action. A second round
 // shows withdrawing. Works whatever state earlier journeys left behind.
+// AGF F5 (register §87): the page no longer offers a paid-plan request ("Payment not available yet" while billing is off), so
+// the Model 4 request is made through the unchanged owner API (as an existing request would be) and fulfilled as before.
 
 function adminCredentials() {
     const email = process.env.E2E_ADMIN_EMAIL, password = process.env.E2E_ADMIN_PASSWORD;
@@ -69,7 +71,7 @@ async function clearRestaurant(page: Page) {
 test.describe("J21 Owner plan requests", () => {
     test.use({ storageState: AUTH_FILE });
 
-    test("the owner requests Model 4, the admin fulfils it and the owner sees the plan; a second request is withdrawn", async ({ page, browser }) => {
+    test("the owner's Model 4 request (API), the admin fulfils it and the owner sees the plan; a second request is withdrawn", async ({ page, browser }) => {
         const admin = await adminPage(browser);
         await configureModels2And4(admin);
         await clearRestaurant(admin);
@@ -86,11 +88,12 @@ test.describe("J21 Owner plan requests", () => {
         await expect(section.getByRole("button", { name: "Request Business Ads" })).toHaveCount(0);
         expect(await seriousViolations(page, "#plan")).toEqual([]);
 
-        await section.getByRole("button", { name: "Request Ad-Free" }).click();
-        const dialog = page.getByRole("dialog", { name: "Request a plan" });
-        await expect(dialog).toContainText("This is a request, not a purchase.");
-        expect(await seriousViolations(page, '[role="dialog"]')).toEqual([]);
-        await dialog.getByRole("button", { name: "Send request" }).click();
+        await expect(section.getByRole("button", { name: "Request Ad-Free" })).toHaveCount(0);
+        await expect(section.getByRole("article").filter({ has: page.getByRole("heading", { name: "Ad-Free", exact: true }) })).toContainText("Payment not available yet");
+        const ownerAuth = { Authorization: `Bearer ${await page.evaluate(() => localStorage.getItem("token"))}` };
+        const version = (await (await page.request.get("/api/plan", { headers: ownerAuth })).json()).configVersion as number;
+        expect((await page.request.post("/api/plan/requests", { headers: ownerAuth, data: { planCode: "MODEL_4", expectedConfigVersion: version } })).status()).toBe(201);
+        await page.reload();
         await expect(section).toContainText("Request for Ad-Free sent on");
 
         await admin.getByRole("link", { name: "Plan requests" }).click();
@@ -112,7 +115,10 @@ test.describe("J21 Owner plan requests", () => {
         await clearRestaurant(admin);
         await page.reload();
         await section.getByRole("button", { name: "Request Free with Ads" }).click();
-        await page.getByRole("dialog", { name: "Request a plan" }).getByRole("button", { name: "Send request" }).click();
+        const dialog = page.getByRole("dialog", { name: "Request a plan" });
+        await expect(dialog).toContainText("This is a request, not a purchase.");
+        expect(await seriousViolations(page, '[role="dialog"]')).toEqual([]);
+        await dialog.getByRole("button", { name: "Send request" }).click();
         await section.getByRole("button", { name: "Withdraw request" }).click();
         await page.getByRole("dialog", { name: "Withdraw request" }).getByRole("button", { name: "Withdraw" }).click();
         await expect(section.getByRole("button", { name: "Request Free with Ads" })).toBeVisible();
