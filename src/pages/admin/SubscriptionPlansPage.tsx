@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "../../app/context/AuthContext";
-import planApi, { type OwnerGrandfathering, type OwnerPlanView } from "../../api/planApi";
+import planApi, { type OwnerGrandfathering, type OwnerPlanView, type OwnerRenewal } from "../../api/planApi";
 import Modal from "../../components/ui/Modal";
 import ModalHeader from "../../components/ui/ModalHeader";
 import { errorMessage } from "../../utils/errorMessage";
 import { trialEndDate } from "../../utils/trialDate";
 import {
     ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS, PRICING_NOTE,
-    TRIAL_DAYS, TRIAL_NOTICE_DAYS, TRIAL_REFUSALS, TRIAL_TERMS, days, planName, statusLabel,
+    TRIAL_DAYS, TRIAL_NOTICE_DAYS, TRIAL_REFUSALS, TRIAL_TERMS, days, planName, statusLabel, CARD_UPDATE_REFUSALS, CARD_UPDATE_FAILED, money,
 } from "../../components/plan/planText";
 
 // ONB Phase 1: the owner's Subscription & Plans page (moved from the account page's Plan section, AGF E4-M4). Only while
@@ -20,6 +20,9 @@ import {
 // AGF FE-1 (register §45 D-3, §46, §47): under Setting 1, while the backend says the restaurant is eligible (trialEligible),
 // the owner starts the free trial after a confirmation. While email verification is required (operational and not yet
 // verified, Q2) the page asks for it instead of offering the start. Every outcome reloads the view.
+// AGF FE-R1 (backend R5-03-B/E; addendum §13): a paid plan's renewal state above the current plan (past due with the date to
+// update the card by, ended for non-payment, a refund in progress, a payment under review) and "Update card", which opens the
+// payment provider's hosted page for the owner's own plan (Agafari never sees card data). Dates in the restaurant's time zone.
 
 type Dialog = { kind: "request"; planCode: string } | { kind: "withdraw" } | { kind: "start"; planCode: string } | { kind: "trial" } | null;
 type ApiRefusal = { response?: { data?: { code?: unknown } } };
@@ -87,6 +90,28 @@ export default function SubscriptionPlansPage() {
         }
     };
 
+    // AGF FE-R1: the provider's hosted card-update page; only an https link is ever followed
+    const updateCard = async () => {
+        if (busy) return;
+        setBusy(true);
+        setError("");
+        setNotice("");
+        try {
+            const res = await planApi.openCardUpdate();
+            const url = res.data?.url;
+            if (typeof url !== "string" || !url.startsWith("https://")) {
+                setError(CARD_UPDATE_FAILED);
+                return;
+            }
+            window.location.assign(url);
+        } catch (err) {
+            const code = (err as ApiRefusal | null)?.response?.data?.code;
+            setError((typeof code === "string" ? CARD_UPDATE_REFUSALS[code] : undefined) ?? CARD_UPDATE_FAILED);
+        } finally {
+            setBusy(false);
+        }
+    };
+
     return (
         <section id="plan" aria-labelledby="plans-heading" className="space-y-6">
             <div>
@@ -106,6 +131,16 @@ export default function SubscriptionPlansPage() {
             )}
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
+            {view.renewal && <RenewalNotice renewal={view.renewal} busy={busy} onUpdateCard={updateCard} />}
+            {view.paymentUnderReview && !view.renewal?.refund && (
+                <section aria-labelledby="payment-review" className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950 sm:p-6">
+                    <h3 id="payment-review" className="text-base font-semibold">Payment under review</h3>
+                    <p className="mt-1">
+                        {"We're reviewing a payment"}{money(view.paymentUnderReview.amountMinor, view.paymentUnderReview.currency)
+                            ? ` of ${money(view.paymentUnderReview.amountMinor, view.paymentUnderReview.currency)}` : ""}. Plan changes wait until it&apos;s resolved; your menus stay as they are.
+                    </p>
+                </section>
+            )}
 
             <section aria-labelledby="current-plan" className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
                 <h3 id="current-plan" className="text-base font-semibold text-gray-900">Current plan</h3>
@@ -118,6 +153,9 @@ export default function SubscriptionPlansPage() {
                         {current.periodEnd && <p className="mt-1 text-gray-700">Current period ends {new Date(current.periodEnd).toLocaleDateString()}</p>}
                         {current.outsideCurrentConfiguration && !current.grandfathering && <p className="mt-1 text-gray-700">Your plan stays as it is for now.</p>}
                         {current.grandfathering && <GrandfatheringNotice planCode={current.planCode} g={current.grandfathering} setting1={view.setting === "SETTING_1"} />}
+                        {current.graceUntil && current.status === "ACTIVE" && view.renewal?.state !== "PAST_DUE" && (
+                            <button type="button" className={`mt-3 ${OWNER_SECONDARY}`} disabled={busy} onClick={updateCard}>Update card</button>
+                        )}
                         <p className="mt-3 text-gray-700">{CHANGE_NOTE}</p>
                     </div>
                 )}
@@ -352,5 +390,46 @@ function GrandfatheringNotice({ planCode, g, setting1 }: { planCode: string; g: 
                 </p>
             )}
         </div>
+    );
+}
+
+// AGF FE-R1 (addendum §13): one notice per renewal state, with its dates in the restaurant's time zone
+function RenewalNotice({ renewal, busy, onUpdateCard }: { renewal: OwnerRenewal; busy: boolean; onUpdateCard: () => void }) {
+    const refund = renewal.refund;
+    const amount = refund ? money(refund.amountMinor, refund.currency) : "";
+    const refundText = refund
+        ? refund.reason === "RENEWAL_DUPLICATE_PERIOD"
+            ? `A duplicate payment${amount ? ` of ${amount}` : ""} will be refunded.`
+            : `The payment${amount ? ` of ${amount}` : ""} made after your plan ended will be refunded.`
+        : "";
+    if (renewal.state === "PAST_DUE") {
+        return (
+            <section aria-labelledby="renewal-past-due" className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950 sm:p-6">
+                <h3 id="renewal-past-due" className="text-base font-semibold">Payment failed</h3>
+                <p className="mt-1">
+                    {"We couldn't renew your plan."}{renewal.graceUntil ? ` Update your card by ${trialEndDate(renewal.graceUntil, renewal.timeZone)} to keep it.` : " Update your card to keep it."}
+                    {" "}Until then everything keeps working.
+                </p>
+                {refundText && <p className="mt-1">{refundText}</p>}
+                <button type="button" className={`mt-3 ${OWNER_PRIMARY}`} disabled={busy} onClick={onUpdateCard}>Update card</button>
+            </section>
+        );
+    }
+    if (renewal.state === "ENDED_PAYMENT_FAILED") {
+        return (
+            <section aria-labelledby="renewal-ended" className="rounded-2xl border border-gray-300 bg-gray-50 p-5 text-sm text-gray-900 sm:p-6">
+                <h3 id="renewal-ended" className="text-base font-semibold">Your plan ended</h3>
+                <p className="mt-1">
+                    Your plan ended{renewal.endedAt ? ` on ${trialEndDate(renewal.endedAt, renewal.timeZone)}` : ""} because the payment didn&apos;t go through. Your published menus stay online; choose a plan to continue.
+                </p>
+                {refundText && <p className="mt-1">{refundText}</p>}
+            </section>
+        );
+    }
+    return (
+        <section aria-labelledby="renewal-refund" className="rounded-2xl border border-gray-300 bg-gray-50 p-5 text-sm text-gray-900 sm:p-6">
+            <h3 id="renewal-refund" className="text-base font-semibold">Refund in progress</h3>
+            <p className="mt-1">{refundText || "A payment will be refunded."} Your plan isn&apos;t affected.</p>
+        </section>
     );
 }

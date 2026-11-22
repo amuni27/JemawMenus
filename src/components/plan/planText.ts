@@ -51,7 +51,20 @@ export const TRIAL_REFUSALS: Record<string, string> = {
 };
 export const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
 
-export const statusLabel = (status: string) => status.charAt(0) + status.slice(1).toLowerCase();
+export const statusLabel = (status: string) => (status.charAt(0) + status.slice(1).toLowerCase()).replace(/_/g, " "); // PAST_DUE → "Past due"
+
+// AGF FE-R1 (addendum §13 "Owner sees"): renewal wording and the card-update refusals
+export const CARD_UPDATE_REFUSALS: Record<string, string> = {
+    PORTAL_NOT_ELIGIBLE: "Card update isn't available for this plan.",
+    PORTAL_UNAVAILABLE: "The card-update page is unavailable right now. Please try again.",
+};
+export const CARD_UPDATE_FAILED = "Couldn't open the card-update page. Please try again.";
+
+/** An amount in minor units (e.g. cents), in its currency; empty when the backend sent none. */
+export function money(amountMinor: number | null | undefined, currency: string | null | undefined): string {
+    if (amountMinor == null || !currency) return "";
+    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amountMinor / 100);
+}
 
 // AA contrast on white (the shared brand Button is below AA, a known deferred defect)
 export const OWNER_PRIMARY = "rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400";

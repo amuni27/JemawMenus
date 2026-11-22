@@ -3,7 +3,13 @@ import apiAuth from "../services/apiAuth.ts";
 // AGF E4-M4: the owner's plan view and plan requests (own restaurant from the token). A request is never a subscription.
 export type OwnerPlan = { code: string; model: string; adSource: "NONE" | "AGAFARI" | "RESTAURANT"; paid: boolean };
 export type OwnerSubscription = { planCode: string; status: string; periodEnd: string | null; sourceLabel: string | null; outsideCurrentConfiguration: boolean;
-    grandfathering?: OwnerGrandfathering };
+    grandfathering?: OwnerGrandfathering;
+    // AGF FE-R1 (backend R5-03-B): a paid (provider-billed) plan only: the grace end (period end + 7 days) and, while past due, since when
+    graceUntil?: string; pastDueSince?: string };
+// AGF FE-R1 (backend R5-03-B): a paid plan's renewal needing the owner's attention; dates in the restaurant's time zone
+export type OwnerRenewal = { state: "PAST_DUE" | "ENDED_PAYMENT_FAILED" | "REFUND_PENDING"; periodEnd?: string; graceUntil?: string; endedAt?: string;
+    refund?: OwnerRefundPending; timeZone?: string };
+export type OwnerRefundPending = { amountMinor: number | null; currency: string | null; reason: "PAID_AFTER_EXPIRY" | "RENEWAL_DUPLICATE_PERIOD" };
 // AGF E4-M6: the plan is no longer offered; it stays active until its approved end (dates in the restaurant's time zone)
 export type OwnerGrandfathering = { until?: string; daysLeft?: number; transitionsEnabled: boolean; timeZone?: string };
 export type OwnerEndedPlan = { planCode: string; endedAt: string; timeZone?: string };
@@ -24,6 +30,8 @@ export type OwnerPlanView = {
     selectionRequired?: boolean;
     // AGF FE-3 (backend BE-5b): present only while the publish gate is on for the restaurant's market; the gate's own decision
     publishAllowed?: boolean;
+    // AGF FE-R1 (backend R5-03-B): present only while a paid plan's renewal needs the owner's attention
+    renewal?: OwnerRenewal;
 };
 // AGF FE-1: the backend's SubscriptionActivationResponse for POST /plan/trial (201 created; 200 the trial already running)
 export type OwnerTrialStart = { subscriptionId: string; planCode: string; status: string; created: boolean; withdrawnRequestId: string | null };
@@ -49,6 +57,10 @@ const planApi = {
     // AGF FE-1: the owner starts the restaurant's free trial (Setting 1); the restaurant and owner come from the token
     startTrial(expectedConfigVersion: number) {
         return apiAuth.post<OwnerTrialStart>("/plan/trial", { expectedConfigVersion });
+    },
+    // AGF FE-R1 (backend R5-03-E): a short-lived link to the payment provider's hosted card-update page for the owner's own plan
+    openCardUpdate() {
+        return apiAuth.post<{ url: string }>("/billing/subscription/portal-session");
     },
     withdraw(rowVersion: number) {
         return apiAuth.patch("/plan/requests/current", { status: "WITHDRAWN", rowVersion });
