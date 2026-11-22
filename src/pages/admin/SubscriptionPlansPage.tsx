@@ -10,6 +10,7 @@ import { trialEndDate } from "../../utils/trialDate";
 import {
     ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS, PRICING_NOTE,
     TRIAL_DAYS, TRIAL_NOTICE_DAYS, TRIAL_REFUSALS, TRIAL_TERMS, days, planName, statusLabel, CARD_UPDATE_REFUSALS, CARD_UPDATE_FAILED, money,
+    PRICE_TO_BE_ANNOUNCED, priceLine,
 } from "../../components/plan/planText";
 
 // ONB Phase 1: the owner's Subscription & Plans page (moved from the account page's Plan section, AGF E4-M4). Only while
@@ -21,6 +22,7 @@ import {
 // AGF FE-1 (register §45 D-3, §46, §47): under Setting 1, while the backend says the restaurant is eligible (trialEligible),
 // the owner starts the free trial after a confirmation. While email verification is required (operational and not yet
 // verified, Q2) the page asks for it instead of offering the start. Every outcome reloads the view.
+// AGF F2 (register §84 D1): paid cards show the backend's listed prices (amount, currency, interval; no tax wording, AD-16).
 // AGF FE-R1 (backend R5-03-B/E; addendum §13): a paid plan's renewal state above the current plan (past due with the date to
 // update the card by, ended for non-payment, a refund in progress, a payment under review) and "Update card", which opens the
 // payment provider's hosted page for the owner's own plan (Agafari never sees card data). Dates in the restaurant's time zone.
@@ -63,6 +65,9 @@ export default function SubscriptionPlansPage() {
     const trial = view.trial;
     const setting2 = view.setting === "SETTING_2";
     const plans = view.plans ?? [];
+    // AGF F2: prices only as the backend lists them (prices-visible); none for a free plan
+    const prices = view.prices ?? [];
+    const pricesOf = (code: string) => prices.filter((pr) => pr.planCode === code).sort((a, b) => (a.interval === b.interval ? 0 : a.interval === "MONTH" ? -1 : 1));
     const canRequest = Boolean(view.canRequest) && !current && !pending;
     const selfService = view.selfService;
     const canStartFree = Boolean(selfService?.available) && !current;
@@ -244,6 +249,13 @@ export default function SubscriptionPlansPage() {
                                             {isCurrent && <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-semibold text-white">Current plan</span>}
                                             {isRequested && <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">Requested</span>}
                                         </div>
+                                        {p.paid && prices.length > 0 && (
+                                            pricesOf(p.code).length > 0 ? (
+                                                <ul aria-label={`${planName(p.code)} price`} className="mt-2 text-sm font-semibold text-gray-900">
+                                                    {pricesOf(p.code).map((pr) => <li key={pr.id}>{priceLine(pr)}</li>)}
+                                                </ul>
+                                            ) : <p className="mt-2 text-sm text-gray-700">{PRICE_TO_BE_ANNOUNCED}</p>
+                                        )}
                                         <ul className="mt-3 flex-1 space-y-2 text-sm text-gray-800">
                                             {(PLAN_BENEFITS[p.code] ?? [PLAN_DESCRIPTIONS[p.code]]).map((b) => (
                                                 <li key={b} className="flex gap-2"><span aria-hidden="true" className="text-emerald-700">✓</span><span>{b}</span></li>
@@ -296,7 +308,7 @@ export default function SubscriptionPlansPage() {
             )}
 
             <div className="space-y-1 text-xs text-gray-700">
-                {setting2 && <p>{PRICING_NOTE}</p>}
+                {setting2 && prices.length === 0 && <p>{PRICING_NOTE}</p>}
                 {setting2 && <p>{ACTIVATION_NOTE}</p>}
                 <p>{FEATURES_NOTE}</p>
             </div>

@@ -1,4 +1,4 @@
-import type { OwnerNotice } from "../../api/planApi";
+import type { OwnerNotice, OwnerPrice } from "../../api/planApi";
 import { trialEndDate } from "../../utils/trialDate";
 // AGF E4-M4: owner-facing plan wording. No prices, payments, trials or limits exist yet.
 export const modelName = (code: string) => `Model ${code.slice(-1)}`;
@@ -95,3 +95,7 @@ export function noticeText(n: OwnerNotice): string {
             return "You have a new notice.";
     }
 }
+
+// AGF F2 (register §84 D1): a paid plan's price as the backend lists it (amount, currency, interval); no tax wording (AD-16)
+export const priceLine = (p: OwnerPrice) => `${money(p.amountMinor, p.currency)} per ${p.interval === "YEAR" ? "year" : "month"}`;
+export const PRICE_TO_BE_ANNOUNCED = "Price to be announced";
