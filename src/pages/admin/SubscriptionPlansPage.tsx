@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { useAuth } from "../../app/context/AuthContext";
 import planApi, { type OwnerGrandfathering, type OwnerPlanView, type OwnerRenewal } from "../../api/planApi";
 import Modal from "../../components/ui/Modal";
+import NoticeList from "../../components/plan/NoticeList";
 import ModalHeader from "../../components/ui/ModalHeader";
 import { errorMessage } from "../../utils/errorMessage";
 import { trialEndDate } from "../../utils/trialDate";
@@ -372,6 +373,8 @@ export default function SubscriptionPlansPage() {
                     </div>
                 </div>
             </Modal>
+            {/* AGF FE-R2: the owner's notice list (N2) */}
+            <NoticeList />
         </section>
     );
 }

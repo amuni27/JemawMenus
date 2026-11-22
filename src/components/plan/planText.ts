@@ -1,3 +1,5 @@
+import type { OwnerNotice } from "../../api/planApi";
+import { trialEndDate } from "../../utils/trialDate";
 // AGF E4-M4: owner-facing plan wording. No prices, payments, trials or limits exist yet.
 export const modelName = (code: string) => `Model ${code.slice(-1)}`;
 
@@ -69,3 +71,27 @@ export function money(amountMinor: number | null | undefined, currency: string |
 // AA contrast on white (the shared brand Button is below AA, a known deferred defect)
 export const OWNER_PRIMARY = "rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-400";
 export const OWNER_SECONDARY = "rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 disabled:opacity-50";
+
+// AGF FE-R2 (backend R5-03-D): the wording of an owner notice, from its data (dates in the restaurant's time zone)
+const noticeDay = (iso: string | undefined, zone: string | undefined) => (iso ? trialEndDate(iso, zone) : "");
+
+export function noticeText(n: OwnerNotice): string {
+    const d = n.data ?? {};
+    const plan = d.planCode ? planName(d.planCode) : "your plan";
+    const amount = money(d.amountMinor, d.currency);
+    switch (n.kind) {
+        case "RENEWAL_PAYMENT_REQUEST": {
+            const by = d.graceUntil ? ` by ${noticeDay(d.graceUntil, d.timeZone)}` : "";
+            const prefix = d.day === 6 ? "Last reminder: " : d.day === 3 ? "Reminder: " : "Your payment didn't go through. ";
+            return `${prefix}Update your card${by} to keep ${plan}.`;
+        }
+        case "PAYMENT_RECEIVED":
+            return `Payment received${amount ? `: ${amount}` : ""}. ${plan} continues${d.periodEnd ? ` until ${noticeDay(d.periodEnd, d.timeZone)}` : ""}.`;
+        case "EXPIRY_NOTICE":
+            return `${plan} ended${d.endedAt ? ` on ${noticeDay(d.endedAt, d.timeZone)}` : ""}. Choose a plan to continue.`;
+        case "PLAN_ENDED_REFUND":
+            return `${plan} had already ended${d.endedAt ? ` on ${noticeDay(d.endedAt, d.timeZone)}` : ""} when a payment${amount ? ` of ${amount}` : ""} was made. It will be refunded.`;
+        default:
+            return "You have a new notice.";
+    }
+}

@@ -9,6 +9,10 @@ export type OwnerSubscription = { planCode: string; status: string; periodEnd: s
 // AGF FE-R1 (backend R5-03-B): a paid plan's renewal needing the owner's attention; dates in the restaurant's time zone
 export type OwnerRenewal = { state: "PAST_DUE" | "ENDED_PAYMENT_FAILED" | "REFUND_PENDING"; periodEnd?: string; graceUntil?: string; endedAt?: string;
     refund?: OwnerRefundPending; timeZone?: string };
+// AGF FE-R2 (backend R5-03-D): one delivered in-app notice of the owner's restaurant; `data` holds plan, dates, amounts, time zone
+export type OwnerNotice = { id: string; kind: string; read: boolean; createdAt: string; data: OwnerNoticeData };
+export type OwnerNoticeData = { planCode?: string; periodEnd?: string; graceUntil?: string; endedAt?: string; day?: number; amountMinor?: number; currency?: string;
+    timeZone?: string };
 export type OwnerRefundPending = { amountMinor: number | null; currency: string | null; reason: "PAID_AFTER_EXPIRY" | "RENEWAL_DUPLICATE_PERIOD" };
 // AGF E4-M6: the plan is no longer offered; it stays active until its approved end (dates in the restaurant's time zone)
 export type OwnerGrandfathering = { until?: string; daysLeft?: number; transitionsEnabled: boolean; timeZone?: string };
@@ -61,6 +65,13 @@ const planApi = {
     // AGF FE-R1 (backend R5-03-E): a short-lived link to the payment provider's hosted card-update page for the owner's own plan
     openCardUpdate() {
         return apiAuth.post<{ url: string }>("/billing/subscription/portal-session");
+    },
+    // AGF FE-R2 (backend R5-03-D): the owner's delivered notices, newest first; marking one read is idempotent
+    notices() {
+        return apiAuth.get<OwnerNotice[]>("/plan/notices");
+    },
+    readNotice(id: string) {
+        return apiAuth.post(`/plan/notices/${encodeURIComponent(id)}/read`);
     },
     withdraw(rowVersion: number) {
         return apiAuth.patch("/plan/requests/current", { status: "WITHDRAWN", rowVersion });

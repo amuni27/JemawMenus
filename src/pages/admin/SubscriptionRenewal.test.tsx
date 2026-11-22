@@ -9,7 +9,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const get = vi.fn();
 const openCardUpdate = vi.fn();
-vi.mock("../../api/planApi", () => ({ default: { get, request: vi.fn(), withdraw: vi.fn(), activate: vi.fn(), startTrial: vi.fn(), openCardUpdate } }));
+vi.mock("../../api/planApi", () => ({ default: { get, request: vi.fn(), withdraw: vi.fn(), activate: vi.fn(), startTrial: vi.fn(), openCardUpdate,
+    notices: vi.fn(() => Promise.resolve({ data: [] })) } })); // AGF FE-R2: no notices
 const auth = { value: { user: { email: "owner@cafe.test", emailVerification: { verified: true, available: true, publishGateEnabled: false } }, refresh: vi.fn() } };
 vi.mock("../../app/context/AuthContext", () => ({ useAuth: () => auth.value }));
 const assign = vi.fn();
