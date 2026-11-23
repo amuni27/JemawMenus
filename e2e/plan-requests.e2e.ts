@@ -83,7 +83,7 @@ test.describe("J21 Owner plan requests", () => {
         await card.getByRole("link", { name: "View plans" }).click(); // ONB Phase 1: the card links to Subscription & Plans
         await expect(page).toHaveURL(new RegExp(`/${BUSINESS_ID}/admin/plans$`));
         const section = page.locator("#plan");
-        await expect(section).toContainText("Pricing will be announced");
+        await expect(section).toContainText("Price not available"); // AGF SA-P1: no price is shown or invented
         await expect(section).toContainText("All features stay available while plans are being introduced.");
         await expect(section.getByRole("button", { name: "Request Business Ads" })).toHaveCount(0);
         expect(await seriousViolations(page, "#plan")).toEqual([]);

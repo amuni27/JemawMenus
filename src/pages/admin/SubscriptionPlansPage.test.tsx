@@ -64,7 +64,7 @@ describe("owner Subscription & Plans page", () => {
         expect(section.textContent).toContain("Free with Ads");
         expect(section.textContent).toContain("Ad-Free");
         expect(section.textContent).not.toContain("Business Ads"); // Model 3 isn't enabled in this configuration
-        expect(section.textContent).toContain("Pricing will be announced");
+        expect(section.textContent).toContain("Price not available"); // AGF SA-P1
         expect(section.textContent).toContain("All features stay available while plans are being introduced.");
         expect(section.textContent).not.toMatch(/ETB|USD|\$|price:/i);
         expect(within(section).getAllByRole("button", { name: /^Request / }).map((b) => b.textContent)).toEqual(["Request Free with Ads"]);

@@ -6,6 +6,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 // AGF F2 (register §84 D1, D3): paid plans show the backend's prices (amount, currency, interval) when the backend lists them
 // (prices-visible); no price is ever invented or shown for a free plan; no tax wording (AD-16). Without prices the page keeps
 // "Pricing will be announced"; the request note stays only while a paid plan is still requested.
+// AGF SA-P1 (register §88, Route C): a paid plan without a configured price that the owner can see says "Price not available"
+// on its card, whether the backend lists no price for it or sends no prices at all; "Pricing will be announced." is retired.
 
 const get = vi.fn();
 vi.mock("../../api/planApi", () => ({ default: { get, request: vi.fn(), withdraw: vi.fn(), activate: vi.fn(), startTrial: vi.fn(), openCardUpdate: vi.fn(),
@@ -45,6 +47,7 @@ describe("paid plan prices (F2)", () => {
         expect(within(await card(/Business Ads/)).getByText("$15.00 per month")).toBeTruthy();
         expect((await card(/Free with Ads|Model 2/)).textContent).not.toMatch(/\$|per month|per year/);
         expect(screen.queryByText("Pricing will be announced.")).toBeNull();
+        expect(screen.queryByText("Price not available")).toBeNull();
         expect(document.body.textContent).not.toMatch(/tax/i);
     });
 
@@ -54,12 +57,13 @@ describe("paid plan prices (F2)", () => {
         expect(within(await card(/Ad-Free|Model 4/)).getByText(/2,500\.00 per month/)).toBeTruthy();
     });
 
-    it("keeps 'Pricing will be announced' and shows no price while the backend lists none", async () => {
+    it("says 'Price not available' on every paid card, and never invents one, while the backend sends no prices", async () => {
         get.mockResolvedValue(view());
         render(<PlansPage />);
-        await card(/Ad-Free|Model 4/);
-        expect(screen.getByText("Pricing will be announced.")).toBeTruthy();
-        expect(document.body.textContent).not.toMatch(/per month|per year/);
+        for (const name of [/Business Ads/, /Ad-Free|Model 4/]) expect(within(await card(name)).getByText("Price not available")).toBeTruthy();
+        expect(within(await card(/Free with Ads|Model 2/)).queryByText("Price not available")).toBeNull();
+        expect(screen.queryByText("Pricing will be announced.")).toBeNull();
+        expect(document.body.textContent).not.toMatch(/per month|per year|\$\d/);
     });
 
     it("never shows a price for a plan the backend didn't list", async () => {
@@ -67,7 +71,8 @@ describe("paid plan prices (F2)", () => {
         render(<PlansPage />);
         const m3 = await card(/Business Ads/);
         expect(m3.textContent).not.toMatch(/per month|per year/);
-        expect(within(m3).getByText("Price to be announced")).toBeTruthy();
+        expect(within(m3).getByText("Price not available")).toBeTruthy();
+        expect(within(m3).queryByText("Price to be announced")).toBeNull();
     });
 
     it("shows the price with 'Payment not available yet' and no Request while checkout isn't available (AGF F5)", async () => {

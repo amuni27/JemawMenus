@@ -31,7 +31,6 @@ export const PLAN_COMPARISON: { label: string; values: Record<string, string> }[
     { label: "Ads page to manage your own ads", values: { MODEL_2: "—", MODEL_3: "Yes", MODEL_4: "—" } },
 ];
 
-export const PRICING_NOTE = "Pricing will be announced.";
 export const ACTIVATION_NOTE = "Requesting a plan doesn't charge you; the Agafari team activates it.";
 export const CHANGE_NOTE = "To change your plan, contact the Agafari team.";
 
@@ -98,7 +97,9 @@ export function noticeText(n: OwnerNotice): string {
 
 // AGF F2 (register §84 D1): a paid plan's price as the backend lists it (amount, currency, interval); no tax wording (AD-16)
 export const priceLine = (p: OwnerPrice) => `${money(p.amountMinor, p.currency)} per ${p.interval === "YEAR" ? "year" : "month"}`;
-export const PRICE_TO_BE_ANNOUNCED = "Price to be announced";
+// AGF SA-P1 (register §88): a paid plan whose price the owner can't see (none configured, or prices not shown in this market).
+// Replaces "Price to be announced" and the page note "Pricing will be announced."; a price is never invented.
+export const PRICE_NOT_AVAILABLE = "Price not available";
 
 // AGF F3 (register §84 D1, D4, D7): Subscribe wording and checkout refusals
 // AGF F5 (register §87): a paid plan without checkout (billing off, not available, or no listed price); a status, never an action

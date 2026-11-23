@@ -34,6 +34,7 @@ import SuperAdminSubscriptions from "../pages/superadmin/SuperAdminSubscriptions
 import SuperAdminPlanRequests from "../pages/superadmin/SuperAdminPlanRequests.tsx";
 import CheckoutReturn from "../pages/billing/CheckoutReturn.tsx"; // AGF F4
 import CheckoutCancelled from "../pages/billing/CheckoutCancelled.tsx"; // AGF F4
+import SuperAdminPrices from "../pages/superadmin/SuperAdminPrices.tsx"; // AGF SA-P1
 import SuperAdminPublishingGate from "../pages/superadmin/SuperAdminPublishingGate.tsx"; // AGF FE-4
 
 // The app's route table, in its own module so route tests can use it (AGF-S2-29)
@@ -93,6 +94,7 @@ export const routes: RouteObject[] = [
                     {path: 'monetization', element: <SuperAdminMonetization/>},
                     {path: 'subscriptions', element: <SuperAdminSubscriptions/>},
                     {path: 'plan-requests', element: <SuperAdminPlanRequests/>},
+                    {path: 'prices', element: <SuperAdminPrices/>}, // AGF SA-P1: paid-plan prices
                     {path: 'ads', element: <SuperAdminAds/>},
                     {path: 'restaurant-ads', element: <SuperAdminRestaurantAds/>}, // AGF E4-M8
                     {path: 'publishing-gate', element: <SuperAdminPublishingGate/>}, // AGF FE-4: dry run and sign-off (read only)

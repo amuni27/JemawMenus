@@ -89,6 +89,14 @@ export type PublishGateRow = { businessId?: string; name?: string; country?: str
 export type PublishGatePage = { section: PublishGateSection; items: PublishGateRow[]; page: number; size: number; total: number };
 export type PublishGateSignOffResult = { market: PublishGateMarket; signedAt: string; cutOver: string; fingerprint: string };
 
+// AGF SA-P1 (backend SUB-R3-01 /api/admin/prices): paid-plan price versions; the currency follows the market, amounts in minor units
+export type PriceMarket = 'US' | 'ET';
+export type PriceInterval = 'MONTH' | 'YEAR';
+export type PlanPriceVersion = { id: string; planCode: MonetizationModel; market: PriceMarket; currency: string; interval: PriceInterval;
+  amountMinor: number; version: number; providerPriceRef?: string | null; active: boolean; validFrom: string };
+export type PlanPriceCreate = { planCode: MonetizationModel; market: PriceMarket; interval: PriceInterval; amountMinor: number;
+  providerPriceRef: string | null; validFrom: string | null };
+
 export const adminClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'https://jemaw-menu-backend-spring.onrender.com'}/api`,
 });
@@ -174,4 +182,8 @@ export const adminApi = {
     adminClient.post<PlanRequest>(`/admin/plan-requests/${id}/fulfil`, { expectedConfigVersion, rowVersion }),
   declinePlanRequest: (id: string, rowVersion: number) =>
     adminClient.post<PlanRequest>(`/admin/plan-requests/${id}/decline`, { rowVersion }),
+  // AGF SA-P1: price versions (append-only; a new version is inactive until activated)
+  prices: () => adminClient.get<PlanPriceVersion[]>('/admin/prices'),
+  createPrice: (body: PlanPriceCreate) => adminClient.post<PlanPriceVersion>('/admin/prices', body),
+  activatePrice: (id: string) => adminClient.post<PlanPriceVersion>(`/admin/prices/${encodeURIComponent(id)}/activate`),
 };

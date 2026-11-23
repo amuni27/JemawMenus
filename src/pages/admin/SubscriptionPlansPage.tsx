@@ -10,9 +10,9 @@ import ModalHeader from "../../components/ui/ModalHeader";
 import { errorMessage } from "../../utils/errorMessage";
 import { trialEndDate } from "../../utils/trialDate";
 import {
-    ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS, PRICING_NOTE,
+    ACTIVATION_NOTE, CHANGE_NOTE, FEATURES_NOTE, OWNER_PRIMARY, OWNER_SECONDARY, PLAN_BENEFITS, PLAN_COMPARISON, PLAN_DESCRIPTIONS,
     TRIAL_DAYS, TRIAL_NOTICE_DAYS, TRIAL_REFUSALS, TRIAL_TERMS, days, planName, statusLabel, CARD_UPDATE_REFUSALS, CARD_UPDATE_FAILED, money,
-    PRICE_TO_BE_ANNOUNCED, PAYMENT_NOT_AVAILABLE, priceLine, CHECKOUT_NOTE, CHECKOUT_FAILED, CHECKOUT_NOT_AVAILABLE, CHECKOUT_VERIFY, CHECKOUT_IN_PROGRESS, CHECKOUT_CANCELLED_NOTICE,
+    PRICE_NOT_AVAILABLE, PAYMENT_NOT_AVAILABLE, priceLine, CHECKOUT_NOTE, CHECKOUT_FAILED, CHECKOUT_NOT_AVAILABLE, CHECKOUT_VERIFY, CHECKOUT_IN_PROGRESS, CHECKOUT_CANCELLED_NOTICE,
     CHECKOUT_REFUSALS,
 } from "../../components/plan/planText";
 
@@ -357,12 +357,12 @@ export default function SubscriptionPlansPage() {
                                             {isCurrent && <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-semibold text-white">Current plan</span>}
                                             {isRequested && <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">Requested</span>}
                                         </div>
-                                        {p.paid && prices.length > 0 && (
+                                        {p.paid && (
                                             pricesOf(p.code).length > 0 ? (
                                                 <ul aria-label={`${planName(p.code)} price`} className="mt-2 text-sm font-semibold text-gray-900">
                                                     {pricesOf(p.code).map((pr) => <li key={pr.id}>{priceLine(pr)}</li>)}
                                                 </ul>
-                                            ) : <p className="mt-2 text-sm text-gray-700">{PRICE_TO_BE_ANNOUNCED}</p>
+                                            ) : <p className="mt-2 text-sm text-gray-700">{PRICE_NOT_AVAILABLE}</p>
                                         )}
                                         <ul className="mt-3 flex-1 space-y-2 text-sm text-gray-800">
                                             {(PLAN_BENEFITS[p.code] ?? [PLAN_DESCRIPTIONS[p.code]]).map((b) => (
@@ -441,7 +441,6 @@ export default function SubscriptionPlansPage() {
             )}
 
             <div className="space-y-1 text-xs text-gray-700">
-                {setting2 && prices.length === 0 && <p>{PRICING_NOTE}</p>}
                 {setting2 && anySubscribe && <p>{CHECKOUT_NOTE}</p>}
                 {setting2 && anyFreeRequest && !anySubscribe && <p>{ACTIVATION_NOTE}</p>}
                 <p>{FEATURES_NOTE}</p>

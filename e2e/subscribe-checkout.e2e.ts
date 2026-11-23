@@ -68,7 +68,7 @@ test.describe("J33 Subscribe while billing is off", () => {
             .filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
         await expect(card(page, "Free with Ads").getByRole("button", { name: "Start free" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Subscribe" })).toHaveCount(0);
-        await expect(page.getByText("Pricing will be announced.").first()).toBeVisible();
+        await expect(adFree.getByText("Price not available")).toBeVisible(); // AGF SA-P1
 
         for (const width of [1280, 375]) {
             await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
