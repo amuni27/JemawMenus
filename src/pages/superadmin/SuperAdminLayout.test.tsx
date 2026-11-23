@@ -7,7 +7,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 // its own sign-in page; Sign out ends only the admin session.
 
 const me = vi.fn();
-vi.mock("../../api/adminApi", async (orig) => ({ ...(await orig<typeof import("../../api/adminApi")>()), adminApi: { me } }));
+vi.mock("../../api/adminApi", async (orig) => ({ ...(await orig<typeof import("../../api/adminApi")>()), adminApi: { me, exceptionSummary: () => Promise.resolve({ data: { unresolved: 0, open: 0, escalated: 0, autoHandling: 0, overdue: 0 } }) } }));
 
 const { default: SuperAdminLayout } = await import("./SuperAdminLayout.tsx");
 

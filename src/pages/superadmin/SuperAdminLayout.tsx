@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { ADMIN_TOKEN_KEY, adminApi, type AdminSummary } from '../../api/adminApi';
+import ExceptionsNavLink from './ExceptionsNavLink'; // AGF EX-F
 
 // AGF E4-M1: the Super Admin console shell. The backend decides (ROLE_ADMIN on every request); without a valid admin
 // session the console goes to its own sign-in page. Owner sessions are never read or changed here (SC5).
@@ -46,12 +47,13 @@ export default function SuperAdminLayout() {
         </div>
       </header>
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row">
-        <nav aria-label="Super Admin" className="flex gap-2 md:w-48 md:flex-col">
+        <nav aria-label="Super Admin" className="flex flex-wrap gap-2 md:w-48 md:flex-col md:flex-nowrap">
           <NavLink to="/super-admin" end className={link}>Overview</NavLink>
           <NavLink to="/super-admin/monetization" className={link}>Monetization</NavLink>
           <NavLink to="/super-admin/subscriptions" className={link}>Subscriptions</NavLink>
           <NavLink to="/super-admin/plan-requests" className={link}>Plan requests</NavLink>
           <NavLink to="/super-admin/prices" className={link}>Prices</NavLink>
+          <ExceptionsNavLink className={link} />
           <NavLink to="/super-admin/ads" className={link}>Ads</NavLink>
           <NavLink to="/super-admin/restaurant-ads" className={link}>Restaurant ads</NavLink>
           <NavLink to="/super-admin/publishing-gate" className={link}>Publishing gate</NavLink>

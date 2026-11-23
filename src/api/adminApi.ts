@@ -97,6 +97,21 @@ export type PlanPriceVersion = { id: string; planCode: MonetizationModel; market
 export type PlanPriceCreate = { planCode: MonetizationModel; market: PriceMarket; interval: PriceInterval; amountMinor: number;
   providerPriceRef: string | null; validFrom: string | null };
 
+// AGF EX-F (register §91): billing exceptions for the Super Admin; businessId is null for a platform exception
+export type BillingExceptionSummary = { unresolved: number; open: number; escalated: number; autoHandling: number; overdue: number };
+export type BillingExceptionItem = { id: string; code: string; status: string; businessId: string | null; businessName: string | null; amountMinor: number | null;
+  currency: string | null; involvesCustomerFunds: boolean; createdAt: string; dueAt: string | null; overdue: boolean; claimedBy: string | null;
+  escalatedTo: string | null; providerEventId: string | null; sourceJobId: string | null };
+export type BillingExceptionPage = { items: BillingExceptionItem[]; page: number; size: number; total: number };
+export type BillingExceptionView = { id: string; businessId: string | null; code: string; status: string; paymentId: string | null; checkoutId: string | null;
+  providerEventId: string | null; refundRequestId: string | null; amountMinor: number | null; currency: string | null; paidAt: string | null;
+  involvesCustomerFunds: boolean; ownerUserId: string | null; claimedAt: string | null; escalatedAt: string | null; escalationReason: string | null;
+  escalatedTo: string | null; resolution: string | null; resolutionNote: string | null; resolvedBy: string | null; resolvedAt: string | null; createdAt: string;
+  rowVersion: number; dueAt: string | null; immediate: boolean | null; overdue: boolean | null; calendarIncomplete: boolean | null; sourceJobId: string | null };
+export type BillingExceptionHistoryItem = { id: string; occurredAt: string; actorLabel: string; action: string; targetType: string; targetId: string;
+  outcome: string; detail: string | null };
+export type ExceptionState = 'UNRESOLVED' | 'RESOLVED' | 'ALL';
+
 export const adminClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'https://jemaw-menu-backend-spring.onrender.com'}/api`,
 });
@@ -186,4 +201,20 @@ export const adminApi = {
   prices: () => adminClient.get<PlanPriceVersion[]>('/admin/prices'),
   createPrice: (body: PlanPriceCreate) => adminClient.post<PlanPriceVersion>('/admin/prices', body),
   activatePrice: (id: string) => adminClient.post<PlanPriceVersion>(`/admin/prices/${encodeURIComponent(id)}/activate`),
+  // AGF EX-F: billing exceptions (read, and the existing audited actions; each sends the row version back)
+  exceptionSummary: () => adminClient.get<BillingExceptionSummary>('/admin/billing/exceptions/summary'),
+  exceptions: (state: ExceptionState, page: number, size: number) =>
+    adminClient.get<BillingExceptionPage>('/admin/billing/exceptions', { params: { state, page, size } }),
+  exception: (id: string) => adminClient.get<BillingExceptionView>(`/admin/billing/exceptions/${encodeURIComponent(id)}`),
+  exceptionHistory: (id: string) => adminClient.get<BillingExceptionHistoryItem[]>(`/admin/billing/exceptions/${encodeURIComponent(id)}/history`),
+  claimException: (id: string, rowVersion: number) =>
+    adminClient.post<BillingExceptionView>(`/admin/billing/exceptions/${encodeURIComponent(id)}/claim`, { rowVersion }),
+  addExceptionNote: (id: string, rowVersion: number, note: string) =>
+    adminClient.post<BillingExceptionView>(`/admin/billing/exceptions/${encodeURIComponent(id)}/notes`, { rowVersion, note }),
+  escalateException: (id: string, rowVersion: number, reason: string, escalatedTo: string | null) =>
+    adminClient.post<BillingExceptionView>(`/admin/billing/exceptions/${encodeURIComponent(id)}/escalate`, { rowVersion, reason, escalatedTo }),
+  resolveException: (id: string, rowVersion: number, resolution: string, note: string) =>
+    adminClient.post<BillingExceptionView>(`/admin/billing/exceptions/${encodeURIComponent(id)}/resolve`, { rowVersion, resolution, note }),
+  replayException: (id: string, rowVersion: number) =>
+    adminClient.post<{ exception: BillingExceptionView; eventResult: string }>(`/admin/billing/exceptions/${encodeURIComponent(id)}/replay`, { rowVersion }),
 };

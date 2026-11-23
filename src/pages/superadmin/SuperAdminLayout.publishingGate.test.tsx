@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 // AGF FE-4 (U-3): the console's navigation links to the Publishing gate dry run.
 
 const me = vi.fn().mockResolvedValue({ data: { id: "a1", email: "root@admin.test", role: "ADMIN" } });
-vi.mock("../../api/adminApi", async (orig) => ({ ...(await orig<typeof import("../../api/adminApi")>()), adminApi: { me } }));
+vi.mock("../../api/adminApi", async (orig) => ({ ...(await orig<typeof import("../../api/adminApi")>()), adminApi: { me, exceptionSummary: () => Promise.resolve({ data: { unresolved: 0, open: 0, escalated: 0, autoHandling: 0, overdue: 0 } }) } }));
 
 const { default: SuperAdminLayout } = await import("./SuperAdminLayout.tsx");
 const { ADMIN_TOKEN_KEY } = await import("../../api/adminApi");

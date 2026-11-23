@@ -16,6 +16,8 @@ vi.mock("../../pages/superadmin/SuperAdminMonetization.tsx", () => ({ default: (
 vi.mock("../../pages/superadmin/SuperAdminSubscriptions.tsx", () => ({ default: () => <p>Subscriptions page</p> }));
 vi.mock("../../pages/superadmin/SuperAdminPlanRequests.tsx", () => ({ default: () => <p>Plan requests page</p> }));
 vi.mock("../../pages/superadmin/SuperAdminPrices.tsx", () => ({ default: () => <p>Plan prices page</p> }));
+vi.mock("../../pages/superadmin/SuperAdminExceptions.tsx", () => ({ default: () => <p>Exceptions page</p> }));
+vi.mock("../../pages/superadmin/SuperAdminExceptionDetail.tsx", () => ({ default: () => <p>Exception detail page</p> }));
 
 const { routes } = await import("../routes.tsx");
 
@@ -38,6 +40,14 @@ describe("Super Admin routes", () => {
         render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/super-admin/subscriptions"] })} />);
         expect(await screen.findByText("Subscriptions page")).toBeTruthy();
         expect(screen.queryByText("Guest menu page")).toBeNull();
+    });
+
+    it("serves exceptions at /super-admin/exceptions and one at /super-admin/exceptions/:id (AGF EX-F)", async () => {
+        render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/super-admin/exceptions"] })} />);
+        expect(await screen.findByText("Exceptions page")).toBeTruthy();
+        cleanup();
+        render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/super-admin/exceptions/ex-1"] })} />);
+        expect(await screen.findByText("Exception detail page")).toBeTruthy();
     });
 
     it("serves plan prices at /super-admin/prices (AGF SA-P1)", async () => {
